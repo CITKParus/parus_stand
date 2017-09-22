@@ -1,0 +1,27 @@
+﻿-- Create table
+create table UDO_T_WEB_API_FILES
+(
+  name         VARCHAR2(256) not null,
+  mime_type    VARCHAR2(128),
+  doc_size     NUMBER,
+  dad_charset  VARCHAR2(128),
+  last_updated DATE,
+  content_type VARCHAR2(128),
+  content      LONG RAW,
+  blob_content BLOB
+)
+tablespace PARUSDATA
+  pctfree 10
+  initrans 1
+  maxtrans 255;
+-- Create/Recreate primary, unique and foreign key constraints 
+alter table UDO_T_WEB_API_FILES
+  add unique (NAME)
+  using index 
+  tablespace PARUSDATA
+  pctfree 10
+  initrans 2
+  maxtrans 255;
+-- Grant/Revoke object privileges 
+grant select, insert on UDO_T_WEB_API_FILES to PUBLIC;
+grant select, insert, update on UDO_T_WEB_API_FILES to WEB_USER;

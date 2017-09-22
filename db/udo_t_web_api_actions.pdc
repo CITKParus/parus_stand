@@ -1,0 +1,40 @@
+﻿-- Create table
+create table UDO_T_WEB_API_ACTIONS
+(
+  rn        NUMBER(17) not null,
+  action    VARCHAR2(200),
+  processor VARCHAR2(40),
+  unauth    NUMBER(1)
+)
+tablespace PARUSDATA
+  pctfree 10
+  initrans 1
+  maxtrans 255;
+-- Create/Recreate primary, unique and foreign key constraints 
+alter table UDO_T_WEB_API_ACTIONS
+  add constraint UDO_C_WEB_API_ACTIONS_RN_PK primary key (RN)
+  using index 
+  tablespace PARUSDATA
+  pctfree 10
+  initrans 2
+  maxtrans 255;
+alter table UDO_T_WEB_API_ACTIONS
+  add constraint UDO_C_WEB_API_ACTIONS_UN unique (ACTION)
+  using index 
+  tablespace PARUSDATA
+  pctfree 10
+  initrans 2
+  maxtrans 255;
+-- Create/Recreate check constraints 
+alter table UDO_T_WEB_API_ACTIONS
+  add constraint UDO_C_WEB_API_ACTIONS_ACTN_NN
+  check (ACTION is not null);
+alter table UDO_T_WEB_API_ACTIONS
+  add constraint UDO_C_WEB_API_ACTIONS_PRCSR_NN
+  check (PROCESSOR is not null);
+alter table UDO_T_WEB_API_ACTIONS
+  add constraint UDO_C_WEB_API_ACTIONS_UNATH_CH
+  check (UNAUTH in (0, 1));
+alter table UDO_T_WEB_API_ACTIONS
+  add constraint UDO_C_WEB_API_ACTIONS_UNATH_NN
+  check (UNAUTH is not null);

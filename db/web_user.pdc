@@ -1,0 +1,8 @@
+﻿-- Create the user 
+create user WEB_USER
+  default tablespace PARUSDATA
+  temporary tablespace TEMP
+  profile DEFAULT
+  password expire;
+-- Grant/Revoke system privileges 
+grant create session to WEB_USER;
