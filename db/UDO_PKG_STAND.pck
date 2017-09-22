@@ -286,7 +286,7 @@ create or replace package body UDO_PKG_STAND as
     P_INCOMEFROMDEPS_SET_STATUS(NCOMPANY  => NCOMPANY,
                                 NRN       => NINCOMEFROMDEPS,
                                 NSTATUS   => 0,
-                                DWORKDATE => sysdate,
+                                DWORKDATE => TRUNC(sysdate),
                                 NWARNING  => NWARNING,
                                 SMSG      => SMSG);
     if ((NWARNING is not null) or (SMSG is not null)) then
@@ -549,8 +549,39 @@ create or replace package body UDO_PKG_STAND as
     NCOMPANY      number, -- Регистрационный номер организации
     NTRANSINVCUST number -- Регистрационный номер отгрузочной РНОП
   ) is
+    SMSG PKG_STD.TSTRING; -- Текст сообщения процедуры отработки прихода
   begin
-    null;
+    /* Отменяем размещение на местах хранения */
+    P_STRPLRESJRNL_GTINV2C_RLLBACK(NCOMPANY => NCOMPANY, NRN => NTRANSINVCUST, NRES_TYPE => 1);
+  
+    /* Снимаем отработку */
+    P_TRANSINVCUST_SET_STATUS(NCOMPANY   => NCOMPANY,
+                              NRN        => NTRANSINVCUST,
+                              NSTATUS    => 0,
+                              DWORK_DATE => TRUNC(sysdate),
+                              SMSG       => SMSG);
+    if (SMSG is not null) then
+      P_EXCEPTION(0, SMSG);
+    end if;
+  
+    /* Удаляем резервирование по местам хранения */
+    for C in (select T.COMPANY,
+                     T.RN
+                from STRPLRESJRNL      T,
+                     TRANSINVCUSTSPECS SP,
+                     DOCLINKS          L
+               where T.COMPANY = NCOMPANY
+                 and SP.PRN = NTRANSINVCUST
+                 and L.IN_DOCUMENT = SP.RN
+                 and L.IN_UNITCODE = 'GoodsTransInvoicesToConsumersSpecs'
+                 and L.OUT_UNITCODE = 'StoragePlacesResJournal'
+                 and L.OUT_DOCUMENT = T.RN)
+    loop
+      P_STRPLRESJRNL_DELETE(NCOMPANY => C.COMPANY, NRN => C.RN);
+    end loop;
+  
+    /* Удаляем документ */
+    P_TRANSINVCUST_DELETE(NCOMPANY => NCOMPANY, NRN => NTRANSINVCUST);
   end;
 
 end;
