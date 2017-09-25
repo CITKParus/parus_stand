@@ -5,152 +5,152 @@
  as
 
   /* Константы - режим отладки */
-  BDEBUG                 constant boolean := true;
+  BDEBUG                    constant boolean := true;
 
   /* Константы - типы ответов сервиса */
-  NRESP_FORMAT_JSON      constant number(1) := 0;                  -- Ответ в JSON
-  NRESP_FORMAT_XML       constant number(1) := 1;                  -- Ответ в XML
-  SRESP_TYPE_KEY         constant varchar2(20) := 'RESP_TYPE';     -- Наименование ключа для идентификации ответа сервера
-  SRESP_TYPE_VAL         constant varchar2(20) := 'STAND_MESSAGE'; -- Значение ключа для идентификации ответа сервера
-  SRESP_STATE_KEY        constant varchar2(20) := 'STATE';         -- Наименование ключа для описания в ответе состояния сервера
-  SRESP_MSG_KEY          constant varchar2(20) := 'MSG';           -- Наименование ключа для описания в ответе сообщения сервера
-  NRESP_STATE_ERR        constant number(1) := 0;                  -- Ошибка выполнения
-  NRESP_STATE_OK         constant number(1) := 1;                  -- Успешное выполнение
+  NRESP_FORMAT_JSON         constant number(1) := 0;                  -- Ответ в JSON
+  NRESP_FORMAT_XML          constant number(1) := 1;                  -- Ответ в XML
+  SRESP_TYPE_KEY            constant varchar2(20) := 'RESP_TYPE';     -- Наименование ключа для идентификации ответа сервера
+  SRESP_TYPE_VAL            constant varchar2(20) := 'STAND_MESSAGE'; -- Значение ключа для идентификации ответа сервера
+  SRESP_STATE_KEY           constant varchar2(20) := 'STATE';         -- Наименование ключа для описания в ответе состояния сервера
+  SRESP_MSG_KEY             constant varchar2(20) := 'MSG';           -- Наименование ключа для описания в ответе сообщения сервера
+  NRESP_STATE_ERR           constant number(1) := 0;                  -- Ошибка выполнения
+  NRESP_STATE_OK            constant number(1) := 1;                  -- Успешное выполнение
   
   /* Константы - ключи запросов (общие, частные в соответствующих обработчиках) */
-  SREQ_ACTION_KEY        constant varchar2(20) := 'SACTION';       -- Наименование ключа для действия с сервером
-  SREQ_SESSION_KEY       constant varchar2(20) := 'SSESSION';      -- Наименование ключа для идентификатора сессии
-  SREQ_USER_KEY          constant varchar2(20) := 'SUSER';         -- Наименование ключа для имени пользователя
-  SREQ_PASSWORD_KEY      constant varchar2(20) := 'SPASSWORD';     -- Наименование ключа для имени пользователя
-  SREQ_COMPANY_KEY       constant varchar2(20) := 'SCOMPANY';      -- Наименование ключа для названия организации  
-  SREQ_FILE_TYPE_KEY     constant varchar2(20) := 'SFILE_TYPE';    -- Наименование ключа для типа выгружаемого файла
-  SREQ_FILE_RN_KEY       constant varchar2(20) := 'NFILE_RN';      -- Наименование ключа для рег. номера выгружаемого файла
+  SREQ_ACTION_KEY           constant varchar2(20) := 'SACTION';       -- Наименование ключа для действия с сервером
+  SREQ_SESSION_KEY          constant varchar2(20) := 'SSESSION';      -- Наименование ключа для идентификатора сессии
+  SREQ_USER_KEY             constant varchar2(20) := 'SUSER';         -- Наименование ключа для имени пользователя
+  SREQ_PASSWORD_KEY         constant varchar2(20) := 'SPASSWORD';     -- Наименование ключа для имени пользователя
+  SREQ_COMPANY_KEY          constant varchar2(20) := 'SCOMPANY';      -- Наименование ключа для названия организации  
+  SREQ_FILE_TYPE_KEY        constant varchar2(20) := 'SFILE_TYPE';    -- Наименование ключа для типа выгружаемого файла
+  SREQ_FILE_RN_KEY          constant varchar2(20) := 'NFILE_RN';      -- Наименование ключа для рег. номера выгружаемого файла
   
   /* Константы - коды специальных действий сервера */
-  SACTION_LOGIN          constant varchar2(20) := 'LOGIN';         -- Аутентификация
-  SACTION_VERIFY         constant varchar2(20) := 'VERIFY';        -- Проверка валидности сессии
-  SACTION_DOWNLOAD       constant varchar2(20) := 'DOWNLOAD';      -- Выгрузка файла
+  SACTION_LOGIN             constant varchar2(20) := 'LOGIN';         -- Аутентификация
+  SACTION_VERIFY            constant varchar2(20) := 'VERIFY';        -- Проверка валидности сессии
+  SACTION_DOWNLOAD          constant varchar2(20) := 'DOWNLOAD';      -- Выгрузка файла
   
   /* Константы - типы выгружаемых файлов */
-  SFILE_TYPE_REPORT      constant varchar2(20) := 'REPORT';        -- Готовый отчет
+  SFILE_TYPE_REPORT         constant varchar2(20) := 'REPORT';        -- Готовый отчет
   
   /* Константы - возможность исполнения действия без авторизации */
-  NUNAUTH_YES            constant number(1) := 1;                  -- Возможно исполнение без авторизации
-  NUNAUTH_NO             constant number(1) := 0;                  -- Невозможно исполнение без авторизации
+  NUNAUTH_YES               constant number(1) := 1;                  -- Возможно исполнение без авторизации
+  NUNAUTH_NO                constant number(1) := 0;                  -- Невозможно исполнение без авторизации
   
   /* Константы - состояние исполнения обработчика */
-  NEXEC_OK               constant number(1) := 1;                  -- Успешное исполнение
+  NEXEC_OK                  constant number(1) := 1;                  -- Успешное исполнение
   
   /* Констнаты - состояние отчета в очереди печати */  
-  NRPTQ_STATUS_QUEUE     constant number(1) := 0;                  -- Поставлено в очередь
-  NRPTQ_STATUS_PROCESS   constant number(1) := 1;                  -- Выполнение начато
-  NRPTQ_STATUS_OK        constant number(1) := 2;                  -- Выполнение завершено (успешно)
-  NRPTQ_STATUS_ERR       constant number(1) := 3;                  -- Выполнение завершено (с ошибками) 
+  NRPTQ_STATUS_QUEUE        constant number(1) := 0;                  -- Поставлено в очередь
+  NRPTQ_STATUS_PROCESS      constant number(1) := 1;                  -- Выполнение начато
+  NRPTQ_STATUS_OK           constant number(1) := 2;                  -- Выполнение завершено (успешно)
+  NRPTQ_STATUS_ERR          constant number(1) := 3;                  -- Выполнение завершено (с ошибками) 
   
   /* Константы - типы отчетов */
-  NRPT_TYPE_CRYSTAL      constant number(1) := 0;                  -- Crystal Reports
-  NRPT_TYPE_EXCEL        constant number(1) := 1;                  -- MS Excel
-  NRPT_TYPE_DRILL        constant number(1) := 2;                  -- DrillDown
-  NRPT_TYPE_OOCALC       constant number(1) := 3;                  -- Open Office Calc
-  NRPT_TYPE_BINARY       constant number(1) := 4;                  -- Двоичные данные
+  NRPT_TYPE_CRYSTAL         constant number(1) := 0;                  -- Crystal Reports
+  NRPT_TYPE_EXCEL           constant number(1) := 1;                  -- MS Excel
+  NRPT_TYPE_DRILL           constant number(1) := 2;                  -- DrillDown
+  NRPT_TYPE_OOCALC          constant number(1) := 3;                  -- Open Office Calc
+  NRPT_TYPE_BINARY          constant number(1) := 4;                  -- Двоичные данные
   
   /* Авторизация для обработки запросос WEB-сервиса */
   function AUTHORIZE
   (
-    SPROCEDURE           varchar2            -- Имя исполняемой процедуры
+    SPROCEDURE              varchar2         -- Имя исполняемой процедуры
   ) return boolean;
   
   /* Конвертация строковых значений в числовые для целей WEB-представления */
   function UTL_CONVERT_TO_NUMBER
   (
-    SSTR                 varchar2,           -- Конвертируемая строка (разрядность 17.5, допускается передавать пробелы в качестве разделителя групп разрядов (но не другие символы!), допускается передавать в качестве разделителя целой и дробной части "." или ",", отрицательные обрабатываются корректно с минусом спереди, автоматически удаляются некоторые спец-символы)
-    NSMART               number := 0         -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
+    SSTR                    varchar2,        -- Конвертируемая строка (разрядность 17.5, допускается передавать пробелы в качестве разделителя групп разрядов (но не другие символы!), допускается передавать в качестве разделителя целой и дробной части "." или ",", отрицательные обрабатываются корректно с минусом спереди, автоматически удаляются некоторые спец-символы)
+    NSMART                  number := 0      -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
   ) return number;
   
   /* Конвертация числовых значений в строковые для целей WEB-представления */
   function UTL_CONVERT_TO_STRING
   (
-    NNUMB                number,             -- Конвертируемое число
-    NSEPARATE            number := 0,        -- Разделять разряды (0 - нет, 1 - да)
-    NSHARP               number := 2         -- Точность (кол-во знаков после запятой, только для NSEPARATE = 1)
+    NNUMB                   number,          -- Конвертируемое число
+    NSEPARATE               number := 0,     -- Разделять разряды (0 - нет, 1 - да)
+    NSHARP                  number := 2      -- Точность (кол-во знаков после запятой, только для NSEPARATE = 1)
   ) return varchar2;
   
   /* Конвертация строки в дату для целей WEB-представления */
   function UTL_CONVERT_TO_DATE
   (
-    NSMART               number,             -- Признак выдачи сообщения об ошибке
-    SDATE                varchar2,           -- Дата (строковое представление)
-    SERR_MSG             varchar2 := null    -- Сообщение об ошибке конвертации
+    NSMART                  number,          -- Признак выдачи сообщения об ошибке
+    SDATE                   varchar2,        -- Дата (строковое представление)
+    SERR_MSG                varchar2 := null -- Сообщение об ошибке конвертации
   ) return date; 
   
   /* Считывание записи отчета */
   function UTL_RPT_GET
   (
-    NREPORT              number              -- Регистрационный номер отчета
-   ,NSMART               number := 0         -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
+    NREPORT                 number           -- Регистрационный номер отчета
+   ,NSMART                  number := 0      -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
   ) return USERREPORTS%rowtype;
   
   /* Считывание записи очереди печати отчетов */
   function UTL_RPTQ_GET
   (
-    NREPORTQ             number              -- Регистрационный номер позиции очереди печати отчетов
-   ,NSMART               number := 0         -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
+    NREPORTQ                number           -- Регистрационный номер позиции очереди печати отчетов
+   ,NSMART                  number := 0      -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
   ) return RPTPRTQUEUE%rowtype;
   
   /* Формирование имени файла готового отчета */
   function UTL_RPTQ_BUILD_FILE_NAME
   (
-    NREPORTQ             number              -- Регистрационный номер позиции очереди
+    NREPORTQ                number           -- Регистрационный номер позиции очереди
   ) return varchar2;      
   
   /* Преобразование имени файла для использования в HTML-заголовке */
   function UTL_PREPARE_FILENAME
   (
-    SFILE_NAME           varchar2            -- Имя файла
+    SFILE_NAME              varchar2         -- Имя файла
   ) return varchar2;  
   
   /* Транслитерация русской строки в английскую */
   function RESP_TRANSLATE_MSG
   (
-    SSTR_RU              varchar2            -- Строка с русскими символами (CL8MSWIN1251)
+    SSTR_RU                 varchar2         -- Строка с русскими символами (CL8MSWIN1251)
   ) return varchar2;
 
   /* Нормализация сообщения об ошибке */
   function RESP_CORRECT_ERR
   (
-    SERR                 varchar2            -- Ненормальзованное сообщени об ошибке
+    SERR                    varchar2         -- Ненормальзованное сообщени об ошибке
   ) return varchar2;
 
   /* Формирование стандартного ответа сервиса */
   function RESP_MAKE
   (
-    NRESP_FORMAT         number,             -- Формат ответа (0 - JSON, 1 - XML)
-    NRESP_STATE          number,             -- Тип ответа (0 - ошибка, 1 - успех)
-    SRESP_MSG            varchar2            -- Сообщение
+    NRESP_FORMAT            number,          -- Формат ответа (0 - JSON, 1 - XML)
+    NRESP_STATE             number,          -- Тип ответа (0 - ошибка, 1 - успех)
+    SRESP_MSG               varchar2         -- Сообщение
   ) return clob;
 
   /* Разбор стандартного ответа сервера (в JSON) */
   procedure RESP_PARSE
   (
-    CJSON                clob,               -- Данные ответа
-    NRESP_TYPE           out number,         -- Тип ответа (0 - ошибка, 1 - успех, null - CJSON не является стандартным ответом сервера)
-    SRESP_MSG            out varchar2        -- Сообщение сервера
+    CJSON                   clob,            -- Данные ответа
+    NRESP_TYPE              out number,      -- Тип ответа (0 - ошибка, 1 - успех, null - CJSON не является стандартным ответом сервера)
+    SRESP_MSG               out varchar2     -- Сообщение сервера
   );
 
   /* Выдача ответа WEB-серверу */
   procedure RESP_PUBLISH
   (
-    CDATA                clob,                    -- Данные
-    SCONTENT_TYPE        varchar2 := 'text/json', -- MIME-Type для данных
-    SCHARSET             varchar2 := 'UTF-8'      -- Кодировка
+    CDATA                   clob,                    -- Данные
+    SCONTENT_TYPE           varchar2 := 'text/json', -- MIME-Type для данных
+    SCHARSET                varchar2 := 'UTF-8'      -- Кодировка
   );
 
   /* Выдача ответа WEB-серверу (в виде файла для скачивания) */
   procedure RESP_DOWNLOAD
   (
-    BDATA                in out nocopy blob,                    -- Данные
-    SFILE_NAME           varchar2,                              -- Имя файла
-    SCONTENT_TYPE        varchar2 := 'application/octet-stream' -- MIME-Type для данных
+    BDATA                   in out nocopy blob,                    -- Данные
+    SFILE_NAME              varchar2,                              -- Имя файла
+    SCONTENT_TYPE           varchar2 := 'application/octet-stream' -- MIME-Type для данных
   );
   
   /* Определение пользователя сессии */
@@ -159,35 +159,35 @@
   /* Проверка актуальности сессии */
   procedure SESSION_VALIDATE
   (
-    SSESSION             varchar2            -- Идентификатор сессии
+    SSESSION                varchar2         -- Идентификатор сессии
   );
 
   /* Считывание записи обработчика */
   function WEB_API_ACTIONS_GET
   (
-    NRN                  number,             -- Регистрационный номер записи
-    NSMART               number := 0         -- Признак выдачи сообщения об ошибке
+    NRN                     number,          -- Регистрационный номер записи
+    NSMART                  number := 0      -- Признак выдачи сообщения об ошибке
   ) return UDO_T_WEB_API_ACTIONS%rowtype;
 
   /* Считывание записи обработчика (по коду действия) */
   function WEB_API_ACTIONS_GET
   (
-    SACTION              varchar2,           -- Код действия
-    NSMART               number := 0         -- Признак выдачи сообщения об ошибке
+    SACTION                 varchar2,        -- Код действия
+    NSMART                  number := 0      -- Признак выдачи сообщения об ошибке
   ) return UDO_T_WEB_API_ACTIONS%rowtype;
 
   /* Запуск обработчика действия */
   procedure WEB_API_ACTIONS_PROCESS
   (
-    NRN                  number,             -- Регистрационный номер обработчика
-    CPRMS                clob,               -- Входные параметры
-    CRES                 out clob            -- Результат работы
+    NRN                     number,          -- Регистрационный номер обработчика
+    CPRMS                   clob,            -- Входные параметры
+    CRES                    out clob         -- Результат работы
   );
 
   /* Обработка запроса WEB-сервиса (JSON) */
   procedure PROCESS
   (
-    CPRMS                clob                -- Параметры запроса
+    CPRMS                   clob             -- Параметры запроса
   );
 
 end;
@@ -197,7 +197,7 @@ create or replace package body UDO_PKG_WEB_API as
   /* Авторизация для обработки запросос WEB-сервиса */
   function AUTHORIZE
   (
-    SPROCEDURE           varchar2            -- Имя исполняемой процедуры
+    SPROCEDURE              varchar2         -- Имя исполняемой процедуры
   ) return boolean 
   is
   begin
@@ -221,12 +221,12 @@ create or replace package body UDO_PKG_WEB_API as
   /* Конвертация строковых значений в числовые для целей WEB-представления */
   function UTL_CONVERT_TO_NUMBER
   (
-    SSTR                 varchar2,           -- Конвертируемая строка (разрядность 17.5, допускается передавать пробелы в качестве разделителя групп разрядов (но не другие символы!), допускается передавать в качестве разделителя целой и дробной части "." или ",", отрицательные обрабатываются корректно с минусом спереди, автоматически удаляются некоторые спец-символы)
-    NSMART               number := 0         -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
+    SSTR                    varchar2,         -- Конвертируемая строка (разрядность 17.5, допускается передавать пробелы в качестве разделителя групп разрядов (но не другие символы!), допускается передавать в качестве разделителя целой и дробной части "." или ",", отрицательные обрабатываются корректно с минусом спереди, автоматически удаляются некоторые спец-символы)
+    NSMART                  number := 0       -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
   ) return number 
   is
-    STMP                 PKG_STD.TLSTRING;   -- Буфер для конвертации
-    NTMP                 number;             -- Буфер для конвертации
+    STMP                    PKG_STD.TLSTRING; -- Буфер для конвертации
+    NTMP                    PKG_STD.TLNUMBER; -- Буфер для конвертации
   begin
     /* Конвертируем */
     begin
@@ -246,13 +246,13 @@ create or replace package body UDO_PKG_WEB_API as
   /* Конвертация числовых значений в строковые для целей WEB-представления */
   function UTL_CONVERT_TO_STRING
   (
-    NNUMB                number,             -- Конвертируемое число
-    NSEPARATE            number := 0,        -- Разделять разряды (0 - нет, 1 - да)
-    NSHARP               number := 2         -- Точность (кол-во знаков после запятой, только для NSEPARATE = 1)
+    NNUMB                   number,          -- Конвертируемое число
+    NSEPARATE               number := 0,     -- Разделять разряды (0 - нет, 1 - да)
+    NSHARP                  number := 2      -- Точность (кол-во знаков после запятой, только для NSEPARATE = 1)
   ) return varchar2 
   is
-    SPATTERN             varchar2(200);      -- Шаблон для конвертации с разделителями
-    SRES                 PKG_STD.TSTRING;
+    SPATTERN                PKG_STD.TSTRING; -- Шаблон для конвертации с разделителями
+    SRES                    PKG_STD.TSTRING; -- Результат работы
   begin
     /* Простой перевод в строку, без разделителей */
     if (NSEPARATE = 0) then
@@ -278,12 +278,12 @@ create or replace package body UDO_PKG_WEB_API as
   /* Конвертация строки в дату для целей WEB-представления */
   function UTL_CONVERT_TO_DATE
   (
-    NSMART               number,             -- Признак выдачи сообщения об ошибке
-    SDATE                varchar2,           -- Дата (строковое представление)
-    SERR_MSG             varchar2 := null    -- Сообщение об ошибке конвертации
+    NSMART                  number,          -- Признак выдачи сообщения об ошибке
+    SDATE                   varchar2,        -- Дата (строковое представление)
+    SERR_MSG                varchar2 := null -- Сообщение об ошибке конвертации
   ) return date 
   is
-    DRESULT              date;               -- Результат работы
+    DRESULT                 PKG_STD.TLDATE;  -- Результат работы
   begin
     /* Конвертируем в зависимости от возможных разделителей */
     begin
@@ -306,11 +306,11 @@ create or replace package body UDO_PKG_WEB_API as
   /* Считывание записи отчета */
   function UTL_RPT_GET
   (
-    NREPORT              number               -- Регистрационный номер отчета
-   ,NSMART               number := 0          -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
+    NREPORT                 number               -- Регистрационный номер отчета
+   ,NSMART                  number := 0          -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
   ) return USERREPORTS%rowtype 
   is
-    RES                  USERREPORTS%rowtype; -- Результат работы
+    RES                     USERREPORTS%rowtype; -- Результат работы
   begin
     /* Считаем данные */
     begin
@@ -327,11 +327,11 @@ create or replace package body UDO_PKG_WEB_API as
   /* Считывание записи очереди печати отчетов */
   function UTL_RPTQ_GET
   (
-    NREPORTQ             number               -- Регистрационный номер позиции очереди печати отчетов
-   ,NSMART               number := 0          -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
+    NREPORTQ                number               -- Регистрационный номер позиции очереди печати отчетов
+   ,NSMART                  number := 0          -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
   ) return RPTPRTQUEUE%rowtype 
   is
-    RES                  RPTPRTQUEUE%rowtype; -- Результат работы
+    RES                     RPTPRTQUEUE%rowtype; -- Результат работы
   begin
     /* Считаем данные */
     begin
@@ -348,13 +348,13 @@ create or replace package body UDO_PKG_WEB_API as
   /* Формирование имени файла готового отчета */
   function UTL_RPTQ_BUILD_FILE_NAME
   (
-    NREPORTQ             number               -- Регистрационный номер позиции очереди
+    NREPORTQ                number               -- Регистрационный номер позиции очереди
   ) return varchar2 
   is
-    RPTQ_REC             RPTPRTQUEUE%rowtype; -- Запись позиции очереди
-    RPT_REC              USERREPORTS%rowtype; -- Запись отчета
-    SEXT                 PKG_STD.TSTRING;     -- Расширение файла
-    SFILE_NAME           PKG_STD.TSTRING;     -- Имя файла отчета
+    RPTQ_REC                RPTPRTQUEUE%rowtype; -- Запись позиции очереди
+    RPT_REC                 USERREPORTS%rowtype; -- Запись отчета
+    SEXT                    PKG_STD.TSTRING;     -- Расширение файла
+    SFILE_NAME              PKG_STD.TSTRING;     -- Имя файла отчета
   begin
     /* Cчитаем запись позиции очереди */
     RPTQ_REC := UTL_RPTQ_GET(NREPORTQ => NREPORTQ);
@@ -383,7 +383,7 @@ create or replace package body UDO_PKG_WEB_API as
   /* Преобразование имени файла для использования в HTML-заголовке */
   function UTL_PREPARE_FILENAME
   (
-    SFILE_NAME           varchar2            -- Имя файла
+    SFILE_NAME              varchar2         -- Имя файла
   ) return varchar2 
   is
   begin
@@ -397,10 +397,10 @@ create or replace package body UDO_PKG_WEB_API as
   /* Транслитерация русской строки в английскую */
   function RESP_TRANSLATE_MSG
   (
-    SSTR_RU              varchar2            -- Строка с русскими символами (CL8MSWIN1251)
+    SSTR_RU                 varchar2         -- Строка с русскими символами (CL8MSWIN1251)
   ) return varchar2 
   is
-    SRES                 varchar2(4000);     -- Результат работы
+    SRES                    varchar2(4000);  -- Результат работы
   begin
     /* Выполним транслитерацию */
     SRES := TRANSLATE(UPPER(SSTR_RU), 'АБВГДЕЗИЙКЛМНОПРСТУФЬЫЪЭ', 'ABVGDEZIJKLMNOPRSTUF''Y''E');
@@ -420,13 +420,13 @@ create or replace package body UDO_PKG_WEB_API as
   /* Нормализация сообщения об ошибке */
   function RESP_CORRECT_ERR
   (
-    SERR                 varchar2                -- Ненормальзованное сообщени об ошибке
+    SERR                    varchar2                -- Ненормальзованное сообщени об ошибке
   ) return varchar2 
   is
-    STMP                 varchar2(4000) := SERR; -- Буфер для расчетов
-    SRES                 varchar2(4000);         -- Результат
-    NB                   number;                 -- Начало интервала
-    NE                   number;                 -- Окончание интервала
+    STMP                    varchar2(4000) := SERR; -- Буфер для расчетов
+    SRES                    varchar2(4000);         -- Результат
+    NB                      number;                 -- Начало интервала
+    NE                      number;                 -- Окончание интервала
   begin
     begin
       /* Пока есть рудименты */
@@ -451,12 +451,12 @@ create or replace package body UDO_PKG_WEB_API as
   /* Формирование стандартного ответа сервиса */
   function RESP_MAKE
   (
-    NRESP_FORMAT         number,             -- Формат ответа (0 - JSON, 1 - XML)
-    NRESP_STATE          number,             -- Тип ответа (0 - ошибка, 1 - успех)
-    SRESP_MSG            varchar2            -- Сообщение
+    NRESP_FORMAT            number,          -- Формат ответа (0 - JSON, 1 - XML)
+    NRESP_STATE             number,          -- Тип ответа (0 - ошибка, 1 - успех)
+    SRESP_MSG               varchar2         -- Сообщение
   ) return clob 
   is
-    CRESP                clob;               -- Текст ответа
+    CRESP                   clob;            -- Текст ответа
   begin
     /* Откроем буфер */
     DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRESP, CACHE => false);
@@ -506,9 +506,9 @@ create or replace package body UDO_PKG_WEB_API as
   /* Разбор стандартного ответа сервера (в JSON) */
   procedure RESP_PARSE
   (
-    CJSON                clob,               -- Данные ответа
-    NRESP_TYPE           out number,         -- Тип ответа (0 - ошибка, 1 - успех, null - CJSON не является стандартным ответом сервера)
-    SRESP_MSG            out varchar2        -- Сообщение сервера
+    CJSON                   clob,            -- Данные ответа
+    NRESP_TYPE              out number,      -- Тип ответа (0 - ошибка, 1 - успех, null - CJSON не является стандартным ответом сервера)
+    SRESP_MSG               out varchar2     -- Сообщение сервера
   ) 
   is
     JRESP JSON;
@@ -540,16 +540,16 @@ create or replace package body UDO_PKG_WEB_API as
   /* Выдача ответа WEB-серверу (в теле HTTP-ответа) */
   procedure RESP_PUBLISH
   (
-    CDATA                clob,                    -- Данные
-    SCONTENT_TYPE        varchar2 := 'text/json', -- MIME-Type для данных
-    SCHARSET             varchar2 := 'UTF-8'      -- Кодировка
+    CDATA                   clob,                    -- Данные
+    SCONTENT_TYPE           varchar2 := 'text/json', -- MIME-Type для данных
+    SCHARSET                varchar2 := 'UTF-8'      -- Кодировка
   )
   is
-    NTOTLEN              number(17);              -- Общее кол-во символов к передаче
-    NREST                number(17);              -- Остаток символов к передаче
-    NBLEN                number(17) := 2000;      -- Длина строкового буфера (порция)
-    STMP                 varchar2(2000);          -- Cтроковый буфер
-    NI                   number(17) := 0;         -- Cчетчик передач
+    NTOTLEN                 number(17);              -- Общее кол-во символов к передаче
+    NREST                   number(17);              -- Остаток символов к передаче
+    NBLEN                   number(17) := 2000;      -- Длина строкового буфера (порция)
+    STMP                    varchar2(2000);          -- Cтроковый буфер
+    NI                      number(17) := 0;         -- Cчетчик передач
   begin
     /* Если есть данные */
     if ((CDATA is not null) and (DBMS_LOB.GETLENGTH(CDATA) > 0)) then
@@ -578,12 +578,12 @@ create or replace package body UDO_PKG_WEB_API as
   /* Выдача ответа WEB-серверу (в виде файла для скачивания) */
   procedure RESP_DOWNLOAD
   (
-    BDATA                in out nocopy blob,                    -- Данные
-    SFILE_NAME           varchar2,                              -- Имя файла
-    SCONTENT_TYPE        varchar2 := 'application/octet-stream' -- MIME-Type для данных
+    BDATA                   in out nocopy blob,                    -- Данные
+    SFILE_NAME              varchar2,                              -- Имя файла
+    SCONTENT_TYPE           varchar2 := 'application/octet-stream' -- MIME-Type для данных
   )
   is
-    NTOTLEN              number(17);                            -- Общее кол-во символов к передаче
+    NTOTLEN                 number(17);                            -- Общее кол-во символов к передаче
   begin
     /* Если есть данные */
     if ((BDATA is not null) and (DBMS_LOB.GETLENGTH(BDATA) > 0)) then
@@ -611,7 +611,7 @@ create or replace package body UDO_PKG_WEB_API as
   /* Проверка актуальности сессии */
   procedure SESSION_VALIDATE
   (
-    SSESSION             varchar2            -- Идентификатор сессии
+    SSESSION                varchar2         -- Идентификатор сессии
   )
   is
   begin
@@ -625,12 +625,12 @@ create or replace package body UDO_PKG_WEB_API as
   /* Считывание записи обработчика */
   function WEB_API_ACTIONS_GET
   (
-    NRN                  number,                        -- Регистрационный номер записи
-    NSMART               number := 0                    -- Признак выдачи сообщения об ошибке
+    NRN                     number,                        -- Регистрационный номер записи
+    NSMART                  number := 0                    -- Признак выдачи сообщения об ошибке
   ) return UDO_T_WEB_API_ACTIONS%rowtype
   is
-    RES                  UDO_T_WEB_API_ACTIONS%rowtype; -- Результат работы
-    SERR                 varchar2(4000);                -- Буфер для ошибок
+    RES                     UDO_T_WEB_API_ACTIONS%rowtype; -- Результат работы
+    SERR                    varchar2(4000);                -- Буфер для ошибок
   begin
     /* Считаем запись */
     begin
@@ -650,12 +650,12 @@ create or replace package body UDO_PKG_WEB_API as
   /* Считывание записи обработчика (по коду действия) */
   function WEB_API_ACTIONS_GET
   (
-    SACTION              varchar2,                      -- Код действия
-    NSMART               number := 0                    -- Признак выдачи сообщения об ошибке
+    SACTION                 varchar2,                      -- Код действия
+    NSMART                  number := 0                    -- Признак выдачи сообщения об ошибке
   ) return UDO_T_WEB_API_ACTIONS%rowtype
   is
-    RES                  UDO_T_WEB_API_ACTIONS%rowtype; -- Результат работы
-    SERR                 varchar2(4000);                -- Буфер для ошибок
+    RES                     UDO_T_WEB_API_ACTIONS%rowtype; -- Результат работы
+    SERR                    varchar2(4000);                -- Буфер для ошибок
   begin
     /* Считаем запись */
     begin
@@ -677,16 +677,16 @@ create or replace package body UDO_PKG_WEB_API as
   /* Запуск обработчика действия */
   procedure WEB_API_ACTIONS_PROCESS
   (
-    NRN                  number,                        -- Регистрационный номер обработчика
-    CPRMS                clob,                          -- Входные параметры
-    CRES                 out clob                       -- Результат работы
+    NRN                     number,                        -- Регистрационный номер обработчика
+    CPRMS                   clob,                          -- Входные параметры
+    CRES                    out clob                       -- Результат работы
   )
   is
-    ACTPROC              UDO_T_WEB_API_ACTIONS%rowtype; -- Запись обработчика действия
-    SSQL                 varchar2(4000);                -- Исполняемый запрос
-    NCUR                 integer;                       -- Курсор для запроса
-    NRES                 integer;                       -- Результат исполнения запроса
-    SERR                 varchar2(4000);                -- Буфер для ошибок
+    ACTPROC                 UDO_T_WEB_API_ACTIONS%rowtype; -- Запись обработчика действия
+    SSQL                    varchar2(4000);                -- Исполняемый запрос
+    NCUR                    integer;                       -- Курсор для запроса
+    NRES                    integer;                       -- Результат исполнения запроса
+    SERR                    varchar2(4000);                -- Буфер для ошибок
   begin
     /* Считаем обработчик */
     ACTPROC := WEB_API_ACTIONS_GET(NRN => NRN);
@@ -734,23 +734,23 @@ create or replace package body UDO_PKG_WEB_API as
   /* Обработка запроса WEB-сервиса (JSON) */
   procedure PROCESS
   (
-    CPRMS                clob                               -- Параметры запроса
+    CPRMS                   clob                               -- Параметры запроса
   )
   is
-    SCANNER_EXCEPTION    exception;                         -- Ошибка JSON-сканера
-    pragma exception_init(SCANNER_EXCEPTION, -20100);       -- Инициализация ошибки JSON-сканера
-    PARSER_EXCEPTION     exception;                         -- Ошибка JSON-парсера
-    pragma exception_init(PARSER_EXCEPTION, -20101);        -- Инициализация ошибки JSON-парсера
-    JEXT_EXCEPTION       exception;                         -- Ошибка JSON-расширений
-    pragma exception_init(JEXT_EXCEPTION, -20110);          -- Инициализация ошибки JSON-расширений
-    JPRMS                JSON;                              -- Объектное представление параметров запроса
-    CRES                 clob;                              -- Текстовое представление ответа
-    SERR                 varchar2(4000);                    -- Буфер для ошибок
-    SACTION              UDO_T_WEB_API_ACTIONS.ACTION%type; -- Код действия запроса
-    ACTPROC              UDO_T_WEB_API_ACTIONS%rowtype;     -- Запись обработчика действия
-    BDOWNLOAD            boolean := false;                  -- Вризнак возможности выгрузки данных
-    BDOWNLOAD_BUFFER     blob;                              -- Буфер для выгружаемого файла
-    SDOWNLOAD_FILE_NAME  varchar2(4000);                    -- Имя выгружаемого файла    
+    SCANNER_EXCEPTION       exception;                         -- Ошибка JSON-сканера
+    pragma exception_init(SCANNER_EXCEPTION, -20100);          -- Инициализация ошибки JSON-сканера
+    PARSER_EXCEPTION        exception;                         -- Ошибка JSON-парсера
+    pragma exception_init(PARSER_EXCEPTION, -20101);           -- Инициализация ошибки JSON-парсера
+    JEXT_EXCEPTION          exception;                         -- Ошибка JSON-расширений
+    pragma exception_init(JEXT_EXCEPTION, -20110);             -- Инициализация ошибки JSON-расширений
+    JPRMS                   JSON;                              -- Объектное представление параметров запроса
+    CRES                    clob;                              -- Текстовое представление ответа
+    SERR                    varchar2(4000);                    -- Буфер для ошибок
+    SACTION                 UDO_T_WEB_API_ACTIONS.ACTION%type; -- Код действия запроса
+    ACTPROC                 UDO_T_WEB_API_ACTIONS%rowtype;     -- Запись обработчика действия
+    BDOWNLOAD               boolean := false;                  -- Вризнак возможности выгрузки данных
+    BDOWNLOAD_BUFFER        blob;                              -- Буфер для выгружаемого файла
+    SDOWNLOAD_FILE_NAME     varchar2(4000);                    -- Имя выгружаемого файла    
   begin
     /* Инициализация ответа */
     DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
@@ -839,9 +839,9 @@ create or replace package body UDO_PKG_WEB_API as
         /* Спецдействие - Выгрузка файла (обрабатывается непосредственно здесь, в ядре) */
         when SACTION_DOWNLOAD then
           declare
-            SFILE_TYPE   PKG_STD.TSTRING;     -- Тип выгружаемого файла
-            NFILE_RN     PKG_STD.TREF;        -- Рег. номер выгружаемого файла   
-            RPTQ         RPTPRTQUEUE%rowtype; -- Выгружаемая позиция очереди
+            SFILE_TYPE PKG_STD.TSTRING;     -- Тип выгружаемого файла
+            NFILE_RN   PKG_STD.TREF;        -- Рег. номер выгружаемого файла   
+            RPTQ       RPTPRTQUEUE%rowtype; -- Выгружаемая позиция очереди
           begin
             /* Считаем тип файла */
             if ((not JPRMS.EXIST(SREQ_FILE_TYPE_KEY)) or (JPRMS.GET(SREQ_FILE_TYPE_KEY).VALUE_OF is null)) then
