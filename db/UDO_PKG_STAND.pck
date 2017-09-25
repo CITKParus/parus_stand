@@ -4,81 +4,88 @@
   */
 
   /* Константы описания склада */
-  SSTORE_PRODUCE       AZSAZSLISTMT.AZS_NUMBER%type := 'Производство'; -- Склад производства готовой продукции
-  SSTORE_GOODS         AZSAZSLISTMT.AZS_NUMBER%type := 'СГП'; -- Склад отгрузки готовой продукции
-  SRACK_PREF           STPLRACKS.PREF%type := 'АВТОМАТ'; -- Префикс стеллажа склада отгрузки готовой продукции
-  SRACK_NUMB           STPLRACKS.NUMB%type := '1'; -- Номер стеллажа склада отгрузки готовой продукции
-  SRACK_CELL_PREF_TMPL STPLCELLS.PREF%type := 'ЯРУС'; -- Шаблон префикса места хранения
-  SRACK_CELL_NUMB_TMPL STPLCELLS.NUMB%type := 'МЕСТО'; -- Шаблон номера места зранения
-  NRACK_LINES          number(17) := 1; -- Количество ярусов стеллажа
-  NRACK_LINE_CELLS     number(17) := 3; -- Количество ячеек (мест хранения) в ярусе
-  NRACK_CELL_CAPACITY  number(17) := 2; -- Максимальное количество номенклатуры в ячейке хранения
-  NRACK_CELL_SHIP_CNT  number(17) := 1; -- Количество номенклатуры, отгружаемое потребителю за одну транзакцию
+  SSTORE_PRODUCE            AZSAZSLISTMT.AZS_NUMBER%type := 'Производство';             -- Склад производства готовой продукции
+  SSTORE_GOODS              AZSAZSLISTMT.AZS_NUMBER%type := 'СГП';                      -- Склад отгрузки готовой продукции
+  SRACK_PREF                STPLRACKS.PREF%type := 'АВТОМАТ';                           -- Префикс стеллажа склада отгрузки готовой продукции
+  SRACK_NUMB                STPLRACKS.NUMB%type := '1';                                 -- Номер стеллажа склада отгрузки готовой продукции
+  SRACK_CELL_PREF_TMPL      STPLCELLS.PREF%type := 'ЯРУС';                              -- Шаблон префикса места хранения
+  SRACK_CELL_NUMB_TMPL      STPLCELLS.NUMB%type := 'МЕСТО';                             -- Шаблон номера места зранения
+  NRACK_LINES               PKG_STD.TNUMBER := 1;                                       -- Количество ярусов стеллажа
+  NRACK_LINE_CELLS          PKG_STD.TNUMBER := 3;                                       -- Количество ячеек (мест хранения) в ярусе
+  NRACK_CELL_CAPACITY       PKG_STD.TNUMBER := 2;                                       -- Максимальное количество номенклатуры в ячейке хранения
+  NRACK_CELL_SHIP_CNT       PKG_STD.TNUMBER := 1;                                       -- Количество номенклатуры, отгружаемое потребителю за одну транзакцию
 
   /* Константы описания движения по складу */
-  SDEF_STORE_MOVE_IN  AZSGSMWAYSTYPES.GSMWAYS_MNEMO%type := 'Приход внутренний'; -- Операция прихода по умолчанию
-  SDEF_STORE_MOVE_OUT AZSGSMWAYSTYPES.GSMWAYS_MNEMO%type := 'Расход внешний'; -- Операция расхода по умолчанию
-  SDEF_STORE_PARTY    INCOMDOC.CODE%type := 'Готовая продукция'; -- Партия по умолчанию
-  SDEF_FACE_ACC       FACEACC.NUMB%type := 'Универсальный'; -- Лицевой счет по умолчанию
-  SDEF_TARIF          DICTARIF.CODE%type := 'Базовый'; -- Тариф по умолчанию
-  SDEF_SHEEP_VIEW     DICSHPVW.CODE%type := 'Самовывоз'; -- Вид отгрузки по умолчанию
-  SDEF_PAY_TYPE       AZSGSMPAYMENTSTYPES.GSMPAYMENTS_MNEMO%type := 'Без оплаты'; -- Вид оплаты по умолчанию
-  SDEF_TAX_GROUP      DICTAXGR.CODE%type := 'Без налогов'; -- Налоговая группа по умолчанию
-  SDEF_NOMEN          DICNOMNS.NOMEN_CODE%type := 'Жевательная резинка'; -- Номенклатура по умолчанию
-  SDEF_NOMEN_MODIF    NOMMODIF.MODIF_CODE%type := 'Orbit'; -- Модификация номенклатуры по умолчанию
+  SDEF_STORE_MOVE_IN        AZSGSMWAYSTYPES.GSMWAYS_MNEMO%type := 'Приход внутренний';  -- Операция прихода по умолчанию
+  SDEF_STORE_MOVE_OUT       AZSGSMWAYSTYPES.GSMWAYS_MNEMO%type := 'Расход внешний';     -- Операция расхода по умолчанию
+  SDEF_STORE_PARTY          INCOMDOC.CODE%type := 'Готовая продукция';                  -- Партия по умолчанию
+  SDEF_FACE_ACC             FACEACC.NUMB%type := 'Универсальный';                       -- Лицевой счет по умолчанию
+  SDEF_TARIF                DICTARIF.CODE%type := 'Базовый';                            -- Тариф по умолчанию
+  SDEF_SHEEP_VIEW           DICSHPVW.CODE%type := 'Самовывоз';                          -- Вид отгрузки по умолчанию
+  SDEF_PAY_TYPE             AZSGSMPAYMENTSTYPES.GSMPAYMENTS_MNEMO%type := 'Без оплаты'; -- Вид оплаты по умолчанию
+  SDEF_TAX_GROUP            DICTAXGR.CODE%type := 'Без налогов';                        -- Налоговая группа по умолчанию
+  SDEF_NOMEN                DICNOMNS.NOMEN_CODE%type := 'Жевательная резинка';          -- Номенклатура по умолчанию
+  SDEF_NOMEN_MODIF          NOMMODIF.MODIF_CODE%type := 'Orbit';                        -- Модификация номенклатуры по умолчанию
 
   /* Константы описания приходов */
-  SINCDEPS_TYPE DOCTYPES.DOCCODE%type := 'ПНП'; -- Тип документа "Приход из подразделений"
-  SINCDEPS_PREF INCOMEFROMDEPS.DOC_PREF%type := 'ПНП'; -- Префикс документа "Приход из подразделений"
+  SINCDEPS_TYPE             DOCTYPES.DOCCODE%type := 'ПНП';                             -- Тип документа "Приход из подразделений"
+  SINCDEPS_PREF             INCOMEFROMDEPS.DOC_PREF%type := 'ПНП';                      -- Префикс документа "Приход из подразделений"
 
   /* Константы описания расходов */
-  STRINVCUST_TYPE DOCTYPES.DOCCODE%type := 'РНОП'; -- Тип документа "Расходная накладная на отпуск потребителям"
-  STRINVCUST_PREF INCOMEFROMDEPS.DOC_PREF%type := 'РНОП'; -- Префикс документа "Расходная накладная на отпуск потребителям"
+  STRINVCUST_TYPE           DOCTYPES.DOCCODE%type := 'РНОП';                            -- Тип документа "Расходная накладная на отпуск потребителям"
+  STRINVCUST_PREF           INCOMEFROMDEPS.DOC_PREF%type := 'РНОП';                     -- Префикс документа "Расходная накладная на отпуск потребителям"
 
   /* Загрузка стенда товаром */
-  procedure LOAD(NCOMPANY number -- Регистрационный номер организации 
-                 );
+  procedure LOAD
+  (
+    NCOMPANY                number      -- Регистрационный номер организации 
+  );
 
   /* Откат последней загрузки стенда */
-  procedure LOAD_ROLLBACK(NCOMPANY number -- Регистрационный номер организации
-                          );
+  procedure LOAD_ROLLBACK
+  (
+    NCOMPANY                number      -- Регистрационный номер организации
+  );
 
   /* Отгрузка со стенда посетителю */
   procedure SHIPMENT
   (
-    NCOMPANY        number, -- Регистрационный номер организации
-    SCUSTOMER       varchar2, -- Мнемокод контрагента-покупателя
-    NRACK_LINE      number, -- Номер яруса стеллажа стенда
-    NRACK_LINE_CELL number -- Номер ячейки в ярусе стеллажа стенда
+    NCOMPANY                number,     -- Регистрационный номер организации
+    SCUSTOMER               varchar2,   -- Мнемокод контрагента-покупателя
+    NRACK_LINE              number,     -- Номер яруса стеллажа стенда
+    NRACK_LINE_CELL         number      -- Номер ячейки в ярусе стеллажа стенда
   );
 
   /* Откат отгрузки со стенда */
   procedure SHIPMENT_ROLLBACK
   (
-    NCOMPANY      number, -- Регистрационный номер организации
-    NTRANSINVCUST number -- Регистрационный номер отгрузочной РНОП
+    NCOMPANY               number,      -- Регистрационный номер организации
+    NTRANSINVCUST          number       -- Регистрационный номер отгрузочной РНОП
   );
 end;
 /
 create or replace package body UDO_PKG_STAND as
 
   /* Загрузка стенда товаром */
-  procedure LOAD(NCOMPANY number -- Регистрационный номер организации 
-                 ) is
-    NCRN                INCOMEFROMDEPS.RN%type; -- Каталог размещения документов "Приход из подразделения"
-    NJUR_PERS           JURPERSONS.RN%type; -- Регистрационный номер юридического лица "Прихода из подразделения" (основное ЮЛ организации)
-    SJUR_PERS           JURPERSONS.CODE%type; -- Мнемокод номер юридического лица "Прихода из подразделения" (основное ЮЛ организации)
-    SDOC_NUMB           INCOMEFROMDEPS.DOC_NUMB%type; -- Номер формируемого "Прихода из подразделения"
-    SOUT_DEPARTMENT     INS_DEPARTMENT.CODE%type; -- Подразделение-отправитель формируемого "Прихода из подразделения"
-    SAGENT              AGNLIST.AGNABBR%type; -- МОЛ формируемого "Прихода из подразделения"
-    SCURRENCY           CURNAMES.CURCODE%type; -- Валюта формируемого "Прихода из подразделения" (базовая валюта организации)
-    NNOMMODIF           NOMMODIF.RN%type; -- Рег. номер отгружаемой модификации номенклатуры
-    NQUANT              INCOMEFROMDEPSSPEC.QUANT_PLAN%type; -- Количество номенклатуры в формируемом "Прихода из подразделения"
-    NINCOMEFROMDEPS     INCOMEFROMDEPS.RN%type; -- Рег. номер сформированного "Прихода из подразделения"
-    NINCOMEFROMDEPSSPEC INCOMEFROMDEPSSPEC.RN%type; -- Рег. номер сформированной позиции спецификации "Прихода из подразделения"
-    NSTRPLRESJRNL       STRPLRESJRNL.RN%type; -- Рег. номер сформированной записи резервирования по местам хранения
-    NWARNING            PKG_STD.TREF; -- Флаг предупреждения процедуры отработки прихода
-    SMSG                PKG_STD.TSTRING; -- Текст сообщения процедуры отработки прихода
+  procedure LOAD
+  (
+   NCOMPANY                 number                              -- Регистрационный номер организации 
+  ) 
+  is
+    NCRN                    INCOMEFROMDEPS.RN%type;             -- Каталог размещения документов "Приход из подразделения"
+    NJUR_PERS               JURPERSONS.RN%type;                 -- Регистрационный номер юридического лица "Прихода из подразделения" (основное ЮЛ организации)
+    SJUR_PERS               JURPERSONS.CODE%type;               -- Мнемокод номер юридического лица "Прихода из подразделения" (основное ЮЛ организации)
+    SDOC_NUMB               INCOMEFROMDEPS.DOC_NUMB%type;       -- Номер формируемого "Прихода из подразделения"
+    SOUT_DEPARTMENT         INS_DEPARTMENT.CODE%type;           -- Подразделение-отправитель формируемого "Прихода из подразделения"
+    SAGENT                  AGNLIST.AGNABBR%type;               -- МОЛ формируемого "Прихода из подразделения"
+    SCURRENCY               CURNAMES.CURCODE%type;              -- Валюта формируемого "Прихода из подразделения" (базовая валюта организации)
+    NNOMMODIF               NOMMODIF.RN%type;                   -- Рег. номер отгружаемой модификации номенклатуры
+    NQUANT                  INCOMEFROMDEPSSPEC.QUANT_PLAN%type; -- Количество номенклатуры в формируемом "Прихода из подразделения"
+    NINCOMEFROMDEPS         INCOMEFROMDEPS.RN%type;             -- Рег. номер сформированного "Прихода из подразделения"
+    NINCOMEFROMDEPSSPEC     INCOMEFROMDEPSSPEC.RN%type;         -- Рег. номер сформированной позиции спецификации "Прихода из подразделения"
+    NSTRPLRESJRNL           STRPLRESJRNL.RN%type;               -- Рег. номер сформированной записи резервирования по местам хранения
+    NWARNING                PKG_STD.TREF;                       -- Флаг предупреждения процедуры отработки прихода
+    SMSG                    PKG_STD.TSTRING;                    -- Текст сообщения процедуры отработки прихода
   begin
     /* Определим рег. номер каталога */
     FIND_ROOT_CATALOG(NCOMPANY => NCOMPANY, SCODE => 'IncomFromDeps', NCRN => NCRN);
@@ -252,11 +259,14 @@ create or replace package body UDO_PKG_STAND as
   end;
 
   /* Откат последней загрузки стенда */
-  procedure LOAD_ROLLBACK(NCOMPANY number -- Регистрационный номер организации
-                          ) is
-    NINCOMEFROMDEPS INCOMEFROMDEPS.RN%type; -- Рег. номер расформируемого "Прихода из подразделения"
-    NWARNING        PKG_STD.TREF; -- Флаг предупреждения процедуры отработки прихода
-    SMSG            PKG_STD.TSTRING; -- Текст сообщения процедуры отработки прихода
+  procedure LOAD_ROLLBACK
+  (
+    NCOMPANY                number                  -- Регистрационный номер организации
+  ) 
+  is
+    NINCOMEFROMDEPS         INCOMEFROMDEPS.RN%type; -- Рег. номер расформируемого "Прихода из подразделения"
+    NWARNING                PKG_STD.TREF;           -- Флаг предупреждения процедуры отработки прихода
+    SMSG                    PKG_STD.TSTRING;        -- Текст сообщения процедуры отработки прихода
   begin
     /* Находим последнюю загрузку */
     begin
@@ -316,24 +326,24 @@ create or replace package body UDO_PKG_STAND as
   /* Отгрузка со стенда посетителю */
   procedure SHIPMENT
   (
-    NCOMPANY        number, -- Регистрационный номер организации
-    SCUSTOMER       varchar2, -- Мнемокод контрагента-покупателя
-    NRACK_LINE      number, -- Номер яруса стеллажа стенда
-    NRACK_LINE_CELL number -- Номер ячейки в ярусе стеллажа стенда
+    NCOMPANY                number,                    -- Регистрационный номер организации
+    SCUSTOMER               varchar2,                  -- Мнемокод контрагента-покупателя
+    NRACK_LINE              number,                    -- Номер яруса стеллажа стенда
+    NRACK_LINE_CELL         number                     -- Номер ячейки в ярусе стеллажа стенда
   ) is
-    NCRN               INCOMEFROMDEPS.RN%type; -- Каталог размещения РНОП
-    NJUR_PERS          JURPERSONS.RN%type; -- Регистрационный номер юридического лица РНОП (основное ЮЛ организации)
-    SJUR_PERS          JURPERSONS.CODE%type; -- Мнемокод номер юридического лица РНОП (основное ЮЛ организации)
-    SCURRENCY          CURNAMES.CURCODE%type; -- Валюта формируемого РНОП (базовая валюта организации)
-    NNOMMODIF          NOMMODIF.RN%type; -- Рег. номер отгружаемой модификации номенклатуры
-    SNUMB              TRANSINVCUST.NUMB%type; -- Номер формируемого РНОП
-    SMOL               AGNLIST.AGNABBR%type; -- МОЛ склада отгрузки РНОП
-    SMSG               PKG_STD.TSTRING; -- Текст сообщения процедуры добавления РНОП/спецификации РНОП/отработки РНОП
-    NTRANSINVCUST      TRANSINVCUST.RN%type; -- Регистрационный номер сформированной РНОП
-    NTRANSINVCUSTSPECS TRANSINVCUSTSPECS.RN%type; -- Регистрационный номер сформированной спецификации РНОП
-    NGOODSSUPPLY       GOODSSUPPLY.RN%type; -- Регистрационный номер товарного запаса для резервирования
-    NSTRPLRESJRNL      STRPLRESJRNL.RN%type; -- Регистрационный номер сформированной записи резервирования по местам хранения
-    NTMP_QUANT         PKG_STD.TQUANT; -- Буфер для количества номенклатуры в товарном запасе
+    NCRN                    INCOMEFROMDEPS.RN%type;    -- Каталог размещения РНОП
+    NJUR_PERS               JURPERSONS.RN%type;        -- Регистрационный номер юридического лица РНОП (основное ЮЛ организации)
+    SJUR_PERS               JURPERSONS.CODE%type;      -- Мнемокод номер юридического лица РНОП (основное ЮЛ организации)
+    SCURRENCY               CURNAMES.CURCODE%type;     -- Валюта формируемого РНОП (базовая валюта организации)
+    NNOMMODIF               NOMMODIF.RN%type;          -- Рег. номер отгружаемой модификации номенклатуры
+    SNUMB                   TRANSINVCUST.NUMB%type;    -- Номер формируемого РНОП
+    SMOL                    AGNLIST.AGNABBR%type;      -- МОЛ склада отгрузки РНОП
+    SMSG                    PKG_STD.TSTRING;           -- Текст сообщения процедуры добавления РНОП/спецификации РНОП/отработки РНОП
+    NTRANSINVCUST           TRANSINVCUST.RN%type;      -- Регистрационный номер сформированной РНОП
+    NTRANSINVCUSTSPECS      TRANSINVCUSTSPECS.RN%type; -- Регистрационный номер сформированной спецификации РНОП
+    NGOODSSUPPLY            GOODSSUPPLY.RN%type;       -- Регистрационный номер товарного запаса для резервирования
+    NSTRPLRESJRNL           STRPLRESJRNL.RN%type;      -- Регистрационный номер сформированной записи резервирования по местам хранения
+    NTMP_QUANT              PKG_STD.TQUANT;            -- Буфер для количества номенклатуры в товарном запасе
   begin
     /* Определим рег. номер каталога */
     FIND_ROOT_CATALOG(NCOMPANY => NCOMPANY, SCODE => 'GoodsTransInvoicesToConsumers', NCRN => NCRN);
@@ -546,10 +556,10 @@ create or replace package body UDO_PKG_STAND as
   /* Откат отгрузки со стенда */
   procedure SHIPMENT_ROLLBACK
   (
-    NCOMPANY      number, -- Регистрационный номер организации
-    NTRANSINVCUST number -- Регистрационный номер отгрузочной РНОП
+    NCOMPANY                number,          -- Регистрационный номер организации
+    NTRANSINVCUST           number           -- Регистрационный номер отгрузочной РНОП
   ) is
-    SMSG PKG_STD.TSTRING; -- Текст сообщения процедуры отработки прихода
+    SMSG                    PKG_STD.TSTRING; -- Текст сообщения процедуры отработки прихода
   begin
     /* Отменяем размещение на местах хранения */
     P_STRPLRESJRNL_GTINV2C_RLLBACK(NCOMPANY => NCOMPANY, NRN => NTRANSINVCUST, NRES_TYPE => 1);
