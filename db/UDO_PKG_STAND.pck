@@ -3,6 +3,13 @@
     Утилиты для работы стенда
   */
 
+  /* Константы описания режима работы стенда */
+  NALLOW_MULTI_SUPPLY_YES   PKG_STD.TNUMBER := 1;                                       -- Разрешать множественную отгрузку одному посетителю
+  NALLOW_MULTI_SUPPLY_NO    PKG_STD.TNUMBER := 0;                                       -- Не разрешать множественную отгрузку одному посетителю
+
+  /* Константы режима работы стенда */
+  NALLOW_MULTI_SUPPLY       PKG_STD.TNUMBER := NALLOW_MULTI_SUPPLY_YES;                 -- Возможность множественной отгрузки
+  
   /* Константы описания склада */
   SSTORE_PRODUCE            AZSAZSLISTMT.AZS_NUMBER%type := 'Производство';             -- Склад производства готовой продукции
   SSTORE_GOODS              AZSAZSLISTMT.AZS_NUMBER%type := 'СГП';                      -- Склад отгрузки готовой продукции
@@ -34,7 +41,72 @@
   /* Константы описания расходов */
   STRINVCUST_TYPE           DOCTYPES.DOCCODE%type := 'РНОП';                            -- Тип документа "Расходная накладная на отпуск потребителям"
   STRINVCUST_PREF           INCOMEFROMDEPS.DOC_PREF%type := 'РНОП';                     -- Префикс документа "Расходная накладная на отпуск потребителям"
+  
+  /* Констнаты описания состояни отгрузки посетителю стенда */
+  NAGN_SUPPLY_NOT_YET       PKG_STD.TNUMBER := 1;                                       -- Отгрузки ещё не было
+  NAGN_SUPPLY_ALREADY       PKG_STD.TNUMBER := 2;                                       -- Оггрузка уже была
+  
+  /* Констнаты описания испоьзуемых дополнительных свойств */
+  SDP_BARCODE               DOCS_PROPS.CODE%type := 'ШтрихКод';                         -- Мнемокод дополнительного свойства для храения штрихкода
 
+  /* Типы данных - складской остаток номенклатуры */
+  type TNOMEN_REST is record
+  (
+    NNOMEN                  DICNOMNS.RN%type,                                           -- Регистрационный номер номенклатуры остатка
+    SNOMEN                  DICNOMNS.NOMEN_CODE%type,                                   -- Мнемокод номенклатуры остатка
+    NNOMMODIF               NOMMODIF.RN%type,                                           -- Регистрационный номер модификации номенклатуры остатка
+    SNOMMODIF               NOMMODIF.MODIF_CODE%type,                                   -- Мнемокод модификации номенклатуры остатка
+    NREST                   STPLGOODSSUPPLY.QUANT%type,                                 -- Остаток в онсновной ЕИ
+    NMEAS                   DICMUNTS.RN%type,                                           -- Регистрационный номер основной ЕИ номенклатуры остатка
+    SMEAS                   DICMUNTS.MEAS_MNEMO%type                                    -- Мнемокод основное ЕИ номенклатуры остатка
+  );
+  
+  /* Типы данных - коллекция складских остатков номенклатуры */
+  type TNOMEN_RESTS is table of TNOMEN_REST;
+  
+  /* Типы данных - складской остаток ячейки стеллажа (места хранения) */
+  type TRACK_LINE_CELL_REST is record
+  (
+    NRN                     STPLCELLS.RN%type,                                          -- Регистрационный номер ячейки
+    SPREF                   STPLCELLS.PREF%type,                                        -- Префикс ячейки
+    SNUMB                   STPLCELLS.NUMB%type,                                        -- Номер ячейки
+    NRACK_LINE              PKG_STD.TREF,                                               -- Номер яруса стеллажа на котором находится чейка
+    NRACK_LINE_CELL         PKG_STD.TREF,                                               -- Номер ячейки в ярусе стеллажа стенда
+    NOMEN_RESTS             TNOMEN_RESTS                                                -- Остатки номенклатур
+  );
+  
+  /* Типы данных - коллекция складских остатков ячеек стеллажа (места хранения) */
+  type TRACK_LINE_CELL_RESTS is table of TRACK_LINE_CELL_REST;
+  
+  /* Типы данных - складские остатки яруса стеллажа */
+  type TRACK_LINE_REST is record
+  (
+    NRACK_LINE              PKG_STD.TREF,                                               -- Номер яруса стеллажа
+    NCNT_RACK_LINE_CELLS    PKG_STD.TREF,                                               -- Количество ячеек яруса
+    RACK_LINE_CELL_RESTS    TRACK_LINE_CELL_RESTS                                       -- Остатки в местах хранения яруса
+  );
+  
+  /* Типы данных - коллекция складских остатков ярусов стеллажа */
+  type TRACK_LINE_RESTS is table of TRACK_LINE_REST;
+  
+  /* Типы данных - складские остатки стеллажа */
+  type TRACK_REST is record
+  (
+    NRN                     STPLRACKS.RN%type,                                          -- Регистрационный номер стеллажа
+    SPREF                   STPLRACKS.PREF%type,                                        -- Префикс стеллажа
+    SNUMB                   STPLRACKS.NUMB%type,                                        -- Номер стеллажа
+    NCNT_RACK_LINES         PKG_STD.TREF,                                               -- Количество ярусов стеллажа
+    RACK_LINE_RESTS         TRACK_LINE_RESTS                                            -- Остатки в ярусах стеллажа
+  );
+  
+  /* Типы данных - посетитель стенда */
+  type TSTAND_USER is record
+  (
+    NAGENT                  AGNLIST.RN%type,                                            -- Регистрационный номер контрагента-посетителя
+    SAGENT                  AGNLIST.AGNABBR%type,                                       -- Мнемокод контрагента-посетителя
+    SAGENT_NAME             AGNLIST.AGNNAME%type                                        -- Наименование контрагента-посетителя
+  );
+  
   /* Загрузка стенда товаром */
   procedure LOAD
   (
@@ -59,9 +131,40 @@
   /* Откат отгрузки со стенда */
   procedure SHIPMENT_ROLLBACK
   (
-    NCOMPANY               number,      -- Регистрационный номер организации
-    NTRANSINVCUST          number       -- Регистрационный номер отгрузочной РНОП
+    NCOMPANY                number,     -- Регистрационный номер организации
+    NTRANSINVCUST           number      -- Регистрационный номер отгрузочной РНОП
   );
+  
+  /* Получение остатков стеллажа */
+  function STPLRACK_GET_REST
+  (
+    NCOMPANY                number,     -- Регистрационный номер организации
+    SPREF                   varchar2,   -- Префикс сталлажа
+    SNUMB                   varchar2    -- Номер стеллажа
+  ) return TRACK_REST;
+  
+  /* Поиск контрагента-посетителя стенда по штрихкоду */
+  function AGNLIST_GET_BY_BARCODE
+  (
+    NCOMPANY                number,     -- Регистрационный номер организации
+    SBARCODE                varchar2    -- Штрихкод
+  ) return TSTAND_USER;
+  
+  /* Проверка осуществления выдачи контрагенту-посетителю товара со стенда (см. константы NAGN_SUPPLY_*) */
+  function AGNLIST_CHECK_SUPPLY
+  (
+    NCOMPANY                number,     -- Регистрационный номер организации
+    NAGENT                  number      -- Регистрационный номер контрагента
+  ) return number;
+  
+  /* Аутентификация посетителя стенда по штрихкоду */
+  procedure AUTH_BY_BARCODE
+  (
+    NCOMPANY                number,          -- Регистрационный номер организации
+    SBARCODE                varchar2,        -- Штрихкод
+    STAND_USER              out TSTAND_USER, -- Сведения о пользователе стенда
+    RACK_REST               out TRACK_REST   -- Сведения об остатках на стенде
+  );    
 end;
 /
 create or replace package body UDO_PKG_STAND as
@@ -593,6 +696,136 @@ create or replace package body UDO_PKG_STAND as
     /* Удаляем документ */
     P_TRANSINVCUST_DELETE(NCOMPANY => NCOMPANY, NRN => NTRANSINVCUST);
   end;
-
+  
+  /* Получение остатков стеллажа */
+  function STPLRACK_GET_REST
+  (
+    NCOMPANY                number,     -- Регистрационный номер организации
+    SPREF                   varchar2,   -- Префикс сталлажа
+    SNUMB                   varchar2    -- Номер стеллажа
+  ) return TRACK_REST
+  is
+  begin
+    return null;
+  end;
+  
+  /* Поиск контрагента-посетителя стенда по штрихкоду */
+  function AGNLIST_GET_BY_BARCODE
+  (
+    NCOMPANY                number,             -- Регистрационный номер организации
+    SBARCODE                varchar2            -- Штрихкод
+  ) return TSTAND_USER
+  is
+    NVERSION                VERSIONS.RN%type;   -- Версия раздела "Контрагенты"
+    NDP_BARCODE             DOCS_PROPS.RN%type; -- Регистрационный номер дополнительного свойства для хранения штрихкода
+    RES                     TSTAND_USER;        -- Результат работы
+  begin
+    /* Определим версию раздела "Контрагенты" */
+    FIND_VERSION_BY_COMPANY(NCOMPANY => NCOMPANY, SUNITCODE => 'AGNLIST', NVERSION => NVERSION);
+  
+    /* Определим регистрационный номер дополнительного свойства для хранения штрихкода */
+    FIND_DOCS_PROPS_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SCODE => SDP_BARCODE, NRN => NDP_BARCODE);
+  
+    /* Найдем контрагента с указанным штрихкодом */
+    begin
+      select AG.RN,
+             AG.AGNABBR,
+             AG.AGNNAME
+        into RES.NAGENT,
+             RES.SAGENT,
+             RES.SAGENT_NAME
+        from AGNLIST AG
+       where AG.VERSION = NVERSION
+         and F_DOCS_PROPS_GET_STR_VALUE(NPROPERTY => NDP_BARCODE, SUNITCODE => 'AGNLIST', NDOCUMENT => AG.RN) =
+             SBARCODE;
+    exception
+      when TOO_MANY_ROWS then
+        P_EXCEPTION(0,
+                    'Найдено более одного контрагента со штрихкодом "%s"!',
+                    SBARCODE);
+      when NO_DATA_FOUND then
+        P_EXCEPTION(0, 'Контрагент со штрихкодом "%s" не определён!', SBARCODE);
+    end;
+  
+    /* Вернем результат */
+    return RES;
+  end;
+  
+  /* Проверка осуществления выдачи контрагенту-посетителю товара со стенда (см. константы NAGN_SUPPLY_*) */
+  function AGNLIST_CHECK_SUPPLY
+  (
+    NCOMPANY                number,          -- Регистрационный номер организации
+    NAGENT                  number           -- Регистрационный номер контрагента
+  ) return number
+  is
+    NRES                    PKG_STD.TNUMBER; -- Результат работы
+  begin
+    /* Пробуем найти РНОПотр с данным контрагентом, по складу стенда, с номенклатурой стенда, с типом и префиксом по умолчанию для стенда */
+    begin
+      select count(*)
+        into NRES
+        from TRANSINVCUST      T,
+             DOCTYPES          DT,
+             AZSAZSLISTMT      ST,
+             TRANSINVCUSTSPECS SP,
+             NOMMODIF          M,
+             DICNOMNS          N
+       where T.COMPANY = NCOMPANY
+         and trim(T.PREF) = STRINVCUST_PREF
+         and T.DOCTYPE = DT.RN
+         and DT.DOCCODE = STRINVCUST_TYPE
+         and T.AGENT = NAGENT
+         and T.STORE = ST.RN
+         and ST.AZS_NUMBER = SSTORE_GOODS
+         and T.RN = SP.PRN
+         and SP.NOMMODIF = M.RN
+         and M.MODIF_CODE = SDEF_NOMEN_MODIF
+         and M.PRN = N.RN
+         and N.NOMEN_CODE = SDEF_NOMEN;
+    exception
+      when others then
+        P_EXCEPTION(0,
+                    'Ошибка поиска расходных накладных на отпуск потребителям для контрагента (RN: %s)!',
+                    TO_CHAR(NAGENT));
+    end;
+    
+    /* Таких нет... */
+    if (NRES = 0) then
+      /* ...значит не отгружали данному контрагенту */
+      NRES := NAGN_SUPPLY_NOT_YET;
+    else
+      /* ...или есть и тогда - отгружали */
+      NRES := NAGN_SUPPLY_ALREADY;
+    end if;
+  
+    /* Вернем результат */
+    return NRES;
+  end;  
+  
+  /* Аутентификация посетителя стенда по штрихкоду */
+  procedure AUTH_BY_BARCODE
+  (
+    NCOMPANY                number,          -- Регистрационный номер организации
+    SBARCODE                varchar2,        -- Штрихкод    
+    STAND_USER              out TSTAND_USER, -- Сведения о пользователе стенда
+    RACK_REST               out TRACK_REST   -- Сведения об остатках на стенде
+  )
+  is
+  begin
+    /* Найдем контрагента по штрихкоду */
+    STAND_USER := AGNLIST_GET_BY_BARCODE(NCOMPANY => NCOMPANY, SBARCODE => SBARCODE);
+  
+    /* Проверим, что отгрузки данному контрагенту ещё не было (если надо, конечно) */
+    if (NALLOW_MULTI_SUPPLY = NALLOW_MULTI_SUPPLY_NO) then
+      if (AGNLIST_CHECK_SUPPLY(NCOMPANY => NCOMPANY, NAGENT => STAND_USER.NAGENT) = NAGN_SUPPLY_ALREADY) then
+        P_EXCEPTION(0,
+                    'Извините, отгрузка для посетителя "%s" уже производилась!',
+                    STAND_USER.SAGENT_NAME);
+      end if;
+    end if;
+  
+    /* Получим остатки по стеллажу, который обслуживает стенд */
+    RACK_REST := STPLRACK_GET_REST(NCOMPANY => NCOMPANY, SPREF => SRACK_PREF, SNUMB => SRACK_NUMB);
+  end;
 end;
 /
