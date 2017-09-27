@@ -28,6 +28,7 @@
   
   /* Константы - коды специальных действий сервера */
   SACTION_LOGIN             constant varchar2(20) := 'LOGIN';         -- Аутентификация
+  SACTION_LOGOUT            constant varchar2(20) := 'LOGOUT';        -- Завершение сессии
   SACTION_VERIFY            constant varchar2(20) := 'VERIFY';        -- Проверка валидности сессии
   SACTION_DOWNLOAD          constant varchar2(20) := 'DOWNLOAD';      -- Выгрузка файла
   
@@ -404,6 +405,7 @@ create or replace package body UDO_PKG_WEB_API as
   begin
     /* Выполним транслитерацию */
     SRES := TRANSLATE(UPPER(SSTR_RU), 'АБВГДЕЗИЙКЛМНОПРСТУФЬЫЪЭ', 'ABVGDEZIJKLMNOPRSTUF''Y''E');
+    SRES := replace(SRES, 'Ё', 'E');
     SRES := replace(SRES, 'Ж', 'ZH');
     SRES := replace(SRES, 'Х', 'KH');
     SRES := replace(SRES, 'Ц', 'TS');
@@ -515,10 +517,10 @@ create or replace package body UDO_PKG_WEB_API as
   begin
     JRESP := JSON(CJSON);
     if (JRESP.EXIST(SRESP_TYPE_KEY)) then
-      if (JRESP.GET(SRESP_TYPE_KEY).VALUE_OF = SRESP_TYPE_VAL) then
+      if (JRESP.GET(SRESP_TYPE_KEY).VALUE_OF() = SRESP_TYPE_VAL) then
         if ((JRESP.EXIST(SRESP_STATE_KEY)) and (JRESP.EXIST(SRESP_MSG_KEY))) then
-          NRESP_TYPE := JRESP.GET(SRESP_STATE_KEY).VALUE_OF;
-          SRESP_MSG  := JRESP.GET(SRESP_MSG_KEY).VALUE_OF;
+          NRESP_TYPE := JRESP.GET(SRESP_STATE_KEY).VALUE_OF();
+          SRESP_MSG  := JRESP.GET(SRESP_MSG_KEY).VALUE_OF();
         else
           NRESP_TYPE := null;
           SRESP_MSG  := null;
@@ -761,10 +763,10 @@ create or replace package body UDO_PKG_WEB_API as
       JPRMS := JSON(CPRMS);
     
       /* Считаем код действия */
-      if ((not JPRMS.EXIST(SREQ_ACTION_KEY)) or (JPRMS.GET(SREQ_ACTION_KEY).VALUE_OF is null)) then
+      if ((not JPRMS.EXIST(SREQ_ACTION_KEY)) or (JPRMS.GET(SREQ_ACTION_KEY).VALUE_OF() is null)) then
         P_EXCEPTION(0, 'В запросе к серверу не указан код действия!');
       else
-        SACTION := JPRMS.GET(SREQ_ACTION_KEY).VALUE_OF;
+        SACTION := JPRMS.GET(SREQ_ACTION_KEY).VALUE_OF();
       end if;
     
       /* Считаем обработчик для действия */
@@ -772,11 +774,11 @@ create or replace package body UDO_PKG_WEB_API as
     
       /* Проверим возможность исполнения данного действия пользователем (если не установлен флаг исполнения без авторизации) */
       if (ACTPROC.UNAUTH = NUNAUTH_NO) then
-        if ((not JPRMS.EXIST(SREQ_SESSION_KEY)) or (JPRMS.GET(SREQ_SESSION_KEY).VALUE_OF is null)) then
+        if ((not JPRMS.EXIST(SREQ_SESSION_KEY)) or (JPRMS.GET(SREQ_SESSION_KEY).VALUE_OF() is null)) then
           P_EXCEPTION(0, 'В запросе к серверу не указана сессия!');
         else
           /* Валидируем сессию */
-          SESSION_VALIDATE(SSESSION => JPRMS.GET(SREQ_SESSION_KEY).VALUE_OF);
+          SESSION_VALIDATE(SSESSION => JPRMS.GET(SREQ_SESSION_KEY).VALUE_OF());
         end if;
       end if;
     
@@ -828,13 +830,23 @@ create or replace package body UDO_PKG_WEB_API as
             JRESP.PUT(PAIR_NAME => 'SUSER_NAME', PAIR_VALUE => SUSR_NAME);
             JRESP.TO_CLOB(BUF => CRES);          
           end;
+        /* Спецдействие - Завершение сессии (обрабатывается непосредственно здесь, в ядре) */
+        when SACTION_LOGOUT then
+          begin
+            /* Завершим сессию */
+            PKG_SESSION.LOGOFF_WEB(sCONNECT => JPRMS.GET(SREQ_SESSION_KEY).VALUE_OF());
+            /* Скажем что всё прошло хорошо */
+            CRES := RESP_MAKE(NRESP_FORMAT => NRESP_FORMAT_JSON,
+                              NRESP_STATE  => NRESP_STATE_OK,
+                              SRESP_MSG    => JPRMS.GET(SREQ_SESSION_KEY).VALUE_OF());
+          end;
         /* Спецдействие - Валидация сессии (обрабатывается непосредственно здесь, в ядре) */
         when SACTION_VERIFY then
           begin
             /* Если это было действие по валидации сессии - то вернем ответ что всё прошло хорошо */
             CRES := RESP_MAKE(NRESP_FORMAT => NRESP_FORMAT_JSON,
                               NRESP_STATE  => NRESP_STATE_OK,
-                              SRESP_MSG    => JPRMS.GET(SREQ_SESSION_KEY).VALUE_OF);
+                              SRESP_MSG    => JPRMS.GET(SREQ_SESSION_KEY).VALUE_OF());
           end;        
         /* Спецдействие - Выгрузка файла (обрабатывается непосредственно здесь, в ядре) */
         when SACTION_DOWNLOAD then
@@ -844,18 +856,18 @@ create or replace package body UDO_PKG_WEB_API as
             RPTQ       RPTPRTQUEUE%rowtype; -- Выгружаемая позиция очереди
           begin
             /* Считаем тип файла */
-            if ((not JPRMS.EXIST(SREQ_FILE_TYPE_KEY)) or (JPRMS.GET(SREQ_FILE_TYPE_KEY).VALUE_OF is null)) then
+            if ((not JPRMS.EXIST(SREQ_FILE_TYPE_KEY)) or (JPRMS.GET(SREQ_FILE_TYPE_KEY).VALUE_OF() is null)) then
               P_EXCEPTION(0,
                           'В запросе к серверу не указан тип выгружаемого файла!');
             else
-              SFILE_TYPE := JPRMS.GET(SREQ_FILE_TYPE_KEY).VALUE_OF;
+              SFILE_TYPE := JPRMS.GET(SREQ_FILE_TYPE_KEY).VALUE_OF();
             end if;
             /* Считаем идентификатор файла */
-            if ((not JPRMS.EXIST(SREQ_FILE_RN_KEY)) or (JPRMS.GET(SREQ_FILE_RN_KEY).VALUE_OF is null)) then
+            if ((not JPRMS.EXIST(SREQ_FILE_RN_KEY)) or (JPRMS.GET(SREQ_FILE_RN_KEY).VALUE_OF() is null)) then
               P_EXCEPTION(0,
                           'В запросе к серверу не указан регистрационный номер выгружаемого файла!');
             else
-              NFILE_RN := UTL_CONVERT_TO_NUMBER(SSTR => JPRMS.GET(SREQ_FILE_RN_KEY).VALUE_OF, NSMART => 0);
+              NFILE_RN := UTL_CONVERT_TO_NUMBER(SSTR => JPRMS.GET(SREQ_FILE_RN_KEY).VALUE_OF(), NSMART => 0);
             end if;
             /* Инициализируем буферы выгрузки */
             DBMS_LOB.CREATETEMPORARY(LOB_LOC => BDOWNLOAD_BUFFER, CACHE => false);          
@@ -929,7 +941,7 @@ create or replace package body UDO_PKG_WEB_API as
         SERR := sqlerrm;
         CRES := RESP_MAKE(NRESP_FORMAT => NRESP_FORMAT_JSON, NRESP_STATE => NRESP_STATE_ERR, SRESP_MSG => SERR);
     end;
-  
+
     /* Вернем результат - обычный овет в теле HTTP или файл */
     if (not BDOWNLOAD) then
       RESP_PUBLISH(CDATA => CRES);
