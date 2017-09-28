@@ -218,30 +218,30 @@
   );
   
   /* Получение остатков стеллажа стенда по местам хранения */
-  function STPLRACK_GET_REST
+  function STAND_GET_RACK_REST
   (
     NCOMPANY                number,     -- Регистрационный номер организации
-    SSTORE                  varchar2,   -- Мнемокод склада
-    SPREF                   varchar2,   -- Префикс сталлажа
-    SNUMB                   varchar2    -- Номер стеллажа
+    SSTORE                  varchar2,   -- Мнемокод склада стенда
+    SPREF                   varchar2,   -- Префикс стеллажа стенда
+    SNUMB                   varchar2    -- Номер стеллажа стенда
   ) return TRACK_REST;
   
   /* Поиск контрагента-посетителя стенда по штрихкоду */
-  function AGNLIST_GET_BY_BARCODE
+  function STAND_GET_AGENT_BY_BARCODE
   (
     NCOMPANY                number,     -- Регистрационный номер организации
     SBARCODE                varchar2    -- Штрихкод
   ) return TSTAND_USER;
   
   /* Проверка осуществления выдачи контрагенту-посетителю товара со стенда (см. константы NAGN_SUPPLY_*) */
-  function AGNLIST_CHECK_SUPPLY
+  function STAND_CHECK_SUPPLY
   (
     NCOMPANY                number,     -- Регистрационный номер организации
     NAGENT                  number      -- Регистрационный номер контрагента
   ) return number;
   
   /* Аутентификация посетителя стенда по штрихкоду */
-  procedure AUTH_BY_BARCODE
+  procedure STAND_AUTH_BY_BARCODE
   (
     NCOMPANY                number,          -- Регистрационный номер организации
     SBARCODE                varchar2,        -- Штрихкод
@@ -919,12 +919,12 @@ create or replace package body UDO_PKG_STAND as
   end;
   
   /* Получение остатков стеллажа стенда по местам хранения */
-  function STPLRACK_GET_REST
+  function STAND_GET_RACK_REST
   (
     NCOMPANY                number,               -- Регистрационный номер организации
-    SSTORE                  varchar2,             -- Мнемокод склада
-    SPREF                   varchar2,             -- Префикс сталлажа
-    SNUMB                   varchar2              -- Номер стеллажа
+    SSTORE                  varchar2,             -- Мнемокод склада стенда
+    SPREF                   varchar2,             -- Префикс стеллажа стенда
+    SNUMB                   varchar2              -- Номер стеллажа стенда
   ) return TRACK_REST
   is
     CELL                    STPLCELLS%rowtype;    -- Запись ячейки стеллажа
@@ -1080,7 +1080,7 @@ create or replace package body UDO_PKG_STAND as
   end;
   
   /* Поиск контрагента-посетителя стенда по штрихкоду */
-  function AGNLIST_GET_BY_BARCODE
+  function STAND_GET_AGENT_BY_BARCODE
   (
     NCOMPANY                number,             -- Регистрационный номер организации
     SBARCODE                varchar2            -- Штрихкод
@@ -1122,7 +1122,7 @@ create or replace package body UDO_PKG_STAND as
   end;
   
   /* Проверка осуществления выдачи контрагенту-посетителю товара со стенда (см. константы NAGN_SUPPLY_*) */
-  function AGNLIST_CHECK_SUPPLY
+  function STAND_CHECK_SUPPLY
   (
     NCOMPANY                number,          -- Регистрационный номер организации
     NAGENT                  number           -- Регистрационный номер контрагента
@@ -1173,7 +1173,7 @@ create or replace package body UDO_PKG_STAND as
   end;  
   
   /* Аутентификация посетителя стенда по штрихкоду */
-  procedure AUTH_BY_BARCODE
+  procedure STAND_AUTH_BY_BARCODE
   (
     NCOMPANY                number,          -- Регистрационный номер организации
     SBARCODE                varchar2,        -- Штрихкод    
@@ -1183,11 +1183,11 @@ create or replace package body UDO_PKG_STAND as
   is
   begin
     /* Найдем контрагента по штрихкоду */
-    STAND_USER := AGNLIST_GET_BY_BARCODE(NCOMPANY => NCOMPANY, SBARCODE => SBARCODE);
+    STAND_USER := STAND_GET_AGENT_BY_BARCODE(NCOMPANY => NCOMPANY, SBARCODE => SBARCODE);
   
     /* Проверим, что отгрузки данному контрагенту ещё не было (если надо, конечно) */
     if (NALLOW_MULTI_SUPPLY = NALLOW_MULTI_SUPPLY_NO) then
-      if (AGNLIST_CHECK_SUPPLY(NCOMPANY => NCOMPANY, NAGENT => STAND_USER.NAGENT) = NAGN_SUPPLY_ALREADY) then
+      if (STAND_CHECK_SUPPLY(NCOMPANY => NCOMPANY, NAGENT => STAND_USER.NAGENT) = NAGN_SUPPLY_ALREADY) then
         P_EXCEPTION(0,
                     'Извините, отгрузка для посетителя "%s" уже производилась!',
                     STAND_USER.SAGENT_NAME);
@@ -1195,10 +1195,10 @@ create or replace package body UDO_PKG_STAND as
     end if;
   
     /* Получим остатки по стеллажу, который обслуживает стенд */
-    RACK_REST := STPLRACK_GET_REST(NCOMPANY => NCOMPANY,
-                                   SSTORE   => SSTORE_GOODS,
-                                   SPREF    => SRACK_PREF,
-                                   SNUMB    => SRACK_NUMB);
+    RACK_REST := STAND_GET_RACK_REST(NCOMPANY => NCOMPANY,
+                                     SSTORE   => SSTORE_GOODS,
+                                     SPREF    => SRACK_PREF,
+                                     SNUMB    => SRACK_NUMB);
   end;
 
 end;

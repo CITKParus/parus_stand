@@ -22,7 +22,7 @@ end;
 create or replace package body UDO_PKG_STAND_WEB as
 
   /* Конвертация остатков по стенду в JSON */
-  function RACK_REST_TO_JSON
+  function STAND_RACK_REST_TO_JSON
   (
     R                       UDO_PKG_STAND.TRACK_REST -- Остатки стенда
   ) return JSON
@@ -164,10 +164,10 @@ create or replace package body UDO_PKG_STAND_WEB as
       SBARCODE := JPRMS.GET('SBARCODE').VALUE_OF();
     end if;
     /* Найдем пользователя и дополнительную информацию */
-    UDO_PKG_STAND.AUTH_BY_BARCODE(NCOMPANY => NCOMPANY, SBARCODE => SBARCODE, STAND_USER => U, RACK_REST => R);
+    UDO_PKG_STAND.STAND_AUTH_BY_BARCODE(NCOMPANY => NCOMPANY, SBARCODE => SBARCODE, STAND_USER => U, RACK_REST => R);
     /* Соберем ответ */
     JRES.PUT(PAIR_NAME => 'USER', PAIR_VALUE => STAND_USER_TO_JSON(U => U).TO_JSON_VALUE());
-    JRES.PUT(PAIR_NAME => 'RESTS', PAIR_VALUE => RACK_REST_TO_JSON(R => R).TO_JSON_VALUE());
+    JRES.PUT(PAIR_NAME => 'RESTS', PAIR_VALUE => STAND_RACK_REST_TO_JSON(R => R).TO_JSON_VALUE());
     /* Отдаём ответ */
     JRES.TO_CLOB(BUF => CRES);
   exception
