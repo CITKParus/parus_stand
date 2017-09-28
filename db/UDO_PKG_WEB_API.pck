@@ -929,17 +929,21 @@ create or replace package body UDO_PKG_WEB_API as
         CRES := RESP_MAKE(NRESP_FORMAT => NRESP_FORMAT_JSON,
                           NRESP_STATE  => NRESP_STATE_ERR,
                           SRESP_MSG    => 'Ошибка проверки запроса - убедитесь что зыпрос является валидным JSON-выражением!');
+        rollback;                          
       when PARSER_EXCEPTION then
         CRES := RESP_MAKE(NRESP_FORMAT => NRESP_FORMAT_JSON,
                           NRESP_STATE  => NRESP_STATE_ERR,
                           SRESP_MSG    => 'Ошибка разбора запроса - убедитесь что зыпрос является валидным JSON-выражением!');
+        rollback;                          
       when JEXT_EXCEPTION then
         CRES := RESP_MAKE(NRESP_FORMAT => NRESP_FORMAT_JSON,
                           NRESP_STATE  => NRESP_STATE_ERR,
                           SRESP_MSG    => 'Ошибка обработки запроса - убедитесь что зыпрос является валидным JSON-выражением!');
+        rollback;                          
       when others then
         SERR := sqlerrm;
         CRES := RESP_MAKE(NRESP_FORMAT => NRESP_FORMAT_JSON, NRESP_STATE => NRESP_STATE_ERR, SRESP_MSG => SERR);
+        rollback;
     end;
 
     /* Вернем результат - обычный овет в теле HTTP или файл */
