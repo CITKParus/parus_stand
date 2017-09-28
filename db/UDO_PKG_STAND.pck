@@ -119,7 +119,7 @@
   (
     SPREF                   varchar2 := SRACK_PREF, -- Префикс стеллажа
     SNUMB                   varchar2 := SRACK_NUMB  -- Номер стеллажа
-  )return varchar2;
+  ) return varchar2;
   
   /* Формирование префикса ячейки яруса стеллажа склада */
   function RACK_LINE_CELL_BUILD_PREF
@@ -169,7 +169,8 @@
     NCOMPANY                number,     -- Регистрационный номер организации
     SCUSTOMER               varchar2,   -- Мнемокод контрагента-покупателя
     NRACK_LINE              number,     -- Номер яруса стеллажа стенда
-    NRACK_LINE_CELL         number      -- Номер ячейки в ярусе стеллажа стенда
+    NRACK_LINE_CELL         number,     -- Номер ячейки в ярусе стеллажа стенда
+    NTRANSINVCUST           out number  -- Регистрационный номер сформированной РНОП    
   );
 
   /* Откат отгрузки со стенда */
@@ -179,7 +180,7 @@
     NTRANSINVCUST           number      -- Регистрационный номер отгрузочной РНОП
   );
   
-  /* Получение остатков стеллажа */
+  /* Получение остатков стеллажа стенда по местам хранения */
   function STPLRACK_GET_REST
   (
     NCOMPANY                number,     -- Регистрационный номер организации
@@ -220,7 +221,7 @@ create or replace package body UDO_PKG_STAND as
   (
     SPREF                   varchar2 := SRACK_PREF, -- Префикс стеллажа
     SNUMB                   varchar2 := SRACK_NUMB  -- Номер стеллажа
-  )return varchar2
+  ) return varchar2
   is
   begin
     return trim(SPREF) || '-' || trim(SNUMB);
@@ -538,7 +539,8 @@ create or replace package body UDO_PKG_STAND as
     NCOMPANY                number,                    -- Регистрационный номер организации
     SCUSTOMER               varchar2,                  -- Мнемокод контрагента-покупателя
     NRACK_LINE              number,                    -- Номер яруса стеллажа стенда
-    NRACK_LINE_CELL         number                     -- Номер ячейки в ярусе стеллажа стенда
+    NRACK_LINE_CELL         number,                    -- Номер ячейки в ярусе стеллажа стенда
+    NTRANSINVCUST           out number                 -- Регистрационный номер сформированной РНОП
   ) is
     NCRN                    INCOMEFROMDEPS.RN%type;    -- Каталог размещения РНОП
     NJUR_PERS               JURPERSONS.RN%type;        -- Регистрационный номер юридического лица РНОП (основное ЮЛ организации)
@@ -547,8 +549,7 @@ create or replace package body UDO_PKG_STAND as
     NNOMMODIF               NOMMODIF.RN%type;          -- Рег. номер отгружаемой модификации номенклатуры
     SNUMB                   TRANSINVCUST.NUMB%type;    -- Номер формируемого РНОП
     SMOL                    AGNLIST.AGNABBR%type;      -- МОЛ склада отгрузки РНОП
-    SMSG                    PKG_STD.TSTRING;           -- Текст сообщения процедуры добавления РНОП/спецификации РНОП/отработки РНОП
-    NTRANSINVCUST           TRANSINVCUST.RN%type;      -- Регистрационный номер сформированной РНОП
+    SMSG                    PKG_STD.TSTRING;           -- Текст сообщения процедуры добавления РНОП/спецификации РНОП/отработки РНОП    
     NTRANSINVCUSTSPECS      TRANSINVCUSTSPECS.RN%type; -- Регистрационный номер сформированной спецификации РНОП
     NGOODSSUPPLY            GOODSSUPPLY.RN%type;       -- Регистрационный номер товарного запаса для резервирования
     NSTRPLRESJRNL           STRPLRESJRNL.RN%type;      -- Регистрационный номер сформированной записи резервирования по местам хранения
@@ -802,7 +803,7 @@ create or replace package body UDO_PKG_STAND as
     P_TRANSINVCUST_DELETE(NCOMPANY => NCOMPANY, NRN => NTRANSINVCUST);
   end;
   
-  /* Получение остатков стеллажа */
+  /* Получение остатков стеллажа стенда по местам хранения */
   function STPLRACK_GET_REST
   (
     NCOMPANY                number,               -- Регистрационный номер организации
@@ -921,7 +922,6 @@ create or replace package body UDO_PKG_STAND as
                                NM.MODIF_CODE,
                                DM.RN,
                                DM.MEAS_MNEMO
-                     
                      )
         loop
           /* Добавим номенклатуру в коллекцию */
