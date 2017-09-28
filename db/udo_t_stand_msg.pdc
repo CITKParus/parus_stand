@@ -1,0 +1,24 @@
+﻿-- Create table
+create table UDO_T_STAND_MSG
+(
+  rn  NUMBER(17) not null,
+  ts  DATE not null,
+  tp  VARCHAR2(20) not null,
+  msg VARCHAR2(4000) not null
+)
+tablespace PARUSDATA
+  pctfree 10
+  initrans 1
+  maxtrans 255;
+-- Create/Recreate primary, unique and foreign key constraints 
+alter table UDO_T_STAND_MSG
+  add constraint UDO_C_STAND_MSG_RN_PK primary key (RN)
+  using index 
+  tablespace PARUSDATA
+  pctfree 10
+  initrans 2
+  maxtrans 255;
+-- Create/Recreate check constraints 
+alter table UDO_T_STAND_MSG
+  add constraint UDO_C_STAND_MSG_TP_CH
+  check (tp in ('NOTIFY', 'RESTS'));

@@ -48,6 +48,10 @@
   
   /* Констнаты описания испоьзуемых дополнительных свойств */
   SDP_BARCODE               DOCS_PROPS.CODE%type := 'ШтрихКод';                         -- Мнемокод дополнительного свойства для храения штрихкода
+  
+  /* Констнаты описания типов сообщений очереди стенда */
+  SMSG_TYPE_NOTIFY          UDO_T_STAND_MSG.TP%type := 'NOTIFY';                        -- Сообщение типа "Оповещение"
+  SMSG_TYPE_REST            UDO_T_STAND_MSG.TP%type := 'RESTS';                         -- Сообщение типа "Сведения об остатках"
 
   /* Типы данных - складской остаток номенклатуры */
   type TNOMEN_REST is record
@@ -113,6 +117,39 @@
     SAGENT                  AGNLIST.AGNABBR%type,                                       -- Мнемокод контрагента-посетителя
     SAGENT_NAME             AGNLIST.AGNNAME%type                                        -- Наименование контрагента-посетителя
   );
+  
+  /* Базовое добавление сообщения в очередь */
+  procedure MSG_BASE_INSERT
+  (
+    STP                     varchar2,   -- Тип сообщения
+    SMSG                    varchar2,   -- Текст сообщения
+    NRN                     out number  -- Регистрационный номер добавленного сообщения
+  );
+  
+  /* Базовое удаление сообщения из очереди */
+  procedure MSG_BASE_DELETE
+  (
+    NRN                     number      -- Регистрационный номер сообщения
+  );
+  
+  /* Добавление в очередь сообщения типа "Оповещение" */
+  procedure MSG_INSERT_NOTIFY
+  (
+    SMSG                    varchar2    -- Текст сообщения
+  );
+  
+  /* Добавление в очередь сообщения типа "Сведения об остатках" */
+  procedure MSG_INSERT_RESTS
+  (
+    SMSG                    varchar2    -- Текст сообщения
+  );
+
+  /* Считывание сообщения из очереди */
+  function MSG_GET
+  (
+    NRN                     number,     -- Регистрационный номер сообщения
+    NSMART                  number := 0 -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
+  )return UDO_T_STAND_MSG%rowtype;
   
   /* Формирование наименования стеллажа (префикс-номер) */
   function RACK_BUILD_NAME 
@@ -216,6 +253,84 @@ end;
 /
 create or replace package body UDO_PKG_STAND as
 
+  /* Базовое добавление сообщения в очередь */
+  procedure MSG_BASE_INSERT
+  (
+    STP                     varchar2,   -- Тип сообщения
+    SMSG                    varchar2,   -- Текст сообщения
+    NRN                     out number  -- Регистрационный номер добавленного сообщения
+  )
+  is
+  begin
+    /* Проверим параметры */
+    if (STP not in (SMSG_TYPE_NOTIFY, SMSG_TYPE_REST)) then
+      P_EXCEPTION(0, 'Тип сообщения "%s" не поддерживается!', STP);
+    end if;
+    if (SMSG is null) then
+      P_EXCEPTION(0, 'Не указано сообщение для добавления!');
+    end if;
+    /* Сформируем регистрационный номер */
+    NRN := GEN_ID();
+    /* Добавим сообщение */
+    insert into UDO_T_STAND_MSG (RN, TS, TP, MSG) values (NRN, sysdate, STP, SMSG);
+  end;
+    
+  /* Базовое удаление сообщения из очереди */
+  procedure MSG_BASE_DELETE
+  (
+    NRN                     number      -- Регистрационный номер сообщения
+  )
+  is
+  begin
+    /* Удалим сообщение */
+    delete from UDO_T_STAND_MSG T where T.RN = NRN;
+  end;
+  
+    /* Добавление в очередь сообщения типа "Оповещение" */
+  procedure MSG_INSERT_NOTIFY
+  (
+    SMSG                    varchar2                 -- Текст сообщения
+  )
+  is
+    NRN                     UDO_T_STAND_MSG.RN%type; -- Регистрационный номер добавленного сообщения
+  begin
+    /* Выполним базовое добавление в очередь сообщений */
+    MSG_BASE_INSERT(STP => SMSG_TYPE_NOTIFY, SMSG => SMSG, NRN => NRN);
+  end;
+  
+  /* Добавление в очередь сообщения типа "Сведения об остатках" */
+  procedure MSG_INSERT_RESTS
+  (
+    SMSG                    varchar2                 -- Текст сообщения
+  )
+  is
+    NRN                     UDO_T_STAND_MSG.RN%type; -- Регистрационный номер добавленного сообщения
+  begin
+    /* Выполним базовое добавление в очередь сообщений */
+    MSG_BASE_INSERT(STP => SMSG_TYPE_REST, SMSG => SMSG, NRN => NRN);
+  end;
+  
+  /* Считывание сообщения из очереди */
+  function MSG_GET
+  (
+    NRN                     number,                  -- Регистрационный номер сообщения
+    NSMART                  number := 0              -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
+  )return UDO_T_STAND_MSG%rowtype 
+  is
+    RES                     UDO_T_STAND_MSG%rowtype; -- Результат работы
+  begin
+    /* Считаем данные */
+    begin
+      select T.* into RES from UDO_T_STAND_MSG T where T.RN = NRN;
+    exception
+      when NO_DATA_FOUND then
+        RES.RN := null;
+        PKG_MSG.RECORD_NOT_FOUND(NFLAG_SMART => NSMART, NDOCUMENT => NRN, SUNIT_TABLE => 'UDO_T_STAND_MSG');
+    end;
+    /* Вернем результат */
+    return RES;
+  end;
+  
   /* Формирование наименования стеллажа (префикс-номер) */
   function RACK_BUILD_NAME 
   (
@@ -274,7 +389,7 @@ create or replace package body UDO_PKG_STAND as
                                                                         SPREF_TMPL => SPREF_TMPL),
                                      SNUMB => RACK_LINE_CELL_BUILD_NUMB(NRACK_LINE_CELL => NRACK_LINE_CELL,
                                                                         SNUMB_TMPL      => SNUMB_TMPL));
-  end;
+  end;  
   
   /* Загрузка стенда товаром */
   procedure LOAD
