@@ -87,15 +87,15 @@
   /* Считывание записи отчета */
   function UTL_RPT_GET
   (
-    NREPORT                 number           -- Регистрационный номер отчета
-   ,NSMART                  number := 0      -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
+    NREPORT                 number,          -- Регистрационный номер отчета
+    NSMART                  number := 0      -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
   ) return USERREPORTS%rowtype;
   
   /* Считывание записи очереди печати отчетов */
   function UTL_RPTQ_GET
   (
-    NREPORTQ                number           -- Регистрационный номер позиции очереди печати отчетов
-   ,NSMART                  number := 0      -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
+    NREPORTQ                number,          -- Регистрационный номер позиции очереди печати отчетов
+    NSMART                  number := 0      -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
   ) return RPTPRTQUEUE%rowtype;
   
   /* Формирование имени файла готового отчета */
@@ -307,8 +307,8 @@ create or replace package body UDO_PKG_WEB_API as
   /* Считывание записи отчета */
   function UTL_RPT_GET
   (
-    NREPORT                 number               -- Регистрационный номер отчета
-   ,NSMART                  number := 0          -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
+    NREPORT                 number,              -- Регистрационный номер отчета
+    NSMART                  number := 0          -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
   ) return USERREPORTS%rowtype 
   is
     RES                     USERREPORTS%rowtype; -- Результат работы
@@ -328,8 +328,8 @@ create or replace package body UDO_PKG_WEB_API as
   /* Считывание записи очереди печати отчетов */
   function UTL_RPTQ_GET
   (
-    NREPORTQ                number               -- Регистрационный номер позиции очереди печати отчетов
-   ,NSMART                  number := 0          -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
+    NREPORTQ                number,              -- Регистрационный номер позиции очереди печати отчетов
+    NSMART                  number := 0          -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
   ) return RPTPRTQUEUE%rowtype 
   is
     RES                     RPTPRTQUEUE%rowtype; -- Результат работы
