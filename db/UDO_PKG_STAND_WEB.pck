@@ -3,6 +3,24 @@
     WEB API стенда
   */
   
+  /* Конвертация остатков по номенклатуре стенда в JSON */
+  function STAND_RACK_NOMEN_REST_TO_JSON
+  (
+    NR                      UDO_PKG_STAND.TNOMEN_RESTS -- Остатки номенклатуры
+  ) return JSON_LIST;
+  
+  /* Конвертация остатков по стеллажу стенда в JSON */
+  function STAND_RACK_REST_TO_JSON
+  (
+    R                       UDO_PKG_STAND.TRACK_REST -- Остатки стенда
+  ) return JSON;
+  
+  /* Конвертация сведений о посетителе стенда в JSON */
+  function STAND_USER_TO_JSON
+  (
+    U                       UDO_PKG_STAND.TSTAND_USER -- Пользователь стенда
+  ) return JSON;
+  
   /* Аутентификация посетителя стенда по штрихкоду */
   procedure AUTH_BY_BARCODE
   (
@@ -21,7 +39,39 @@ end;
 /
 create or replace package body UDO_PKG_STAND_WEB as
 
-  /* Конвертация остатков по стенду в JSON */
+  /* Конвертация остатков по номенклатуре стенда в JSON */
+  function STAND_RACK_NOMEN_REST_TO_JSON
+  (
+    NR                      UDO_PKG_STAND.TNOMEN_RESTS -- Остатки номенклатуры
+  ) return JSON_LIST
+  is
+    JSLCN                   JSON_LIST;               -- JSON-коллекция номенклатур ячейки
+    JSLCN_ITM               JSON;                    -- JSON-описание номенклатур ячейки
+  begin
+    /* Инициализируем выход */
+    JSLCN := JSON_LIST();
+    /* Обходим остатки номенклатуры, если есть */
+    if ((NR is not null) and (NR.COUNT > 0)) then
+      for N in NR.FIRST .. NR.LAST
+      loop
+        /* Собираем объект остатка номенклатуры */
+        JSLCN_ITM := JSON();
+        JSLCN_ITM.PUT(PAIR_NAME => 'NNOMEN', PAIR_VALUE => NR(N).NNOMEN);
+        JSLCN_ITM.PUT(PAIR_NAME => 'SNOMEN', PAIR_VALUE => NR(N).SNOMEN);
+        JSLCN_ITM.PUT(PAIR_NAME => 'NNOMMODIF', PAIR_VALUE => NR(N).NNOMMODIF);
+        JSLCN_ITM.PUT(PAIR_NAME => 'SNOMMODIF', PAIR_VALUE => NR(N).SNOMMODIF);
+        JSLCN_ITM.PUT(PAIR_NAME => 'NREST', PAIR_VALUE => NR(N).NREST);
+        JSLCN_ITM.PUT(PAIR_NAME => 'NMEAS', PAIR_VALUE => NR(N).NMEAS);
+        JSLCN_ITM.PUT(PAIR_NAME => 'SMEAS', PAIR_VALUE => NR(N).SMEAS);
+        /* Объект номенклатуры - в клоллекцию номенклатур */
+        JSLCN.APPEND(ELEM => JSLCN_ITM.TO_JSON_VALUE());
+      end loop;
+    end if;
+    /* Вернем ответ */
+    return JSLCN;
+  end;
+  
+  /* Конвертация остатков по стеллажу стенда в JSON */
   function STAND_RACK_REST_TO_JSON
   (
     R                       UDO_PKG_STAND.TRACK_REST -- Остатки стенда
@@ -32,8 +82,6 @@ create or replace package body UDO_PKG_STAND_WEB as
     JSL_ITM                 JSON;                    -- JSON-описание яруса стеллажа
     JSLC                    JSON_LIST;               -- JSON-коллекция ячеек яруса
     JSLC_ITM                JSON;                    -- JSON-описание ячейки яруса
-    JSLCN                   JSON_LIST;               -- JSON-коллекция номенклатур ячейки
-    JSLCN_ITM               JSON;                    -- JSON-описание номенклатур ячейки
   begin
     /* Инициализируем ответ */
     JS := JSON();
@@ -76,38 +124,14 @@ create or replace package body UDO_PKG_STAND_WEB as
             JSLC_ITM.PUT(PAIR_NAME  => 'NRACK_LINE_CELL',
                          PAIR_VALUE => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NRACK_LINE_CELL);
             JSLC_ITM.PUT(PAIR_NAME => 'BEMPTY', PAIR_VALUE => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).BEMPTY);
-            /* Обходим номенклатуры остатков ячейки */
-            JSLCN := JSON_LIST();
-            if (R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS.COUNT > 0) then
-              for N in R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS.FIRST .. R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C)
-                                                                                         .NOMEN_RESTS.LAST
-              loop
-                /* Собираем объект номенклатуры остатка */
-                JSLCN_ITM := JSON();
-                JSLCN_ITM.PUT(PAIR_NAME  => 'NNOMEN',
-                              PAIR_VALUE => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).NNOMEN);
-                JSLCN_ITM.PUT(PAIR_NAME  => 'SNOMEN',
-                              PAIR_VALUE => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).SNOMEN);
-                JSLCN_ITM.PUT(PAIR_NAME  => 'NNOMMODIF',
-                              PAIR_VALUE => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).NNOMMODIF);
-                JSLCN_ITM.PUT(PAIR_NAME  => 'SNOMMODIF',
-                              PAIR_VALUE => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).SNOMMODIF);
-                JSLCN_ITM.PUT(PAIR_NAME  => 'NREST',
-                              PAIR_VALUE => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).NREST);
-                JSLCN_ITM.PUT(PAIR_NAME  => 'NMEAS',
-                              PAIR_VALUE => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).NMEAS);
-                JSLCN_ITM.PUT(PAIR_NAME  => 'SMEAS',
-                              PAIR_VALUE => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).SMEAS);
-                /* Объект номенклатуры - в клоллекцию номенклатур ячейки */
-                JSLCN.APPEND(ELEM => JSLCN_ITM.TO_JSON_VALUE());
-              end loop;
-            end if;
             /* Коллекцию номенклатур - в ячейку */
-            JSLC_ITM.PUT(PAIR_NAME => 'NOMEN_RESTS', PAIR_VALUE => JSLCN.TO_JSON_VALUE());
+            JSLC_ITM.PUT(PAIR_NAME  => 'NOMEN_RESTS',
+                         PAIR_VALUE => STAND_RACK_NOMEN_REST_TO_JSON(NR => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS)
+                                       .TO_JSON_VALUE());
             /* Ячейку - в коллекцию ячеек яруса */
             JSLC.APPEND(ELEM => JSLC_ITM.TO_JSON_VALUE());
           end loop;
-        end if;      
+        end if;
         /* Коллекцию ячеек - в ярус */
         JSL_ITM.PUT(PAIR_NAME => 'RACK_LINE_CELL_RESTS', PAIR_VALUE => JSLC.TO_JSON_VALUE());
         /* Ярус - в коллекцию ярусов стеллажа */
@@ -115,7 +139,7 @@ create or replace package body UDO_PKG_STAND_WEB as
       end loop;
     end if;
     /* Коллекцию ярусов - в стеллаж */
-    JS.PUT(PAIR_NAME => 'RACK_LINE_RESTS', PAIR_VALUE => JSL);  
+    JS.PUT(PAIR_NAME => 'RACK_LINE_RESTS', PAIR_VALUE => JSL);
     /* Вернем резульат */
     return JS;
   end;

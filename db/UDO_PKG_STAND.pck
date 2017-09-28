@@ -21,6 +21,8 @@
   NRACK_LINE_CELLS          PKG_STD.TNUMBER := 3;                                       -- Количество ячеек (мест хранения) в ярусе
   NRACK_CELL_CAPACITY       PKG_STD.TNUMBER := 2;                                       -- Максимальное количество номенклатуры в ячейке хранения
   NRACK_CELL_SHIP_CNT       PKG_STD.TNUMBER := 1;                                       -- Количество номенклатуры, отгружаемое потребителю за одну транзакцию
+  NRESTS_LIMIT_MINIMUM      PKG_STD.TLNUMBER := 50;                                     -- Минимальный критический остаток по складу (в %)  
+  NRESTS_LIMIT_MIDDLE       PKG_STD.TLNUMBER := 50;                                     -- Средний остаток по складу (в %)  
 
   /* Константы описания движения по складу */
   SDEF_STORE_MOVE_IN        AZSGSMWAYSTYPES.GSMWAYS_MNEMO%type := 'Приход внутренний';  -- Операция прихода по умолчанию
@@ -217,13 +219,35 @@
     NTRANSINVCUST           number      -- Регистрационный номер отгрузочной РНОП
   );
   
+  /* Сохранение текущих остатков по стенду */
+  procedure STAND_SAVE_RESTS
+  (
+    NCOMPANY                number,     -- Регистрационный номер органиазации
+    BNOTIFY_REST            boolean,    -- Флаг оповещения о текущем остатке
+    BNOTIFY_LIMIT           boolean     -- Флаг оповещения о критическом снижении остатка
+  );
+  
+  /* Получение остатков стеллажа стенда по номенклатурам */
+  function STAND_GET_RACK_NOMEN_REST
+  (
+    NCOMPANY                number,           -- Регистрационный номер организации
+    SSTORE                  varchar2,         -- Мнемокод склада стенда
+    SPREF                   varchar2,         -- Префикс стеллажа стенда
+    SNUMB                   varchar2,         -- Номер стеллажа стенда
+    SCELL                   varchar2 := null, -- Наименование (префикс-номер) ячейки стеллажа (null - по всем)    
+    SNOMEN                  varchar2 := null, -- Номенклатура (null - по всем)
+    SNOMEN_MODIF            varchar2 := null  -- Модификация (null - по всем)
+  ) return TNOMEN_RESTS;
+  
   /* Получение остатков стеллажа стенда по местам хранения */
   function STAND_GET_RACK_REST
   (
-    NCOMPANY                number,     -- Регистрационный номер организации
-    SSTORE                  varchar2,   -- Мнемокод склада стенда
-    SPREF                   varchar2,   -- Префикс стеллажа стенда
-    SNUMB                   varchar2    -- Номер стеллажа стенда
+    NCOMPANY                number,           -- Регистрационный номер организации
+    SSTORE                  varchar2,         -- Мнемокод склада стенда
+    SPREF                   varchar2,         -- Префикс стеллажа стенда
+    SNUMB                   varchar2,         -- Номер стеллажа стенда
+    SNOMEN                  varchar2 := null, -- Номенклатура (null - по всем)
+    SNOMEN_MODIF            varchar2 := null  -- Модификация (null - по всем)
   ) return TRACK_REST;
   
   /* Поиск контрагента-посетителя стенда по штрихкоду */
@@ -581,6 +605,12 @@ create or replace package body UDO_PKG_STAND as
   
     /* Распределение спецификации по местам хранения */
     P_STRPLRESJRNL_INDEPTS_PROCESS(NCOMPANY => NCOMPANY, NRN => NINCOMEFROMDEPS);
+    
+    /* Оповестим о загузке стенда */
+    MSG_INSERT_NOTIFY(SMSG => 'Стнед успешно загружен...');
+    
+    /* Запомним остатки по стенду */
+    STAND_SAVE_RESTS(NCOMPANY => NCOMPANY, BNOTIFY_REST => true, BNOTIFY_LIMIT => false);
   end;
 
   /* Откат последней загрузки стенда */
@@ -646,6 +676,9 @@ create or replace package body UDO_PKG_STAND as
   
     /* Удаляем документ */
     P_INCOMEFROMDEPS_DELETE(NCOMPANY => NCOMPANY, NRN => NINCOMEFROMDEPS);
+
+    /* Запомним остатки по стенду */
+    STAND_SAVE_RESTS(NCOMPANY => NCOMPANY, BNOTIFY_REST => false, BNOTIFY_LIMIT => true);    
   end;
 
   /* Отгрузка со стенда посетителю */
@@ -875,16 +908,38 @@ create or replace package body UDO_PKG_STAND as
   
     /* Спишем резерв с мест хранения */
     P_STRPLRESJRNL_GTINV2C_PROCESS(NCOMPANY => NCOMPANY, NRN => NTRANSINVCUST, NRES_TYPE => 1);
+  
+    /* Сообщим, что произошло списание */
+    MSG_INSERT_NOTIFY(SMSG => 'Произошла отгрузка посетителю "' || SCUSTOMER || '", документ-подтверждение: ' ||
+                              STRINVCUST_TYPE || ' №' || STRINVCUST_PREF || '-' || SNUMB || ' от ' ||
+                              TO_CHAR(sysdate, 'dd.mm.yyyy'));
+  
+    /* Запомним остатки по стенду */
+    STAND_SAVE_RESTS(NCOMPANY => NCOMPANY, BNOTIFY_REST => false, BNOTIFY_LIMIT => true);
   end;
 
   /* Откат отгрузки со стенда */
   procedure SHIPMENT_ROLLBACK
   (
-    NCOMPANY                number,          -- Регистрационный номер организации
-    NTRANSINVCUST           number           -- Регистрационный номер отгрузочной РНОП
+    NCOMPANY                number,               -- Регистрационный номер организации
+    NTRANSINVCUST           number                -- Регистрационный номер отгрузочной РНОП
   ) is
-    SMSG                    PKG_STD.TSTRING; -- Текст сообщения процедуры отработки прихода
+    SCUSTOMER               AGNLIST.AGNABBR%type; -- Мнемокод контрагента отгрузки
+    SMSG                    PKG_STD.TSTRING;      -- Текст сообщения процедуры отработки прихода
   begin
+    /* Считаем мнемокод контрагента отгрузочного документа */
+    begin
+      select A.AGNABBR
+        into SCUSTOMER
+        from TRANSINVCUST T,
+             AGNLIST      A
+       where T.RN = NTRANSINVCUST
+         and T.AGENT = A.RN;
+    exception
+      when NO_DATA_FOUND then
+        PKG_MSG.RECORD_NOT_FOUND(NFLAG_SMART => 0, NDOCUMENT => NTRANSINVCUST, SUNIT_TABLE => 'TRANSINVCUST');
+    end;
+  
     /* Отменяем размещение на местах хранения */
     P_STRPLRESJRNL_GTINV2C_RLLBACK(NCOMPANY => NCOMPANY, NRN => NTRANSINVCUST, NRES_TYPE => 1);
   
@@ -916,20 +971,224 @@ create or replace package body UDO_PKG_STAND as
   
     /* Удаляем документ */
     P_TRANSINVCUST_DELETE(NCOMPANY => NCOMPANY, NRN => NTRANSINVCUST);
+  
+    /* Скажем что откатили отгрузку */
+    MSG_INSERT_NOTIFY(SMSG => 'Отгрузка посетителю "' || SCUSTOMER || '" была отменена...');
+  
+    /* Запомним остатки по стенду */
+    STAND_SAVE_RESTS(NCOMPANY => NCOMPANY, BNOTIFY_REST => true, BNOTIFY_LIMIT => false);
   end;
   
+  /* Сохранение текущих остатков по стенду */
+  procedure STAND_SAVE_RESTS
+  (
+    NCOMPANY                number,           -- Регистрационный номер органиазации
+    BNOTIFY_REST            boolean,          -- Флаг оповещения о текущем остатке
+    BNOTIFY_LIMIT           boolean           -- Флаг оповещения о критическом снижении остатка
+  )
+  is
+    NTOTAL                  PKG_STD.TLNUMBER := 0;    -- Текущий итог по остаткам
+    SNOMEN                  DICNOMNS.NOMEN_CODE%type; --
+    SNOMEN_MODIF            NOMMODIF.MODIF_CODE%type; --
+    SMEAS                   DICMUNTS.MEAS_MNEMO%type; --
+    NR                      TNOMEN_RESTS;     -- Текущие остатки номенклатуры стенда
+  begin
+    /* Получим остатки по стенду */
+    NR := STAND_GET_RACK_NOMEN_REST(NCOMPANY     => NCOMPANY,
+                                    SSTORE       => SSTORE_GOODS,
+                                    SPREF        => SRACK_PREF,
+                                    SNUMB        => SRACK_NUMB,
+                                    SNOMEN       => SDEF_NOMEN,
+                                    SNOMEN_MODIF => SDEF_NOMEN_MODIF);
+    /* Запомним остатки по стенду */
+    MSG_INSERT_RESTS(SMSG => UDO_PKG_STAND_WEB.STAND_RACK_NOMEN_REST_TO_JSON(NR => NR).TO_CHAR());
+    /* Суммируем остатки если они есть и выставляем по коллекции номенклатуру и ЕИ для сообщений*/
+    if ((NR is not null) and (NR.COUNT > 0)) then
+      for N in NR.FIRST .. NR.LAST
+      loop
+        NTOTAL := NTOTAL + NR(N).NREST;
+        if (N = NR.FIRST) then
+          SNOMEN       := NR(N).SNOMEN;
+          SNOMEN_MODIF := NR(N).SNOMMODIF;
+          SMEAS        := NR(N).SMEAS;
+        end if;
+      end loop;
+    else
+      /* Остатков нет, выставим номенклатуру по умолчанию для сообщений */
+      SNOMEN       := SDEF_NOMEN;
+      SNOMEN_MODIF := SDEF_NOMEN_MODIF;
+    end if;
+    /* Если просили оповестить об остатках в принципе */
+    if (BNOTIFY_REST) then
+      if (NTOTAL = 0) then
+        MSG_INSERT_NOTIFY(SMSG => 'На стенде больше нет модификации "' || SNOMEN_MODIF || '" номенклатуры "' || SNOMEN || '"');
+      else
+        MSG_INSERT_NOTIFY(SMSG => 'Текущий остаток модификации "' || SNOMEN_MODIF || '" номенклатуры "' || SNOMEN ||
+                                  '" на стенде равен ' || TO_CHAR(NTOTAL) || ' ' || SMEAS);
+      end if;
+    end if;
+    /* Если просили оповестить о критическом снижении остатка */
+    if (BNOTIFY_LIMIT) then
+      /* Оповещаем, если они ниже критического лимита или их нет вообще */
+      if (NTOTAL = 0) then
+        MSG_INSERT_NOTIFY(SMSG => 'На стенде больше нет модификации "' || SNOMEN_MODIF || '" номенклатуры "' || SNOMEN ||
+                                  '"! Загрузите стенд!');
+      else
+        if ((NTOTAL / (NRACK_LINES * NRACK_LINE_CELLS * NRACK_CELL_CAPACITY) * 100) < NRESTS_LIMIT_MINIMUM) then
+          MSG_INSERT_NOTIFY(SMSG => 'Текущий остаток ' || TO_CHAR(NTOTAL) || ' ' || SMEAS || ' модификации "' ||
+                                    SNOMEN_MODIF || '" номенклатуры "' || SNOMEN ||
+                                    '" на стенде ниже критической отметки в ' || TO_CHAR(NRESTS_LIMIT_MINIMUM) ||
+                                    '%! Приготовьтесь загрузить стенд!');
+        end if;
+      end if;
+    end if;
+  end;
+  
+  /* Получение остатков стеллажа стенда по номенклатурам */
+  function STAND_GET_RACK_NOMEN_REST
+  (
+    NCOMPANY                number,           -- Регистрационный номер организации
+    SSTORE                  varchar2,         -- Мнемокод склада стенда
+    SPREF                   varchar2,         -- Префикс стеллажа стенда
+    SNUMB                   varchar2,         -- Номер стеллажа стенда
+    SCELL                   varchar2 := null, -- Наименование (префикс-номер) ячейки стеллажа (null - по всем)
+    SNOMEN                  varchar2 := null, -- Номенклатура (null - по всем)
+    SNOMEN_MODIF            varchar2 := null  -- Модификация (null - по всем)
+  ) return TNOMEN_RESTS
+  is
+    NSTORE                  PKG_STD.TREF;     -- Рег. номер склада
+    NRACK                   PKG_STD.TREF;     -- Рег. номер стеллажа
+    NCELL                   PKG_STD.TREF;     -- Рег. номер ячейки
+    BADD                    boolean;          -- Флаг необходимости добавления номенклатуры в коллекцию
+    N                       PKG_STD.TNUMBER;  -- Порядковый номер номенклатуры в результирующей коллекции
+    NREST                   PKG_STD.TLNUMBER; -- Остаток по текущей номенклатуре в текущем месте хранения
+    NTMP                    PKG_STD.TLNUMBER; -- Буфер для рассчетов
+    RES                     TNOMEN_RESTS;     -- Результат работы
+  begin
+    /* Проверим параметры */
+    if (((SNOMEN is null) and (SNOMEN_MODIF is not null)) or ((SNOMEN is not null) and (SNOMEN_MODIF is null))) then
+      P_EXCEPTION(0,
+                  'Обязательно одновременное указание номенклатуры и модификации!');
+    end if;
+    /* Найдём рег. номер склада */
+    FIND_DICSTORE_NUMB(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SNUMB => SSTORE, NRN => NSTORE);
+    /* Найдем рег. номер стеллажа */
+    P_STPLRACKS_FIND(NFLAG_SMART => 0,
+                     NCOMPANY    => NCOMPANY,
+                     SSTORE      => SSTORE,
+                     SPREF       => SPREF,
+                     SNUMB       => SNUMB,
+                     NRN         => NRACK);
+    /* Найдём рег. номер ячейки */
+    FIND_STPLCELLS_NUMB(NFLAG_SMART  => 0,
+                        NFLAG_OPTION => 1,
+                        NCOMPANY     => NCOMPANY,
+                        NSTORE       => NSTORE,
+                        SSTORE       => SSTORE,
+                        SCELL        => SCELL,
+                        NRN          => NCELL);
+    /* Инициализируем выход */
+    RES := TNOMEN_RESTS();
+    /* Обходим номенклатуры */
+    for NMNS in (select DN.RN NNOMEN,
+                        DN.NOMEN_CODE SNOMEN,
+                        NM.RN NNOMMODIF,
+                        NM.MODIF_CODE SNOMMODIF,
+                        DM.RN NMEAS,
+                        DM.MEAS_MNEMO SMEAS,
+                        RACK_LINE_CELL_BUILD_NAME(SPREF => C.PREF, SNUMB => C.NUMB) SCELL
+                   from STPLGOODSSUPPLY SG,
+                        GOODSSUPPLY     G,
+                        GOODSPARTIES    GP,
+                        STPLRACKS       R,
+                        STPLCELLS       C,
+                        INCOMDOC        IND,
+                        DICNOMNS        DN,
+                        NOMMODIF        NM,
+                        DICMUNTS        DM
+                  where G.COMPANY = NCOMPANY
+                    and G.STORE = NSTORE
+                    and G.RN = SG.GOODSSUPPLY
+                    and R.RN = NRACK
+                    and R.RN = C.PRN
+                    and C.RN = SG.CELL
+                    and G.PRN = GP.RN
+                    and GP.INDOC = IND.RN
+                    and IND.CODE = SDEF_STORE_PARTY
+                    and GP.NOMMODIF = NM.RN
+                    and NM.PRN = DN.RN
+                    and DN.UMEAS_MAIN = DM.RN
+                    and ((NCELL is null) or ((NCELL is not null) and (C.RN = NCELL)))
+                    and ((SNOMEN is null) or ((SNOMEN is not null) and (DN.NOMEN_CODE = SNOMEN)))
+                    and ((SNOMEN_MODIF is null) or ((SNOMEN_MODIF is not null) and (NM.MODIF_CODE = SNOMEN_MODIF)))
+                  group by DN.RN,
+                           DN.NOMEN_CODE,
+                           NM.RN,
+                           NM.MODIF_CODE,
+                           DM.RN,
+                           DM.MEAS_MNEMO,
+                           RACK_LINE_CELL_BUILD_NAME(SPREF => C.PREF, SNUMB => C.NUMB))
+    loop
+      /* Попробуем найти номенклатуру в коллекции */
+      BADD := true;
+      if (RES.COUNT > 0) then
+        for I in RES.FIRST .. RES.LAST
+        loop
+          if (RES(I).NNOMMODIF = NMNS.NNOMMODIF) then
+            BADD := false;
+            N    := I;
+            exit;
+          end if;
+        end loop;
+      end if;
+      /* Добавим номенклатуру в коллекцию, если надо */
+      if (BADD) then
+        /* Новый элемент */
+        RES.EXTEND();
+        N := RES.LAST;
+        /* Инициализируем номенклатуру */
+        RES(N).NNOMEN := NMNS.NNOMEN;
+        RES(N).SNOMEN := NMNS.SNOMEN;
+        RES(N).NNOMMODIF := NMNS.NNOMMODIF;
+        RES(N).SNOMMODIF := NMNS.SNOMMODIF;
+        RES(N).NREST := 0;
+        RES(N).NMEAS := NMNS.NMEAS;
+        RES(N).SMEAS := NMNS.SMEAS;
+      end if;
+      /* Вычислим остаток по данной номенклатуре */
+      P_STPLGOODSSUPPLY_GETREST(NFLAG_SMART   => 0,
+                                NCOMPANY      => NCOMPANY,
+                                SSTORE        => SSTORE,
+                                SCELL         => NMNS.SCELL,
+                                SNOMEN        => NMNS.SNOMEN,
+                                SNOMMODIF     => NMNS.SNOMMODIF,
+                                SNOMMODIFPACK => null,
+                                SINDOC        => SDEF_STORE_PARTY,
+                                SSERNUMB      => null,
+                                SCOUNTRY      => null,
+                                SGTD          => null,
+                                NQUANT        => NREST,
+                                NQUANTALT     => NTMP,
+                                NQUANTPACK    => NTMP);
+      /* Накопим остаток */
+      RES(N).NREST := NREST + RES(N).NREST;
+    end loop;
+    /* Вернем результат */
+    return RES;
+  end;
+
   /* Получение остатков стеллажа стенда по местам хранения */
   function STAND_GET_RACK_REST
   (
     NCOMPANY                number,               -- Регистрационный номер организации
     SSTORE                  varchar2,             -- Мнемокод склада стенда
     SPREF                   varchar2,             -- Префикс стеллажа стенда
-    SNUMB                   varchar2              -- Номер стеллажа стенда
+    SNUMB                   varchar2,             -- Номер стеллажа стенда
+    SNOMEN                  varchar2 := null,     -- Номенклатура (null - по всем)
+    SNOMEN_MODIF            varchar2 := null      -- Модификация (null - по всем)    
   ) return TRACK_REST
   is
     CELL                    STPLCELLS%rowtype;    -- Запись ячейки стеллажа
-    N                       PKG_STD.TNUMBER;      -- Порядковый номер номенклатуры в ячейке
-    NTMP                    PKG_STD.TLNUMBER;     -- Буфер для рассчетов
     RES                     TRACK_REST;           -- Результат работы
   begin
     /* Находим стеллаж и инициализируем результат */
@@ -966,7 +1225,6 @@ create or replace package body UDO_PKG_STAND as
     RES.BEMPTY := true;
     /* Инициализируем коллекцию ярусов */
     RES.RACK_LINE_RESTS := TRACK_LINE_RESTS();
-  
     /* Обходим ярусы (согласно конфигурации стенда) */
     for L in 1 .. RES.NRACK_LINES_CNT
     loop
@@ -1010,71 +1268,31 @@ create or replace package body UDO_PKG_STAND as
         /* Скажем что ячейка пустая */
         RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).BEMPTY := true;
         /* Теперь наполним ячейку остатками номенклатуры */
-        for NMNS in (select DN.RN         NNOMEN,
-                            DN.NOMEN_CODE SNOMEN,
-                            NM.RN         NNOMMODIF,
-                            NM.MODIF_CODE SNOMMODIF,
-                            DM.RN         NMEAS,
-                            DM.MEAS_MNEMO SMEAS
-                       from STPLGOODSSUPPLY SG,
-                            GOODSSUPPLY     G,
-                            GOODSPARTIES    GP,
-                            INCOMDOC        IND,
-                            DICNOMNS        DN,
-                            NOMMODIF        NM,
-                            DICMUNTS        DM
-                      where SG.CELL = RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NRACK_CELL
-                        and SG.GOODSSUPPLY = G.RN
-                        and G.PRN = GP.RN
-                        and GP.INDOC = IND.RN
-                        and IND.CODE = SDEF_STORE_PARTY
-                        and GP.NOMMODIF = NM.RN
-                        and NM.PRN = DN.RN
-                        and DN.UMEAS_MAIN = DM.RN
-                      group by DN.RN,
-                               DN.NOMEN_CODE,
-                               NM.RN,
-                               NM.MODIF_CODE,
-                               DM.RN,
-                               DM.MEAS_MNEMO
-                     )
-        loop
-          /* Добавим номенклатуру в коллекцию */
-          RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS.EXTEND();
-          N := RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS.LAST;
-          /* Инициализируем номенклатуру */
-          RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).NNOMEN := NMNS.NNOMEN;
-          RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).SNOMEN := NMNS.SNOMEN;
-          RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).NNOMMODIF := NMNS.NNOMMODIF;
-          RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).SNOMMODIF := NMNS.SNOMMODIF;
-          RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).NMEAS := NMNS.NMEAS;
-          RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).SMEAS := NMNS.SMEAS;
-          /* Вычислим остаток по данной номенклатуре */
-          P_STPLGOODSSUPPLY_GETREST(NFLAG_SMART   => 0,
-                                    NCOMPANY      => NCOMPANY,
-                                    SSTORE        => RES.SSTORE,
-                                    SCELL         => RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).SRACK_CELL_NAME,
-                                    SNOMEN        => RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).SNOMEN,
-                                    SNOMMODIF     => RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N)
-                                                     .SNOMMODIF,
-                                    SNOMMODIFPACK => null,
-                                    SINDOC        => SDEF_STORE_PARTY,
-                                    SSERNUMB      => null,
-                                    SCOUNTRY      => null,
-                                    SGTD          => null,
-                                    NQUANT        => RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).NREST,
-                                    NQUANTALT     => NTMP,
-                                    NQUANTPACK    => NTMP);
-          /* Если запас по номенклатуре не нулевой, то выставим ячейке, ярусу и стеллажу флаг заполненности */
-          if (RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).NREST <> 0) then
-            RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).BEMPTY := false;
-            RES.RACK_LINE_RESTS(L).BEMPTY := false;
-            RES.BEMPTY := false;
-          end if;
-        end loop;
+        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS := STAND_GET_RACK_NOMEN_REST(NCOMPANY     => NCOMPANY,
+                                                                                                SSTORE       => RES.SSTORE,
+                                                                                                SPREF        => RES.SRACK_PREF,
+                                                                                                SNUMB        => RES.SRACK_NUMB,
+                                                                                                SCELL        => RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C)
+                                                                                                                .SRACK_CELL_NAME,
+                                                                                                SNOMEN       => SNOMEN,
+                                                                                                SNOMEN_MODIF => SNOMEN_MODIF);
+      
+      
+        /* Если запас по номенклатуре не нулевой, то выставим ячейке, ярусу и стеллажу флаг заполненности */
+        if (RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS.COUNT > 0) then
+          for N in RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS.FIRST .. RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C)
+                                                                                       .NOMEN_RESTS.LAST
+          loop
+            if (RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).NREST <> 0) then
+              RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).BEMPTY := false;
+              RES.RACK_LINE_RESTS(L).BEMPTY := false;
+              RES.BEMPTY := false;
+              exit;
+            end if;
+          end loop;
+        end if;
       end loop;
     end loop;
-  
     /* Вернем результат */
     return RES;
   end;
@@ -1195,10 +1413,12 @@ create or replace package body UDO_PKG_STAND as
     end if;
   
     /* Получим остатки по стеллажу, который обслуживает стенд */
-    RACK_REST := STAND_GET_RACK_REST(NCOMPANY => NCOMPANY,
-                                     SSTORE   => SSTORE_GOODS,
-                                     SPREF    => SRACK_PREF,
-                                     SNUMB    => SRACK_NUMB);
+    RACK_REST := STAND_GET_RACK_REST(NCOMPANY     => NCOMPANY,
+                                     SSTORE       => SSTORE_GOODS,
+                                     SPREF        => SRACK_PREF,
+                                     SNUMB        => SRACK_NUMB,
+                                     SNOMEN       => SDEF_NOMEN,
+                                     SNOMEN_MODIF => SDEF_NOMEN_MODIF);
   end;
 
 end;
