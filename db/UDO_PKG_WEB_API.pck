@@ -79,9 +79,10 @@
   /* Конвертация строки в дату для целей WEB-представления */
   function UTL_CONVERT_TO_DATE
   (
-    NSMART                  number,          -- Признак выдачи сообщения об ошибке
-    SDATE                   varchar2,        -- Дата (строковое представление)
-    SERR_MSG                varchar2 := null -- Сообщение об ошибке конвертации
+    NSMART                  number,           -- Признак выдачи сообщения об ошибке
+    SDATE                   varchar2,         -- Дата (строковое представление)
+    STEMPLATE               varchar2 := null, -- Шаблон для конвертации
+    SERR_MSG                varchar2 := null  -- Сообщение об ошибке конвертации
   ) return date; 
   
   /* Считывание записи отчета */
@@ -241,6 +242,7 @@ create or replace package body UDO_PKG_WEB_API as
         P_EXCEPTION(NSMART,
                     'Переданное значение - "' || SSTR || '", не является числом!');
     end;
+    /* Вернем ответ */
     return NTMP;
   end;
 
@@ -270,37 +272,46 @@ create or replace package body UDO_PKG_WEB_API as
       end if;
       SRES := trim(TO_CHAR(NNUMB, SPATTERN, 'nls_numeric_characters=''. '''));
     end if;
+    /* Вернем ответ */
     return SRES;
   exception
     when others then
+      /* Если что-то не так - пустая строка */
       return null;
   end;
 
   /* Конвертация строки в дату для целей WEB-представления */
   function UTL_CONVERT_TO_DATE
   (
-    NSMART                  number,          -- Признак выдачи сообщения об ошибке
-    SDATE                   varchar2,        -- Дата (строковое представление)
-    SERR_MSG                varchar2 := null -- Сообщение об ошибке конвертации
+    NSMART                  number,           -- Признак выдачи сообщения об ошибке
+    SDATE                   varchar2,         -- Дата (строковое представление)
+    STEMPLATE               varchar2 := null, -- Шаблон для конвертации
+    SERR_MSG                varchar2 := null  -- Сообщение об ошибке конвертации
   ) return date 
   is
-    DRESULT                 PKG_STD.TLDATE;  -- Результат работы
+    DRESULT                 PKG_STD.TLDATE;   -- Результат работы
   begin
     /* Конвертируем в зависимости от возможных разделителей */
     begin
-      if (SUBSTR(SDATE, 5, 1) = '-') then
-        DRESULT := TO_DATE(SDATE, 'yyyy-mm-dd');
-      elsif (SUBSTR(SDATE, 3, 1) = '.') then
-        DRESULT := TO_DATE(SDATE, 'dd.mm.yyyy');
+      if (STEMPLATE is null) then
+        if (SUBSTR(SDATE, 5, 1) = '-') then
+          DRESULT := TO_DATE(SDATE, 'yyyy-mm-dd');
+        elsif (SUBSTR(SDATE, 3, 1) = '.') then
+          DRESULT := TO_DATE(SDATE, 'dd.mm.yyyy');
+        else
+          DRESULT := TO_DATE(SDATE, 'dd/mm/yyyy');
+        end if;
       else
-        DRESULT := TO_DATE(SDATE, 'dd/mm/yyyy');
+        DRESULT := TO_DATE(SDATE, STEMPLATE);
       end if;
     exception
       when others then
         /* Выдаем ошибку */
         P_EXCEPTION(NSMART,
-                    NVL(SERR_MSG, 'Дата задана некорректно.') || ' Укажите дату в формате "ДД.ММ.ГГГГ"!');
+                    NVL(SERR_MSG, 'Дата задана некорректно.') || ' Укажите дату в формате "' ||
+                    NVL(STEMPLATE, 'ДД.ММ.ГГГГ') || '"!');
     end;
+    /* Вернем ответ */
     return DRESULT;
   end;
   

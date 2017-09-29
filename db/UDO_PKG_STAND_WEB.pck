@@ -21,6 +21,12 @@
     U                       UDO_PKG_STAND.TSTAND_USER -- Пользователь стенда
   ) return JSON;
   
+  /* Конвертация списка сообщений в JSON */
+  function MESSAGES_TO_JSON
+  (
+    MSGS                    UDO_PKG_STAND.TMESSAGES -- Список сообщений
+  ) return JSON_LIST;
+  
   /* Аутентификация посетителя стенда по штрихкоду */
   procedure AUTH_BY_BARCODE
   (
@@ -30,6 +36,20 @@
 
   /* Выдача посетителю товара со стенда */
   procedure SHIPMENT
+  (
+    CPRMS                   clob,       -- Входные параметры
+    CRES                    out clob    -- Результат работы
+  );
+  
+  /* Помещение сообщения в очередь уведомлений */
+  procedure MSG_INSERT
+  (
+    CPRMS                   clob,       -- Входные параметры
+    CRES                    out clob    -- Результат работы
+  );
+  
+  /* Выдача списка сообщений */
+  procedure MSG_GET_LIST
   (
     CPRMS                   clob,       -- Входные параметры
     CRES                    out clob    -- Результат работы
@@ -162,6 +182,37 @@ create or replace package body UDO_PKG_STAND_WEB as
     return JU;
   end;
   
+  /* Конвертация списка сообщений в JSON */
+  function MESSAGES_TO_JSON
+  (
+    MSGS                    UDO_PKG_STAND.TMESSAGES -- Список сообщений
+  ) return JSON_LIST
+  is
+    JL                      JSON_LIST;              -- JSON-описание cписка сообщений
+    JLI                     JSON;                   -- JSON-описание элемента списка
+  begin
+    /* Инициализируем ответ */
+    JL := JSON_LIST();
+    /* Если сообщения есть - обходим их */
+    if ((MSGS is not null) and (MSGS.COUNT > 0)) then
+      for I in MSGS.FIRST .. MSGS.LAST
+      loop
+        /* Инициализируем элемент сообщения */
+        JLI := JSON();
+        /* Соберем объект сообщения */
+        JLI.PUT(PAIR_NAME => 'NRN', PAIR_VALUE => MSGS(I).NRN);
+        JLI.PUT(PAIR_NAME => 'DTS', PAIR_VALUE => MSGS(I).DTS);
+        JLI.PUT(PAIR_NAME => 'STS', PAIR_VALUE => MSGS(I).STS);
+        JLI.PUT(PAIR_NAME => 'STP', PAIR_VALUE => MSGS(I).STP);
+        JLI.PUT(PAIR_NAME => 'SMSG', PAIR_VALUE => MSGS(I).SMSG);
+        /* Поместим сообщение в ответ */
+        JL.APPEND(ELEM => JLI.TO_JSON_VALUE());
+      end loop;
+    end if;
+    /* Вернем результат */
+    return JL;
+  end;  
+  
   /* Аутентификация посетителя стенда по штрихкоду */
   procedure AUTH_BY_BARCODE
   (
@@ -208,7 +259,7 @@ create or replace package body UDO_PKG_STAND_WEB as
   (
     CPRMS                   clob,                                       -- Входные параметры
     CRES                    out clob                                    -- Результат работы
-  )is
+  ) is
     JPRMS                   JSON;                                       -- Объектное представление параметров запроса
     NCOMPANY                COMPANIES.RN%type := GET_SESSION_COMPANY(); -- Рег. номер организации
     SCUSTOMER               PKG_STD.TSTRING;                            -- Мнемокод контрагента-посетителя
@@ -253,6 +304,107 @@ create or replace package body UDO_PKG_STAND_WEB as
     CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
                                       NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_OK,
                                       SRESP_MSG    => NTRANSINVCUST);
+  exception
+    when others then
+      SERR := sqlerrm;
+      CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                        NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_ERR,
+                                        SRESP_MSG    => SERR);
+      rollback;
+  end;
+  
+  /* Помещение сообщения в очередь уведомлений */
+  procedure MSG_INSERT
+  (
+    CPRMS                   clob,            -- Входные параметры
+    CRES                    out clob         -- Результат работы
+  ) is
+    JPRMS                   JSON;            -- Объектное представление параметров запроса
+    STP                     PKG_STD.TSTRING; -- Тип сообщения
+    SMSG                    PKG_STD.TSTRING; -- Текст сообщения
+    SERR                    PKG_STD.TSTRING; -- Буфер для ошибок
+  begin
+    /* Инициализируем выход */
+    DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
+    /* Конвертируем параметры в объектное представление */
+    JPRMS := JSON(CPRMS);
+    /* Считываем тип сообщения */
+    if ((not JPRMS.EXIST('STP')) or (JPRMS.GET('STP').VALUE_OF() is null)) then
+      P_EXCEPTION(0, 'В запросе к серверу не указан тип сообщения!');
+    else
+      STP := JPRMS.GET('STP').VALUE_OF();
+    end if;
+    /* Считываем текст сообщения */
+    if ((not JPRMS.EXIST('SMSG')) or (JPRMS.GET('SMSG').VALUE_OF() is null)) then
+      P_EXCEPTION(0, 'В запросе к серверу не указан текст сообщения!');
+    else
+      SMSG := JPRMS.GET('SMSG').VALUE_OF();
+    end if;
+    /* Добавляем сообщение */
+    UDO_PKG_STAND.MSG_INSERT(STP => STP, SMSG => SMSG);
+    /* Отдаём ответ что всё прошло успешно */
+    CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                      NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_OK,
+                                      SRESP_MSG    => '');
+  exception
+    when others then
+      SERR := sqlerrm;
+      CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                        NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_ERR,
+                                        SRESP_MSG    => SERR);
+      rollback;
+  end;
+  
+  /* Выдача списка сообщений */
+  procedure MSG_GET_LIST
+  (
+    CPRMS                   clob,            -- Входные параметры
+    CRES                    out clob         -- Результат работы
+  ) is
+    JRES                    JSON_LIST;       -- Объектное представление ответа - списка сообщений
+    JPRMS                   JSON;            -- Объектное представление параметров запроса
+    DFROM                   PKG_STD.TLDATE;  -- "Дата с" для отбора сообщений
+    STP                     PKG_STD.TSTRING; -- Тип сообщения для отбора
+    NLIMIT                  PKG_STD.TNUMBER; -- Максимальное количество отбираемых сообщений
+    NORDER                  PKG_STD.TNUMBER; -- Порядок сортировки сообщений
+    MSGS                    UDO_PKG_STAND.TMESSAGES; -- Коллекция сообщений
+    SERR                    PKG_STD.TSTRING; -- Буфер для ошибок
+  begin
+    /* Инициализируем выход */
+    DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
+    /* Конвертируем параметры в объектное представление */
+    JPRMS := JSON(CPRMS);
+    /* Считываем "дату с" для отбора сообщений */
+    if ((not JPRMS.EXIST('DFROM')) or (JPRMS.GET('DFROM').VALUE_OF() is null)) then
+      DFROM := null;
+    else
+      DFROM := UDO_PKG_WEB_API.UTL_CONVERT_TO_DATE(SDATE     => JPRMS.GET('DFROM').VALUE_OF(),
+                                                   NSMART    => 0,
+                                                   STEMPLATE => 'dd.mm.yyyy hh24:mi:ss');
+    end if;
+    /* Считываем тип для отбора сообщений */
+    if ((not JPRMS.EXIST('STP')) or (JPRMS.GET('STP').VALUE_OF() is null)) then
+      STP := null;
+    else
+      STP := JPRMS.GET('STP').VALUE_OF();
+    end if;
+    /* Считываем ограничение по количеству отобранных сообщений */
+    if ((not JPRMS.EXIST('NLIMIT')) or (JPRMS.GET('NLIMIT').VALUE_OF() is null)) then
+      NLIMIT := null;
+    else
+      NLIMIT := UDO_PKG_WEB_API.UTL_CONVERT_TO_NUMBER(SSTR => JPRMS.GET('NLIMIT').VALUE_OF(), NSMART => 0);
+    end if;
+    /* Считываем порядок сортировки отобранных сообщений */
+    if ((not JPRMS.EXIST('NORDER')) or (JPRMS.GET('NORDER').VALUE_OF() is null)) then
+      NORDER := UDO_PKG_STAND.NMSG_ORDER_ASC;
+    else
+      NORDER := UDO_PKG_WEB_API.UTL_CONVERT_TO_NUMBER(SSTR => JPRMS.GET('NORDER').VALUE_OF(), NSMART => 0);
+    end if;
+    /* Получаем список собщений и конвертируем их в JSON */
+    MSGS := UDO_PKG_STAND.MSG_GET_LIST(DFROM => DFROM, STP => STP, NLIMIT => NLIMIT, NORDER => NORDER);
+    JRES := MESSAGES_TO_JSON(MSGS => MSGS);
+    /* Отдаём ответ */
+    JRES.TO_CLOB(BUF => CRES);  
   exception
     when others then
       SERR := sqlerrm;
