@@ -63,8 +63,7 @@ create or replace package body UDO_PKG_STAND_WEB as
   function STAND_RACK_NOMEN_REST_TO_JSON
   (
     NR                      UDO_PKG_STAND.TNOMEN_RESTS -- Остатки номенклатуры
-  ) return JSON_LIST
-  is
+  ) return JSON_LIST is
     JSLCN                   JSON_LIST;               -- JSON-коллекция номенклатур ячейки
     JSLCN_ITM               JSON;                    -- JSON-описание номенклатур ячейки
   begin
@@ -95,8 +94,7 @@ create or replace package body UDO_PKG_STAND_WEB as
   function STAND_RACK_REST_TO_JSON
   (
     R                       UDO_PKG_STAND.TRACK_REST -- Остатки стенда
-  ) return JSON
-  is
+  ) return JSON is
     JS                      JSON;                    -- JSON-описание стеллажа
     JSL                     JSON_LIST;               -- JSON-коллекция ярусов стеллажа
     JSL_ITM                 JSON;                    -- JSON-описание яруса стеллажа
@@ -168,8 +166,7 @@ create or replace package body UDO_PKG_STAND_WEB as
   function STAND_USER_TO_JSON
   (
     U                       UDO_PKG_STAND.TSTAND_USER -- Пользователь стенда
-  ) return JSON
-  is
+  ) return JSON is
     JU                      JSON;                     -- JSON-описание пользователя стенда
   begin
     /* Инициализируем ответ */
@@ -186,8 +183,7 @@ create or replace package body UDO_PKG_STAND_WEB as
   function MESSAGES_TO_JSON
   (
     MSGS                    UDO_PKG_STAND.TMESSAGES -- Список сообщений
-  ) return JSON_LIST
-  is
+  ) return JSON_LIST is
     JL                      JSON_LIST;              -- JSON-описание cписка сообщений
     JLI                     JSON;                   -- JSON-описание элемента списка
   begin
@@ -218,7 +214,7 @@ create or replace package body UDO_PKG_STAND_WEB as
   (
     CPRMS                   clob,                                       -- Входные параметры
     CRES                    out clob                                    -- Результат работы
-  )is
+  ) is
     JRES                    JSON;                                       -- Буфера ответа
     JPRMS                   JSON;                                       -- Объектное представление параметров запроса
     NCOMPANY                COMPANIES.RN%type := GET_SESSION_COMPANY(); -- Рег. номер организации

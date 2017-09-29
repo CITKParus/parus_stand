@@ -316,8 +316,7 @@ create or replace package body UDO_PKG_STAND as
     STP                     varchar2,   -- Тип сообщения
     SMSG                    varchar2,   -- Текст сообщения
     NRN                     out number  -- Регистрационный номер добавленного сообщения
-  )
-  is
+  ) is
   begin
     /* Проверим параметры */
     if (STP not in (SMSG_TYPE_NOTIFY, SMSG_TYPE_REST)) then
@@ -336,8 +335,7 @@ create or replace package body UDO_PKG_STAND as
   procedure MSG_BASE_DELETE
   (
     NRN                     number      -- Регистрационный номер сообщения
-  )
-  is
+  ) is
   begin
     /* Удалим сообщение */
     delete from UDO_T_STAND_MSG T where T.RN = NRN;
@@ -347,8 +345,7 @@ create or replace package body UDO_PKG_STAND as
   procedure MSG_INSERT_NOTIFY
   (
     SMSG                    varchar2                 -- Текст сообщения
-  )
-  is
+  ) is
     NRN                     UDO_T_STAND_MSG.RN%type; -- Регистрационный номер добавленного сообщения
   begin
     /* Выполним базовое добавление в очередь сообщений */
@@ -359,8 +356,7 @@ create or replace package body UDO_PKG_STAND as
   procedure MSG_INSERT_RESTS
   (
     SMSG                    varchar2                 -- Текст сообщения
-  )
-  is
+  ) is
     NRN                     UDO_T_STAND_MSG.RN%type; -- Регистрационный номер добавленного сообщения
   begin
     /* Выполним базовое добавление в очередь сообщений */
@@ -372,8 +368,7 @@ create or replace package body UDO_PKG_STAND as
   (
     STP                     varchar2,   -- Тип сообщения
     SMSG                    varchar2    -- Текст сообщения
-  )
-  is
+  ) is
   begin
     /* Проверим параметры */
     if (STP is null) then
@@ -401,8 +396,7 @@ create or replace package body UDO_PKG_STAND as
   (
     NRN                     number,                  -- Регистрационный номер сообщения
     NSMART                  number := 0              -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
-  )return UDO_T_STAND_MSG%rowtype 
-  is
+  ) return UDO_T_STAND_MSG%rowtype is
     RES                     UDO_T_STAND_MSG%rowtype; -- Результат работы
   begin
     /* Считаем данные */
@@ -424,8 +418,7 @@ create or replace package body UDO_PKG_STAND as
     STP                     varchar2 := null,        -- Тип сообщений (null - все)
     NLIMIT                  number := null,          -- Максимальное количество (null - все)
     NORDER                  number := NMSG_ORDER_ASC -- Порядок сортировки (см. констнаты SMSG_ORDER_*)
-  ) return TMESSAGES 
-  is
+  ) return TMESSAGES is
     RES                     TMESSAGES;               -- Результат работы
   begin
     /* Проверим корректность указания порядка сортировки */
@@ -464,8 +457,7 @@ create or replace package body UDO_PKG_STAND as
   (
     SPREF                   varchar2 := SRACK_PREF, -- Префикс стеллажа
     SNUMB                   varchar2 := SRACK_NUMB  -- Номер стеллажа
-  ) return varchar2
-  is
+  ) return varchar2 is
   begin
     return trim(SPREF) || '-' || trim(SNUMB);
   end;
@@ -475,8 +467,7 @@ create or replace package body UDO_PKG_STAND as
   (
     NRACK_LINE              number,                          -- Номер яруса стеллажа в котором находится ячейка               
     SPREF_TMPL              varchar2 := SRACK_CELL_PREF_TMPL -- Шаблон префикса
-  ) return varchar2
-  is
+  ) return varchar2 is
   begin
     return SPREF_TMPL || NRACK_LINE;
   end;
@@ -486,8 +477,7 @@ create or replace package body UDO_PKG_STAND as
   (
     NRACK_LINE_CELL         number,                          -- Номер ячейки в ярусе стеллажа
     SNUMB_TMPL              varchar2 := SRACK_CELL_NUMB_TMPL -- Шаблон номера
-  ) return varchar2
-  is
+  ) return varchar2 is
   begin
     return SNUMB_TMPL || NRACK_LINE_CELL;
   end;
@@ -497,8 +487,7 @@ create or replace package body UDO_PKG_STAND as
   (
     SPREF                   varchar2,   -- Префикс ячейки
     SNUMB                   varchar2    -- Номер ячейки
-  ) return varchar2
-  is
+  ) return varchar2 is
   begin
     return trim(SPREF) || '-' || trim(SNUMB);
   end;  
@@ -510,8 +499,7 @@ create or replace package body UDO_PKG_STAND as
     NRACK_LINE_CELL         number,                           -- Номер ячейки в ярусе стеллажа
     SPREF_TMPL              varchar2 := SRACK_CELL_PREF_TMPL, -- Шаблон префикса    
     SNUMB_TMPL              varchar2 := SRACK_CELL_NUMB_TMPL  -- Шаблон номера
-  ) return varchar2
-  is
+  ) return varchar2 is
   begin
     return RACK_LINE_CELL_BUILD_NAME(SPREF => RACK_LINE_CELL_BUILD_PREF(NRACK_LINE => NRACK_LINE,
                                                                         SPREF_TMPL => SPREF_TMPL),
@@ -522,9 +510,8 @@ create or replace package body UDO_PKG_STAND as
   /* Загрузка стенда товаром */
   procedure LOAD
   (
-   NCOMPANY                 number                              -- Регистрационный номер организации 
-  ) 
-  is
+    NCOMPANY                 number                             -- Регистрационный номер организации 
+  ) is
     NCRN                    INCOMEFROMDEPS.RN%type;             -- Каталог размещения документов "Приход из подразделения"
     NJUR_PERS               JURPERSONS.RN%type;                 -- Регистрационный номер юридического лица "Прихода из подразделения" (основное ЮЛ организации)
     SJUR_PERS               JURPERSONS.CODE%type;               -- Мнемокод номер юридического лица "Прихода из подразделения" (основное ЮЛ организации)
@@ -721,8 +708,7 @@ create or replace package body UDO_PKG_STAND as
   procedure LOAD_ROLLBACK
   (
     NCOMPANY                number                  -- Регистрационный номер организации
-  ) 
-  is
+  ) is
     NINCOMEFROMDEPS         INCOMEFROMDEPS.RN%type; -- Рег. номер расформируемого "Прихода из подразделения"
     NWARNING                PKG_STD.TREF;           -- Флаг предупреждения процедуры отработки прихода
     SMSG                    PKG_STD.TSTRING;        -- Текст сообщения процедуры отработки прихода
@@ -1089,8 +1075,7 @@ create or replace package body UDO_PKG_STAND as
     NCOMPANY                number,           -- Регистрационный номер органиазации
     BNOTIFY_REST            boolean,          -- Флаг оповещения о текущем остатке
     BNOTIFY_LIMIT           boolean           -- Флаг оповещения о критическом снижении остатка
-  )
-  is
+  ) is
     NTOTAL                  PKG_STD.TLNUMBER := 0;    -- Текущий итог по остаткам
     SNOMEN                  DICNOMNS.NOMEN_CODE%type; --
     SNOMEN_MODIF            NOMMODIF.MODIF_CODE%type; --
@@ -1158,8 +1143,7 @@ create or replace package body UDO_PKG_STAND as
     SCELL                   varchar2 := null, -- Наименование (префикс-номер) ячейки стеллажа (null - по всем)
     SNOMEN                  varchar2 := null, -- Номенклатура (null - по всем)
     SNOMEN_MODIF            varchar2 := null  -- Модификация (null - по всем)
-  ) return TNOMEN_RESTS
-  is
+  ) return TNOMEN_RESTS is
     NSTORE                  PKG_STD.TREF;     -- Рег. номер склада
     NRACK                   PKG_STD.TREF;     -- Рег. номер стеллажа
     NCELL                   PKG_STD.TREF;     -- Рег. номер ячейки
@@ -1290,8 +1274,7 @@ create or replace package body UDO_PKG_STAND as
     SNUMB                   varchar2,             -- Номер стеллажа стенда
     SNOMEN                  varchar2 := null,     -- Номенклатура (null - по всем)
     SNOMEN_MODIF            varchar2 := null      -- Модификация (null - по всем)    
-  ) return TRACK_REST
-  is
+  ) return TRACK_REST is
     CELL                    STPLCELLS%rowtype;    -- Запись ячейки стеллажа
     RES                     TRACK_REST;           -- Результат работы
   begin
@@ -1406,8 +1389,7 @@ create or replace package body UDO_PKG_STAND as
   (
     NCOMPANY                number,             -- Регистрационный номер организации
     SBARCODE                varchar2            -- Штрихкод
-  ) return TSTAND_USER
-  is
+  ) return TSTAND_USER is
     NVERSION                VERSIONS.RN%type;   -- Версия раздела "Контрагенты"
     NDP_BARCODE             DOCS_PROPS.RN%type; -- Регистрационный номер дополнительного свойства для хранения штрихкода
     RES                     TSTAND_USER;        -- Результат работы
@@ -1448,8 +1430,7 @@ create or replace package body UDO_PKG_STAND as
   (
     NCOMPANY                number,          -- Регистрационный номер организации
     NAGENT                  number           -- Регистрационный номер контрагента
-  ) return number
-  is
+  ) return number is
     NRES                    PKG_STD.TNUMBER; -- Результат работы
   begin
     /* Пробуем найти РНОПотр с данным контрагентом, по складу стенда, с номенклатурой стенда, с типом и префиксом по умолчанию для стенда */
@@ -1501,8 +1482,7 @@ create or replace package body UDO_PKG_STAND as
     SBARCODE                varchar2,        -- Штрихкод    
     STAND_USER              out TSTAND_USER, -- Сведения о пользователе стенда
     RACK_REST               out TRACK_REST   -- Сведения об остатках на стенде
-  )
-  is
+  ) is
   begin
     /* Найдем контрагента по штрихкоду */
     STAND_USER := STAND_GET_AGENT_BY_BARCODE(NCOMPANY => NCOMPANY, SBARCODE => SBARCODE);

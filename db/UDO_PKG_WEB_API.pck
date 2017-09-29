@@ -200,8 +200,7 @@ create or replace package body UDO_PKG_WEB_API as
   function AUTHORIZE
   (
     SPROCEDURE              varchar2         -- Имя исполняемой процедуры
-  ) return boolean 
-  is
+  ) return boolean is
   begin
     /* Если вызываемая процедура в списке разрешенных */
     if (UPPER(SPROCEDURE) in
@@ -225,8 +224,7 @@ create or replace package body UDO_PKG_WEB_API as
   (
     SSTR                    varchar2,         -- Конвертируемая строка (разрядность 17.5, допускается передавать пробелы в качестве разделителя групп разрядов (но не другие символы!), допускается передавать в качестве разделителя целой и дробной части "." или ",", отрицательные обрабатываются корректно с минусом спереди, автоматически удаляются некоторые спец-символы)
     NSMART                  number := 0       -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
-  ) return number 
-  is
+  ) return number is
     STMP                    PKG_STD.TLSTRING; -- Буфер для конвертации
     NTMP                    PKG_STD.TLNUMBER; -- Буфер для конвертации
   begin
@@ -252,8 +250,7 @@ create or replace package body UDO_PKG_WEB_API as
     NNUMB                   number,          -- Конвертируемое число
     NSEPARATE               number := 0,     -- Разделять разряды (0 - нет, 1 - да)
     NSHARP                  number := 2      -- Точность (кол-во знаков после запятой, только для NSEPARATE = 1)
-  ) return varchar2 
-  is
+  ) return varchar2 is
     SPATTERN                PKG_STD.TSTRING; -- Шаблон для конвертации с разделителями
     SRES                    PKG_STD.TSTRING; -- Результат работы
   begin
@@ -287,8 +284,7 @@ create or replace package body UDO_PKG_WEB_API as
     SDATE                   varchar2,         -- Дата (строковое представление)
     STEMPLATE               varchar2 := null, -- Шаблон для конвертации
     SERR_MSG                varchar2 := null  -- Сообщение об ошибке конвертации
-  ) return date 
-  is
+  ) return date is
     DRESULT                 PKG_STD.TLDATE;   -- Результат работы
   begin
     /* Конвертируем в зависимости от возможных разделителей */
@@ -320,8 +316,7 @@ create or replace package body UDO_PKG_WEB_API as
   (
     NREPORT                 number,              -- Регистрационный номер отчета
     NSMART                  number := 0          -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
-  ) return USERREPORTS%rowtype 
-  is
+  ) return USERREPORTS%rowtype is
     RES                     USERREPORTS%rowtype; -- Результат работы
   begin
     /* Считаем данные */
@@ -341,8 +336,7 @@ create or replace package body UDO_PKG_WEB_API as
   (
     NREPORTQ                number,              -- Регистрационный номер позиции очереди печати отчетов
     NSMART                  number := 0          -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
-  ) return RPTPRTQUEUE%rowtype 
-  is
+  ) return RPTPRTQUEUE%rowtype is
     RES                     RPTPRTQUEUE%rowtype; -- Результат работы
   begin
     /* Считаем данные */
@@ -361,8 +355,7 @@ create or replace package body UDO_PKG_WEB_API as
   function UTL_RPTQ_BUILD_FILE_NAME
   (
     NREPORTQ                number               -- Регистрационный номер позиции очереди
-  ) return varchar2 
-  is
+  ) return varchar2 is
     RPTQ_REC                RPTPRTQUEUE%rowtype; -- Запись позиции очереди
     RPT_REC                 USERREPORTS%rowtype; -- Запись отчета
     SEXT                    PKG_STD.TSTRING;     -- Расширение файла
@@ -396,8 +389,7 @@ create or replace package body UDO_PKG_WEB_API as
   function UTL_PREPARE_FILENAME
   (
     SFILE_NAME              varchar2         -- Имя файла
-  ) return varchar2 
-  is
+  ) return varchar2 is
   begin
     return UTL_URL.ESCAPE(replace(replace(SUBSTR(SFILE_NAME, INSTR(SFILE_NAME, '/') + 1), CHR(10), null),
                                   CHR(13),
@@ -410,8 +402,7 @@ create or replace package body UDO_PKG_WEB_API as
   function RESP_TRANSLATE_MSG
   (
     SSTR_RU                 varchar2         -- Строка с русскими символами (CL8MSWIN1251)
-  ) return varchar2 
-  is
+  ) return varchar2 is
     SRES                    varchar2(4000);  -- Результат работы
   begin
     /* Выполним транслитерацию */
@@ -434,8 +425,7 @@ create or replace package body UDO_PKG_WEB_API as
   function RESP_CORRECT_ERR
   (
     SERR                    varchar2                -- Ненормальзованное сообщени об ошибке
-  ) return varchar2 
-  is
+  ) return varchar2 is
     STMP                    varchar2(4000) := SERR; -- Буфер для расчетов
     SRES                    varchar2(4000);         -- Результат
     NB                      number;                 -- Начало интервала
@@ -467,8 +457,7 @@ create or replace package body UDO_PKG_WEB_API as
     NRESP_FORMAT            number,          -- Формат ответа (0 - JSON, 1 - XML)
     NRESP_STATE             number,          -- Тип ответа (0 - ошибка, 1 - успех)
     SRESP_MSG               varchar2         -- Сообщение
-  ) return clob 
-  is
+  ) return clob is
     CRESP                   clob;            -- Текст ответа
   begin
     /* Откроем буфер */
@@ -522,8 +511,7 @@ create or replace package body UDO_PKG_WEB_API as
     CJSON                   clob,            -- Данные ответа
     NRESP_TYPE              out number,      -- Тип ответа (0 - ошибка, 1 - успех, null - CJSON не является стандартным ответом сервера)
     SRESP_MSG               out varchar2     -- Сообщение сервера
-  ) 
-  is
+  ) is
     JRESP JSON;
   begin
     JRESP := JSON(CJSON);
@@ -556,8 +544,7 @@ create or replace package body UDO_PKG_WEB_API as
     CDATA                   clob,                    -- Данные
     SCONTENT_TYPE           varchar2 := 'text/json', -- MIME-Type для данных
     SCHARSET                varchar2 := 'UTF-8'      -- Кодировка
-  )
-  is
+  ) is
     NTOTLEN                 number(17);              -- Общее кол-во символов к передаче
     NREST                   number(17);              -- Остаток символов к передаче
     NBLEN                   number(17) := 2000;      -- Длина строкового буфера (порция)
@@ -594,8 +581,7 @@ create or replace package body UDO_PKG_WEB_API as
     BDATA                   in out nocopy blob,                    -- Данные
     SFILE_NAME              varchar2,                              -- Имя файла
     SCONTENT_TYPE           varchar2 := 'application/octet-stream' -- MIME-Type для данных
-  )
-  is
+  ) is
     NTOTLEN                 number(17);                            -- Общее кол-во символов к передаче
   begin
     /* Если есть данные */
@@ -615,8 +601,7 @@ create or replace package body UDO_PKG_WEB_API as
   end;
 
   /* Определение пользователя сессии */
-  function SESSION_GET_USER return varchar2
-  is
+  function SESSION_GET_USER return varchar2 is
   begin
     return UTILIZER();
   end;
@@ -625,8 +610,7 @@ create or replace package body UDO_PKG_WEB_API as
   procedure SESSION_VALIDATE
   (
     SSESSION                varchar2         -- Идентификатор сессии
-  )
-  is
+  ) is
   begin
     /* Валидируем сессию */
     PKG_SESSION.VALIDATE_WEB(SCONNECT => SSESSION);
@@ -640,8 +624,7 @@ create or replace package body UDO_PKG_WEB_API as
   (
     NRN                     number,                        -- Регистрационный номер записи
     NSMART                  number := 0                    -- Признак выдачи сообщения об ошибке
-  ) return UDO_T_WEB_API_ACTIONS%rowtype
-  is
+  ) return UDO_T_WEB_API_ACTIONS%rowtype is
     RES                     UDO_T_WEB_API_ACTIONS%rowtype; -- Результат работы
     SERR                    varchar2(4000);                -- Буфер для ошибок
   begin
@@ -665,8 +648,7 @@ create or replace package body UDO_PKG_WEB_API as
   (
     SACTION                 varchar2,                      -- Код действия
     NSMART                  number := 0                    -- Признак выдачи сообщения об ошибке
-  ) return UDO_T_WEB_API_ACTIONS%rowtype
-  is
+  ) return UDO_T_WEB_API_ACTIONS%rowtype is
     RES                     UDO_T_WEB_API_ACTIONS%rowtype; -- Результат работы
     SERR                    varchar2(4000);                -- Буфер для ошибок
   begin
@@ -693,8 +675,7 @@ create or replace package body UDO_PKG_WEB_API as
     NRN                     number,                        -- Регистрационный номер обработчика
     CPRMS                   clob,                          -- Входные параметры
     CRES                    out clob                       -- Результат работы
-  )
-  is
+  ) is
     ACTPROC                 UDO_T_WEB_API_ACTIONS%rowtype; -- Запись обработчика действия
     SSQL                    varchar2(4000);                -- Исполняемый запрос
     NCUR                    integer;                       -- Курсор для запроса
@@ -748,8 +729,7 @@ create or replace package body UDO_PKG_WEB_API as
   procedure PROCESS
   (
     CPRMS                   clob                               -- Параметры запроса
-  )
-  is
+  ) is
     SCANNER_EXCEPTION       exception;                         -- Ошибка JSON-сканера
     pragma exception_init(SCANNER_EXCEPTION, -20100);          -- Инициализация ошибки JSON-сканера
     PARSER_EXCEPTION        exception;                         -- Ошибка JSON-парсера
