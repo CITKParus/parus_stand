@@ -1,0 +1,8 @@
+﻿-- Create the user 
+create user STAND
+  default tablespace PARUSDATA
+  temporary tablespace TEMP
+  profile DEFAULT
+  password expire;
+-- Grant/Revoke system privileges 
+grant create session to STAND;
