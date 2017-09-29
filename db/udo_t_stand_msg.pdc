@@ -9,7 +9,14 @@ create table UDO_T_STAND_MSG
 tablespace PARUSDATA
   pctfree 10
   initrans 1
-  maxtrans 255;
+  maxtrans 255
+  storage
+  (
+    initial 64K
+    next 1M
+    minextents 1
+    maxextents unlimited
+  );
 -- Create/Recreate primary, unique and foreign key constraints 
 alter table UDO_T_STAND_MSG
   add constraint UDO_C_STAND_MSG_RN_PK primary key (RN)
@@ -17,8 +24,15 @@ alter table UDO_T_STAND_MSG
   tablespace PARUSDATA
   pctfree 10
   initrans 2
-  maxtrans 255;
+  maxtrans 255
+  storage
+  (
+    initial 64K
+    next 1M
+    minextents 1
+    maxextents unlimited
+  );
 -- Create/Recreate check constraints 
 alter table UDO_T_STAND_MSG
   add constraint UDO_C_STAND_MSG_TP_CH
-  check (tp in ('NOTIFY', 'RESTS'));
+  check (TP in ('NOTIFY', 'RESTS', 'PRINT'));

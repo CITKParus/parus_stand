@@ -296,6 +296,8 @@ create or replace package body UDO_PKG_STAND_WEB as
                            NRACK_LINE      => NRACK_LINE,
                            NRACK_LINE_CELL => NRACK_LINE_CELL,
                            NTRANSINVCUST   => NTRANSINVCUST);
+    /* Ставим в очередь печати сформированный документ */
+    UDO_PKG_STAND.PRINT(NCOMPANY => NCOMPANY, NTRANSINVCUST => NTRANSINVCUST);
     /* Отдаём ответ что всё прошло успешно */
     CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
                                       NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_OK,

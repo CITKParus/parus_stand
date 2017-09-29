@@ -43,7 +43,8 @@
   /* Константы описания расходов */
   STRINVCUST_TYPE           DOCTYPES.DOCCODE%type := 'РНОП';                            -- Тип документа "Расходная накладная на отпуск потребителям"
   STRINVCUST_PREF           INCOMEFROMDEPS.DOC_PREF%type := 'РНОП';                     -- Префикс документа "Расходная накладная на отпуск потребителям"
-  
+  STRINVCUST_REPORT         USERREPORTS.CODE%type := 'RL1580';                          -- Мнемокод пользовательского отчета для автоматической печати
+    
   /* Констнаты описания состояни отгрузки посетителю стенда */
   NAGN_SUPPLY_NOT_YET       PKG_STD.TNUMBER := 1;                                       -- Отгрузки ещё не было
   NAGN_SUPPLY_ALREADY       PKG_STD.TNUMBER := 2;                                       -- Оггрузка уже была
@@ -54,6 +55,7 @@
   /* Константы описания типов сообщений очереди стенда */
   SMSG_TYPE_NOTIFY          UDO_T_STAND_MSG.TP%type := 'NOTIFY';                        -- Сообщение типа "Оповещение"
   SMSG_TYPE_REST            UDO_T_STAND_MSG.TP%type := 'RESTS';                         -- Сообщение типа "Сведения об остатках"
+  SMSG_TYPE_PRINT           UDO_T_STAND_MSG.TP%type := 'PRINT';                         -- Сообщение типа "Очередь печати"
   
   /* Константы описания порядка сортировки сообщений очереди стенда */
   NMSG_ORDER_ASC            PKG_STD.TNUMBER := 1;                                       -- Сначала старые
@@ -163,7 +165,13 @@
     SMSG                    varchar2    -- Текст сообщения
   );
 
-    /* Добавление в очередь сообщения */
+  /* Добавление в очередь сообщения типа "Очередь печати" */
+  procedure MSG_INSERT_PRINT
+  (
+    SMSG                    varchar2                 -- Текст сообщения
+  );
+  
+  /* Добавление в очередь сообщения */
   procedure MSG_INSERT
   (
     STP                     varchar2,   -- Тип сообщения
@@ -252,6 +260,13 @@
     NTRANSINVCUST           number      -- Регистрационный номер отгрузочной РНОП
   );
   
+  /* Печать РНОП через сервер печати */
+  procedure PRINT
+  (
+    NCOMPANY                number,     -- Регистрационный номер органиазации
+    NTRANSINVCUST           number      -- Регистрационный номер РНОП
+  );
+  
   /* Сохранение текущих остатков по стенду */
   procedure STAND_SAVE_RESTS
   (
@@ -319,7 +334,7 @@ create or replace package body UDO_PKG_STAND as
   ) is
   begin
     /* Проверим параметры */
-    if (STP not in (SMSG_TYPE_NOTIFY, SMSG_TYPE_REST)) then
+    if (STP not in (SMSG_TYPE_NOTIFY, SMSG_TYPE_REST, SMSG_TYPE_PRINT)) then
       P_EXCEPTION(0, 'Тип сообщения "%s" не поддерживается!', STP);
     end if;
     if (SMSG is null) then
@@ -362,6 +377,17 @@ create or replace package body UDO_PKG_STAND as
     /* Выполним базовое добавление в очередь сообщений */
     MSG_BASE_INSERT(STP => SMSG_TYPE_REST, SMSG => SMSG, NRN => NRN);
   end;
+
+  /* Добавление в очередь сообщения типа "Очередь печати" */
+  procedure MSG_INSERT_PRINT
+  (
+    SMSG                    varchar2                 -- Текст сообщения
+  ) is
+    NRN                     UDO_T_STAND_MSG.RN%type; -- Регистрационный номер добавленного сообщения
+  begin
+    /* Выполним базовое добавление в очередь сообщений */
+    MSG_BASE_INSERT(STP => SMSG_TYPE_PRINT, SMSG => SMSG, NRN => NRN);
+  end;
   
   /* Добавление в очередь сообщения */
   procedure MSG_INSERT
@@ -385,6 +411,9 @@ create or replace package body UDO_PKG_STAND as
       /* Тип сообщения - Сведения об остатках */        
       when SMSG_TYPE_REST then
         MSG_INSERT_RESTS(SMSG => SMSG);
+      /* Тип сообщения - Очередь печати */        
+      when SMSG_TYPE_PRINT then
+        MSG_INSERT_PRINT(SMSG => SMSG);
       /* Неизвестный тип сообщения */
       else
         P_EXCEPTION(0, 'Тип сообщения "%s" не поддерживается!', STP);
@@ -1069,18 +1098,107 @@ create or replace package body UDO_PKG_STAND as
     STAND_SAVE_RESTS(NCOMPANY => NCOMPANY, BNOTIFY_REST => true, BNOTIFY_LIMIT => false);
   end;
   
+  /* Печать РНОП через сервер печати */
+  procedure PRINT
+  (
+    NCOMPANY                number,          -- Регистрационный номер органиазации
+    NTRANSINVCUST           number           -- Регистрационный номер РНОП
+  ) is
+    NIDENT                  PKG_STD.TREF;    -- Идентификатор отмеченных записей для документа отгрузки
+    NREPORT_IDENT           PKG_STD.TREF;    -- Идентификатор отмеченных записей для отчета
+    NSLRN                   PKG_STD.TREF;    -- Рег. номер позиции буфера выбранных документов
+    NTRINVCUST_REPORT       PKG_STD.TREF;    -- Рег. номер формируемого отчета
+    STRANSINVCUST           PKG_STD.TSTRING; -- Описание документа отгрузки
+    SAGENT                  PKG_STD.TSTRING; -- Контрагент документа отгразки
+    NPQ                     PKG_STD.TREF;    -- Рег. номер позиции очереди отчета
+  begin
+    /* Считаем данные документа отгрузки */
+    begin
+      select trim(T.PREF) || '-' || trim(T.NUMB) || ' от ' || TO_CHAR(T.DOCDATE, 'dd.mm.yyyy'),
+             AG.AGNABBR
+        into STRANSINVCUST,
+             SAGENT
+        from TRANSINVCUST T,
+             AGNLIST      AG
+       where T.RN = NTRANSINVCUST
+         and T.COMPANY = NCOMPANY
+         and T.AGENT = AG.RN;
+    exception
+      when NO_DATA_FOUND then
+        PKG_MSG.RECORD_NOT_FOUND(NFLAG_SMART => 0, NDOCUMENT => NTRANSINVCUST, SUNIT_TABLE => 'TRANSINVCUST');
+    end;
+    /* Найдем регистрационный номер отчета */
+    FIND_USERREP_CODE(NFLAG_SMART => 0,
+                      NCOMPANY    => NCOMPANY,
+                      SCODE       => STRINVCUST_REPORT,
+                      NRN         => NTRINVCUST_REPORT);
+    /* Генерируем идентификатор отмеченных записей */
+    P_SELECTLIST_GENIDENT(NIDENT => NIDENT);
+    /* Добавляем РНОП в список выбранных документов */
+    P_SELECTLIST_INSERT_EXT(NIDENT     => NIDENT,
+                            NDOCUMENT  => NTRANSINVCUST,
+                            SUNITCODE  => 'GoodsTransInvoicesToConsumers',
+                            NDOCUMENT1 => null,
+                            SUNITCODE1 => null,
+                            NCRN       => null,
+                            NRN        => NSLRN);
+    /* Передадим отчет серверу печати */
+    PKG_USERREPORTS.PROLOGUE(NSET_PROCESS_TYPE => PKG_USERREPORTS.PROCESS_TYPE_SERV);
+    PKG_USERREPORTS.SET_REPORT_PARAM_NUM(SPARAM_NAME => 'NCOMPANY', NPARAM_VALUE => NCOMPANY);
+    PKG_USERREPORTS.SET_REPORT_PARAM_NUM(SPARAM_NAME => 'NIDENT', NPARAM_VALUE => NIDENT);
+    PKG_USERREPORTS.SET_REPORT_PARAM_STR(SPARAM_NAME => 'SSELLER', SPARAM_VALUE => null);
+    PKG_USERREPORTS.SET_REPORT_PARAM_STR(SPARAM_NAME => 'SSEL_BNKATR', SPARAM_VALUE => null);
+    PKG_USERREPORTS.SET_REPORT_PARAM_STR(SPARAM_NAME => 'SSENDER', SPARAM_VALUE => null);
+    PKG_USERREPORTS.SET_REPORT_PARAM_STR(SPARAM_NAME => 'SSND_BNKATR', SPARAM_VALUE => null);
+    PKG_USERREPORTS.SET_REPORT_PARAM_STR(SPARAM_NAME => 'SRECEIVER', SPARAM_VALUE => SAGENT);
+    PKG_USERREPORTS.SET_REPORT_PARAM_STR(SPARAM_NAME => 'SREC_BNKATR', SPARAM_VALUE => null);
+    PKG_USERREPORTS.SET_REPORT_PARAM_NUM(SPARAM_NAME => 'NNUMB_LINES_FIRST', NPARAM_VALUE => 10);
+    PKG_USERREPORTS.SET_REPORT_PARAM_NUM(SPARAM_NAME => 'NNUMB_LINES_LAST', NPARAM_VALUE => 10);
+    PKG_USERREPORTS.SET_REPORT_PARAM_NUM(SPARAM_NAME => 'NNUMB_LINES', NPARAM_VALUE => 10);
+    PKG_USERREPORTS.SET_REPORT_PARAM_NUM(SPARAM_NAME => 'NSHOW_NOMEN', NPARAM_VALUE => 1);
+    PKG_USERREPORTS.EXEC_REPORT(NREPORT => NTRINVCUST_REPORT, NIDENT => NREPORT_IDENT);
+    PKG_USERREPORTS.EPILOGUE();
+    /* Определим идентификатор отчета в очереди */
+    begin
+      select max(Q.RN)
+        into NPQ
+        from RPTPRTQUEUE Q
+       where Q.USER_REPORT = NTRINVCUST_REPORT
+         and Q.COMPANY = NCOMPANY
+         and Q.AUTHID = UTILIZER()
+         and exists (select P.RN
+                from RPTPRTQUEUE_PRM P
+               where P.PRN = Q.RN
+                 and P.NAME = 'NCOMPANY'
+                 and P.NUM_VALUE = NCOMPANY)
+         and exists (select P.RN
+                from RPTPRTQUEUE_PRM P
+               where P.PRN = Q.RN
+                 and P.NAME = 'SRECEIVER'
+                 and P.STR_VALUE = SAGENT);
+    exception
+      when others then
+        P_EXCEPTION(0, 'Не удалось определить отчет в очереди печати!');
+    end;
+    /* Оповестим пользователей о том, что отчет поставлен в очередь */
+    MSG_INSERT_NOTIFY(SMSG => 'Накладаня "' || STRANSINVCUST || '" для посетителя "' || SAGENT ||
+                              '" поставлена в очередь');
+    /* Оповестим службу автоматической печати, о том, что надо следить за отчетом */
+    MSG_INSERT_PRINT(SMSG => NPQ);
+  end;
+  
   /* Сохранение текущих остатков по стенду */
   procedure STAND_SAVE_RESTS
   (
-    NCOMPANY                number,           -- Регистрационный номер органиазации
-    BNOTIFY_REST            boolean,          -- Флаг оповещения о текущем остатке
-    BNOTIFY_LIMIT           boolean           -- Флаг оповещения о критическом снижении остатка
+    NCOMPANY                number,                   -- Регистрационный номер органиазации
+    BNOTIFY_REST            boolean,                  -- Флаг оповещения о текущем остатке
+    BNOTIFY_LIMIT           boolean                   -- Флаг оповещения о критическом снижении остатка
   ) is
     NTOTAL                  PKG_STD.TLNUMBER := 0;    -- Текущий итог по остаткам
-    SNOMEN                  DICNOMNS.NOMEN_CODE%type; --
-    SNOMEN_MODIF            NOMMODIF.MODIF_CODE%type; --
-    SMEAS                   DICMUNTS.MEAS_MNEMO%type; --
-    NR                      TNOMEN_RESTS;     -- Текущие остатки номенклатуры стенда
+    SNOMEN                  DICNOMNS.NOMEN_CODE%type; -- Номенклатура для сообщения
+    SNOMEN_MODIF            NOMMODIF.MODIF_CODE%type; -- Модификация номенклатуры для сообщения
+    SMEAS                   DICMUNTS.MEAS_MNEMO%type; -- Единица измерения для сообщения
+    NR                      TNOMEN_RESTS;             -- Текущие остатки номенклатуры стенда
   begin
     /* Получим остатки по стенду */
     NR := STAND_GET_RACK_NOMEN_REST(NCOMPANY     => NCOMPANY,
