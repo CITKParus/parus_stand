@@ -51,10 +51,14 @@
   /* Констнаты описания испоьзуемых дополнительных свойств */
   SDP_BARCODE               DOCS_PROPS.CODE%type := 'ШтрихКод';                         -- Мнемокод дополнительного свойства для храения штрихкода
   
-  /* Констнаты описания типов сообщений очереди стенда */
+  /* Константы описания типов сообщений очереди стенда */
   SMSG_TYPE_NOTIFY          UDO_T_STAND_MSG.TP%type := 'NOTIFY';                        -- Сообщение типа "Оповещение"
   SMSG_TYPE_REST            UDO_T_STAND_MSG.TP%type := 'RESTS';                         -- Сообщение типа "Сведения об остатках"
-
+  
+  /* Константы описания порядка сортировки сообщений очереди стенда */
+  NMSG_ORDER_ASC            PKG_STD.TNUMBER := 1;                                       -- Сначала старые
+  NMSG_ORDER_DESC           PKG_STD.TNUMBER := -1;                                      -- Cначала новые
+  
   /* Типы данных - складской остаток номенклатуры */
   type TNOMEN_REST is record
   (
@@ -120,6 +124,19 @@
     SAGENT_NAME             AGNLIST.AGNNAME%type                                        -- Наименование контрагента-посетителя
   );
   
+  /* Типы данных - сообщение */
+  type TMESSAGE is record
+  (
+    NRN                     UDO_T_STAND_MSG.RN%type,                                    -- Регистрационный номер сообщения
+    DTS                     UDO_T_STAND_MSG.TS%type,                                    -- Дата сообщения
+    STS                     PKG_STD.TSTRING,                                            -- Строковое представление даты сообщения (ДД.ММ.ГГГГ ЧЧ24:ММ:СС)
+    STP                     UDO_T_STAND_MSG.TP%type,                                    -- Тип сообщения
+    SMSG                    UDO_T_STAND_MSG.MSG%type                                    -- Текст сообщения
+  );
+  
+  /* Типы данных - коллекция сообщений */
+  type TMESSAGES is table of TMESSAGE;
+  
   /* Базовое добавление сообщения в очередь */
   procedure MSG_BASE_INSERT
   (
@@ -146,12 +163,28 @@
     SMSG                    varchar2    -- Текст сообщения
   );
 
+    /* Добавление в очередь сообщения */
+  procedure MSG_INSERT
+  (
+    STP                     varchar2,   -- Тип сообщения
+    SMSG                    varchar2    -- Текст сообщения
+  );
+  
   /* Считывание сообщения из очереди */
   function MSG_GET
   (
     NRN                     number,     -- Регистрационный номер сообщения
     NSMART                  number := 0 -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
   )return UDO_T_STAND_MSG%rowtype;
+  
+  /* Считывание новых сообщений из очереди */
+  function MSG_GET_LIST
+  (
+    DFROM                   date := null,            -- Дата с которой необходимо начать список (null - не учитывать)
+    STP                     varchar2 := null,        -- Тип сообщений (null - все)
+    NLIMIT                  number := null,          -- Максимальное количество (null - все)
+    NORDER                  number := NMSG_ORDER_ASC -- Порядок сортировки (см. констнаты SMSG_ORDER_*)
+  ) return TMESSAGES;  
   
   /* Формирование наименования стеллажа (префикс-номер) */
   function RACK_BUILD_NAME 
@@ -334,6 +367,35 @@ create or replace package body UDO_PKG_STAND as
     MSG_BASE_INSERT(STP => SMSG_TYPE_REST, SMSG => SMSG, NRN => NRN);
   end;
   
+  /* Добавление в очередь сообщения */
+  procedure MSG_INSERT
+  (
+    STP                     varchar2,   -- Тип сообщения
+    SMSG                    varchar2    -- Текст сообщения
+  )
+  is
+  begin
+    /* Проверим параметры */
+    if (STP is null) then
+      P_EXCEPTION(0, 'Не указан тип сообщения!');
+    end if;
+    if (SMSG is null) then
+      P_EXCEPTION(0, 'Не указан текст сообщения!');
+    end if;
+    /* Работаем от типа сообщения */
+    case STP
+      /* Тип сообщения - Оповещение */
+      when SMSG_TYPE_NOTIFY then
+        MSG_INSERT_NOTIFY(SMSG => SMSG);
+      /* Тип сообщения - Сведения об остатках */        
+      when SMSG_TYPE_REST then
+        MSG_INSERT_RESTS(SMSG => SMSG);
+      /* Неизвестный тип сообщения */
+      else
+        P_EXCEPTION(0, 'Тип сообщения "%s" не поддерживается!', STP);
+    end case;
+  end;
+  
   /* Считывание сообщения из очереди */
   function MSG_GET
   (
@@ -352,6 +414,48 @@ create or replace package body UDO_PKG_STAND as
         PKG_MSG.RECORD_NOT_FOUND(NFLAG_SMART => NSMART, NDOCUMENT => NRN, SUNIT_TABLE => 'UDO_T_STAND_MSG');
     end;
     /* Вернем результат */
+    return RES;
+  end;
+  
+  /* Считывание новых сообщений из очереди */
+  function MSG_GET_LIST
+  (
+    DFROM                   date := null,            -- Дата с которой необходимо начать список (null - не учитывать)
+    STP                     varchar2 := null,        -- Тип сообщений (null - все)
+    NLIMIT                  number := null,          -- Максимальное количество (null - все)
+    NORDER                  number := NMSG_ORDER_ASC -- Порядок сортировки (см. констнаты SMSG_ORDER_*)
+  ) return TMESSAGES 
+  is
+    RES                     TMESSAGES;               -- Результат работы
+  begin
+    /* Проверим корректность указания порядка сортировки */
+    if (NORDER not in (NMSG_ORDER_ASC, NMSG_ORDER_DESC)) then
+      P_EXCEPTION(0,
+                  'Некорректно указан порядок сортировки возвращаемых сообщений!');
+    end if;
+    /* Инициализируем выход */
+    RES := TMESSAGES();
+    /* Строим список сообщений в обратном хронологическом порядке */
+    for M in (select *
+                from (select *
+                        from (select T.*
+                                from UDO_T_STAND_MSG T
+                               where ((STP is null) or (STP is not null) and (T.TP = STP))
+                                 and ((DFROM is null) or (DFROM is not null) and (T.TS >= DFROM))
+                               order by T.RN desc) D
+                       where ((NLIMIT is null) or (NLIMIT is not null) and (ROWNUM <= NLIMIT))) F
+               order by F.RN * NORDER)
+    loop
+      /* Добавляем сообщение в ответ */
+      RES.EXTEND();
+      /* Описываем его */
+      RES(RES.LAST).NRN := M.RN;
+      RES(RES.LAST).DTS := M.TS;
+      RES(RES.LAST).STS := TO_CHAR(M.TS, 'dd.mm.yyyy hh24:mi:ss');
+      RES(RES.LAST).STP := M.TP;
+      RES(RES.LAST).SMSG := M.MSG;
+    end loop;
+    /* Отдаём результат */
     return RES;
   end;
   
