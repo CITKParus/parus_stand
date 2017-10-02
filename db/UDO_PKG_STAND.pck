@@ -1098,15 +1098,50 @@ create or replace package body UDO_PKG_STAND as
     STAND_SAVE_RESTS(NCOMPANY => NCOMPANY, BNOTIFY_REST => true, BNOTIFY_LIMIT => false);
   end;
   
+  /* Заполнение списка отмеченных для печати документов (автономная транзакция) */
+  procedure PRINT_SET_SELECTLIST
+  (
+    NIDENT                  number,          -- Идентификатор буфера
+    NDOCUMENT               number,          -- Регистрационный номер документа
+    SUNITCODE               varchar2         -- Код раздела документа
+  )
+  is
+    NSLRN                   PKG_STD.TREF;    -- Рег. номер позиции буфера выбранных документов
+    pragma AUTONOMOUS_TRANSACTION;
+  begin
+    /* Добавляем РНОП в список выбранных документов */
+    P_SELECTLIST_INSERT_EXT(NIDENT     => NIDENT,
+                            NDOCUMENT  => NDOCUMENT,
+                            SUNITCODE  => SUNITCODE,
+                            NDOCUMENT1 => null,
+                            SUNITCODE1 => null,
+                            NCRN       => null,
+                            NRN        => NSLRN);
+    /* Подтверждаем автономную транзакцию */
+    commit;                            
+  end;
+  
+  /* Очистка списка отмеченных для печати документов (автономная транзакция) */
+  procedure PRINT_CLEAR_SELECTLIST
+  (
+    NIDENT                  number           -- Идентификатор буфера
+  )
+  is
+    pragma                  AUTONOMOUS_TRANSACTION;
+  begin
+    /* Зачищаем буфер */
+    P_SELECTLIST_CLEAR(NIDENT => NIDENT);
+    /* Подтверждаем автономную транзакцию */
+    commit;                            
+  end;
+  
   /* Печать РНОП через сервер печати */
   procedure PRINT
   (
     NCOMPANY                number,          -- Регистрационный номер органиазации
     NTRANSINVCUST           number           -- Регистрационный номер РНОП
   ) is
-    NIDENT                  PKG_STD.TREF;    -- Идентификатор отмеченных записей для документа отгрузки
-    NREPORT_IDENT           PKG_STD.TREF;    -- Идентификатор отмеченных записей для отчета
-    NSLRN                   PKG_STD.TREF;    -- Рег. номер позиции буфера выбранных документов
+    NIDENT                  PKG_STD.TREF;    -- Идентификатор отмеченных записей для документа отгрузки    
     NTRINVCUST_REPORT       PKG_STD.TREF;    -- Рег. номер формируемого отчета
     STRANSINVCUST           PKG_STD.TSTRING; -- Описание документа отгрузки
     SAGENT                  PKG_STD.TSTRING; -- Контрагент документа отгразки
@@ -1128,63 +1163,110 @@ create or replace package body UDO_PKG_STAND as
         PKG_MSG.RECORD_NOT_FOUND(NFLAG_SMART => 0, NDOCUMENT => NTRANSINVCUST, SUNIT_TABLE => 'TRANSINVCUST');
     end;
     /* Найдем регистрационный номер отчета */
-    FIND_USERREP_CODE(NFLAG_SMART => 0,
-                      NCOMPANY    => NCOMPANY,
-                      SCODE       => STRINVCUST_REPORT,
-                      NRN         => NTRINVCUST_REPORT);
+    FIND_USERREP_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SCODE => STRINVCUST_REPORT, NRN => NTRINVCUST_REPORT);
     /* Генерируем идентификатор отмеченных записей */
     P_SELECTLIST_GENIDENT(NIDENT => NIDENT);
-    /* Добавляем РНОП в список выбранных документов */
-    P_SELECTLIST_INSERT_EXT(NIDENT     => NIDENT,
-                            NDOCUMENT  => NTRANSINVCUST,
-                            SUNITCODE  => 'GoodsTransInvoicesToConsumers',
-                            NDOCUMENT1 => null,
-                            SUNITCODE1 => null,
-                            NCRN       => null,
-                            NRN        => NSLRN);
+    /* Кладём документ в буфер (автономная транзакция) */
+    PRINT_SET_SELECTLIST(NIDENT    => NIDENT,
+                         NDOCUMENT => NTRANSINVCUST,
+                         SUNITCODE => 'GoodsTransInvoicesToConsumers');  
     /* Передадим отчет серверу печати */
-    PKG_USERREPORTS.PROLOGUE(NSET_PROCESS_TYPE => PKG_USERREPORTS.PROCESS_TYPE_SERV);
-    PKG_USERREPORTS.SET_REPORT_PARAM_NUM(SPARAM_NAME => 'NCOMPANY', NPARAM_VALUE => NCOMPANY);
-    PKG_USERREPORTS.SET_REPORT_PARAM_NUM(SPARAM_NAME => 'NIDENT', NPARAM_VALUE => NIDENT);
-    PKG_USERREPORTS.SET_REPORT_PARAM_STR(SPARAM_NAME => 'SSELLER', SPARAM_VALUE => null);
-    PKG_USERREPORTS.SET_REPORT_PARAM_STR(SPARAM_NAME => 'SSEL_BNKATR', SPARAM_VALUE => null);
-    PKG_USERREPORTS.SET_REPORT_PARAM_STR(SPARAM_NAME => 'SSENDER', SPARAM_VALUE => null);
-    PKG_USERREPORTS.SET_REPORT_PARAM_STR(SPARAM_NAME => 'SSND_BNKATR', SPARAM_VALUE => null);
-    PKG_USERREPORTS.SET_REPORT_PARAM_STR(SPARAM_NAME => 'SRECEIVER', SPARAM_VALUE => SAGENT);
-    PKG_USERREPORTS.SET_REPORT_PARAM_STR(SPARAM_NAME => 'SREC_BNKATR', SPARAM_VALUE => null);
-    PKG_USERREPORTS.SET_REPORT_PARAM_NUM(SPARAM_NAME => 'NNUMB_LINES_FIRST', NPARAM_VALUE => 10);
-    PKG_USERREPORTS.SET_REPORT_PARAM_NUM(SPARAM_NAME => 'NNUMB_LINES_LAST', NPARAM_VALUE => 10);
-    PKG_USERREPORTS.SET_REPORT_PARAM_NUM(SPARAM_NAME => 'NNUMB_LINES', NPARAM_VALUE => 10);
-    PKG_USERREPORTS.SET_REPORT_PARAM_NUM(SPARAM_NAME => 'NSHOW_NOMEN', NPARAM_VALUE => 1);
-    PKG_USERREPORTS.EXEC_REPORT(NREPORT => NTRINVCUST_REPORT, NIDENT => NREPORT_IDENT);
-    PKG_USERREPORTS.EPILOGUE();
-    /* Определим идентификатор отчета в очереди */
-    begin
-      select max(Q.RN)
-        into NPQ
-        from RPTPRTQUEUE Q
-       where Q.USER_REPORT = NTRINVCUST_REPORT
-         and Q.COMPANY = NCOMPANY
-         and Q.AUTHID = UTILIZER()
-         and exists (select P.RN
-                from RPTPRTQUEUE_PRM P
-               where P.PRN = Q.RN
-                 and P.NAME = 'NCOMPANY'
-                 and P.NUM_VALUE = NCOMPANY)
-         and exists (select P.RN
-                from RPTPRTQUEUE_PRM P
-               where P.PRN = Q.RN
-                 and P.NAME = 'SRECEIVER'
-                 and P.STR_VALUE = SAGENT);
-    exception
-      when others then
-        P_EXCEPTION(0, 'Не удалось определить отчет в очереди печати!');
-    end;
+    PKG_RPTPRTQUEUE.RESET_PARAMETER();
+    PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'NCOMPANY',
+                                  NDATA_TYPE  => 1,
+                                  SSTR_VALUE  => null,
+                                  NNUM_VALUE  => NCOMPANY,
+                                  DDATE_VALUE => null,
+                                  BLIST_IDENT => false);
+    PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'NIDENT',
+                                  NDATA_TYPE  => 1,
+                                  SSTR_VALUE  => null,
+                                  NNUM_VALUE  => NIDENT,
+                                  DDATE_VALUE => null,
+                                  BLIST_IDENT => true);
+    PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'SSELLER',
+                                  NDATA_TYPE  => 0,
+                                  SSTR_VALUE  => null,
+                                  NNUM_VALUE  => null,
+                                  DDATE_VALUE => null,
+                                  BLIST_IDENT => false);
+    PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'SSEL_BNKATR',
+                                  NDATA_TYPE  => 0,
+                                  SSTR_VALUE  => null,
+                                  NNUM_VALUE  => null,
+                                  DDATE_VALUE => null,
+                                  BLIST_IDENT => false);
+    PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'SSENDER',
+                                  NDATA_TYPE  => 0,
+                                  SSTR_VALUE  => null,
+                                  NNUM_VALUE  => null,
+                                  DDATE_VALUE => null,
+                                  BLIST_IDENT => false);
+    PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'SSND_BNKATR',
+                                  NDATA_TYPE  => 0,
+                                  SSTR_VALUE  => null,
+                                  NNUM_VALUE  => null,
+                                  DDATE_VALUE => null,
+                                  BLIST_IDENT => false);
+    PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'SRECEIVER',
+                                  NDATA_TYPE  => 0,
+                                  SSTR_VALUE  => SAGENT,
+                                  NNUM_VALUE  => null,
+                                  DDATE_VALUE => null,
+                                  BLIST_IDENT => false);
+    PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'SREC_BNKATR',
+                                  NDATA_TYPE  => 0,
+                                  SSTR_VALUE  => null,
+                                  NNUM_VALUE  => null,
+                                  DDATE_VALUE => null,
+                                  BLIST_IDENT => false);
+    PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'NNUMB_LINES_FIRST',
+                                  NDATA_TYPE  => 1,
+                                  SSTR_VALUE  => null,
+                                  NNUM_VALUE  => 10,
+                                  DDATE_VALUE => null,
+                                  BLIST_IDENT => false);
+    PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'NNUMB_LINES_LAST',
+                                  NDATA_TYPE  => 1,
+                                  SSTR_VALUE  => null,
+                                  NNUM_VALUE  => 10,
+                                  DDATE_VALUE => null,
+                                  BLIST_IDENT => false);
+    PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'NNUMB_LINES',
+                                  NDATA_TYPE  => 1,
+                                  SSTR_VALUE  => null,
+                                  NNUM_VALUE  => 10,
+                                  DDATE_VALUE => null,
+                                  BLIST_IDENT => false);
+    PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'NSHOW_NOMEN',
+                                  NDATA_TYPE  => 3,
+                                  SSTR_VALUE  => null,
+                                  NNUM_VALUE  => 1,
+                                  DDATE_VALUE => null,
+                                  BLIST_IDENT => false);
+    PKG_RPTPRTQUEUE.REGISTER_REPORT(NREPORT_TYPE     => 0,
+                                    BWAIT_COMPLEET   => false,
+                                    NCOMPANY         => NCOMPANY,
+                                    NIDENT           => null,
+                                    NUSER_REPORT     => NTRINVCUST_REPORT,
+                                    NCALC_TABLE      => null,
+                                    NCALC_TABLE_LINK => null,
+                                    SCALC_TABLE_URL  => null,
+                                    SCALC_TABLE_DB   => null,
+                                    NQUEUE           => NPQ);
+    /* Зачищаем буфер отмеченных документов (автономная транзакция) */
+    PRINT_CLEAR_SELECTLIST(NIDENT => NIDENT);
     /* Оповестим пользователей о том, что отчет поставлен в очередь */
     MSG_INSERT_NOTIFY(SMSG => 'Накладаня "' || STRANSINVCUST || '" для посетителя "' || SAGENT ||
                               '" поставлена в очередь');
     /* Оповестим службу автоматической печати, о том, что надо следить за отчетом */
     MSG_INSERT_PRINT(SMSG => NPQ);
+  exception
+     /* В случае любых ошибок - зачистим всё что сохранили автономной транзакцией в буфере */
+     when others then
+       /* Зачищаем буфер отмеченных документов (автономная транзакция) */
+       PRINT_CLEAR_SELECTLIST(NIDENT => NIDENT);
+       raise;
   end;
   
   /* Сохранение текущих остатков по стенду */

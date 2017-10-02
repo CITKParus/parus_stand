@@ -296,6 +296,8 @@ create or replace package body UDO_PKG_STAND_WEB as
                            NRACK_LINE      => NRACK_LINE,
                            NRACK_LINE_CELL => NRACK_LINE_CELL,
                            NTRANSINVCUST   => NTRANSINVCUST);
+    /* Подтверждаем транзакцию - иначе РНОП будет не видна для сервиса печати и для отчета */
+    commit;
     /* Ставим в очередь печати сформированный документ */
     UDO_PKG_STAND.PRINT(NCOMPANY => NCOMPANY, NTRANSINVCUST => NTRANSINVCUST);
     /* Отдаём ответ что всё прошло успешно */
