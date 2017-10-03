@@ -3,8 +3,14 @@
     WEB API стенда
   */
   
+  /* Конвертация конфигурации номенклатур стенда в JSON */
+  function STAND_RACK_NOMEN_CONFS_TO_JSON
+  (
+    NC                      UDO_PKG_STAND.TRACK_NOMEN_CONFS -- Конфигурация номенклатуры стенда
+  ) return JSON_LIST;
+  
   /* Конвертация остатков по номенклатуре стенда в JSON */
-  function STAND_RACK_NOMEN_REST_TO_JSON
+  function STAND_RACK_NOMEN_RESTS_TO_JSON
   (
     NR                      UDO_PKG_STAND.TNOMEN_RESTS -- Остатки номенклатуры
   ) return JSON_LIST;
@@ -15,10 +21,22 @@
     R                       UDO_PKG_STAND.TRACK_REST -- Остатки стенда
   ) return JSON;
   
+  /* Конвертация истории загруженности стенда в JSON */
+  function STAND_RACK_REST_PRCHS_TO_JSON
+  (
+    RH                      UDO_PKG_STAND.TRACK_REST_PRC_HISTS -- История загруженности стенда
+  ) return JSON_LIST;
+  
   /* Конвертация сведений о посетителе стенда в JSON */
   function STAND_USER_TO_JSON
   (
     U                       UDO_PKG_STAND.TSTAND_USER -- Пользователь стенда
+  ) return JSON;
+  
+  /* Конвертация состояния стенда в JSON */
+  function STAND_STATE_TO_JSON
+  (
+    SS                      UDO_PKG_STAND.TSTAND_STATE -- Состояние стенда
   ) return JSON;
   
   /* Конвертация списка сообщений в JSON */
@@ -54,18 +72,56 @@
     CPRMS                   clob,       -- Входные параметры
     CRES                    out clob    -- Результат работы
   );
+  
+  /* Получение состояния стенда */
+  procedure STAND_GET_STATE
+  (
+    CPRMS                   clob,       -- Входные параметры
+    CRES                    out clob    -- Результат работы
+  );
 
 end;
 /
 create or replace package body UDO_PKG_STAND_WEB as
 
+  /* Конвертация конфигурации номенклатур стенда в JSON */
+  function STAND_RACK_NOMEN_CONFS_TO_JSON
+  (
+    NC                      UDO_PKG_STAND.TRACK_NOMEN_CONFS -- Конфигурация номенклатуры стенда
+  ) return JSON_LIST is
+    JSLCN                   JSON_LIST;                      -- JSON-коллекция номенклатур ячейки
+    JSLCN_ITM               JSON;                           -- JSON-описание номенклатур ячейки
+  begin
+    /* Инициализируем выход */
+    JSLCN := JSON_LIST();
+    /* Обходим номенклатуры, если есть */
+    if ((NC is not null) and (NC.COUNT > 0)) then
+      for N in NC.FIRST .. NC.LAST
+      loop
+        /* Собираем объект остатка номенклатуры */
+        JSLCN_ITM := JSON();
+        JSLCN_ITM.PUT(PAIR_NAME => 'NNOMEN', PAIR_VALUE => NC(N).NNOMEN);
+        JSLCN_ITM.PUT(PAIR_NAME => 'SNOMEN', PAIR_VALUE => NC(N).SNOMEN);
+        JSLCN_ITM.PUT(PAIR_NAME => 'NNOMMODIF', PAIR_VALUE => NC(N).NNOMMODIF);
+        JSLCN_ITM.PUT(PAIR_NAME => 'SNOMMODIF', PAIR_VALUE => NC(N).SNOMMODIF);
+        JSLCN_ITM.PUT(PAIR_NAME => 'NMAX_QUANT', PAIR_VALUE => NC(N).NMAX_QUANT);        
+        JSLCN_ITM.PUT(PAIR_NAME => 'NMEAS', PAIR_VALUE => NC(N).NMEAS);
+        JSLCN_ITM.PUT(PAIR_NAME => 'SMEAS', PAIR_VALUE => NC(N).SMEAS);
+        /* Объект номенклатуры - в клоллекцию номенклатур */
+        JSLCN.APPEND(ELEM => JSLCN_ITM.TO_JSON_VALUE());
+      end loop;
+    end if;
+    /* Вернем ответ */
+    return JSLCN;
+  end;  
+  
   /* Конвертация остатков по номенклатуре стенда в JSON */
-  function STAND_RACK_NOMEN_REST_TO_JSON
+  function STAND_RACK_NOMEN_RESTS_TO_JSON
   (
     NR                      UDO_PKG_STAND.TNOMEN_RESTS -- Остатки номенклатуры
   ) return JSON_LIST is
-    JSLCN                   JSON_LIST;               -- JSON-коллекция номенклатур ячейки
-    JSLCN_ITM               JSON;                    -- JSON-описание номенклатур ячейки
+    JSLCN                   JSON_LIST;                 -- JSON-коллекция номенклатур ячейки
+    JSLCN_ITM               JSON;                      -- JSON-описание номенклатур ячейки
   begin
     /* Инициализируем выход */
     JSLCN := JSON_LIST();
@@ -144,7 +200,7 @@ create or replace package body UDO_PKG_STAND_WEB as
             JSLC_ITM.PUT(PAIR_NAME => 'BEMPTY', PAIR_VALUE => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).BEMPTY);
             /* Коллекцию номенклатур - в ячейку */
             JSLC_ITM.PUT(PAIR_NAME  => 'NOMEN_RESTS',
-                         PAIR_VALUE => STAND_RACK_NOMEN_REST_TO_JSON(NR => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS)
+                         PAIR_VALUE => STAND_RACK_NOMEN_RESTS_TO_JSON(NR => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS)
                                        .TO_JSON_VALUE());
             /* Ячейку - в коллекцию ячеек яруса */
             JSLC.APPEND(ELEM => JSLC_ITM.TO_JSON_VALUE());
@@ -162,6 +218,33 @@ create or replace package body UDO_PKG_STAND_WEB as
     return JS;
   end;
   
+  /* Конвертация истории загруженности стенда в JSON */
+  function STAND_RACK_REST_PRCHS_TO_JSON
+  (
+    RH                      UDO_PKG_STAND.TRACK_REST_PRC_HISTS -- История загруженности стенда
+  ) return JSON_LIST is
+    JSLRH                   JSON_LIST;                         -- JSON-коллекция номенклатур ячейки
+    JSLRH_ITM               JSON;                              -- JSON-описание номенклатур ячейки
+  begin
+    /* Инициализируем выход */
+    JSLRH := JSON_LIST();
+    /* Обходим историю, если есть */
+    if ((RH is not null) and (RH.COUNT > 0)) then
+      for N in RH.FIRST .. RH.LAST
+      loop
+        /* Собираем объект остатка номенклатуры */
+        JSLRH_ITM := JSON();
+        JSLRH_ITM.PUT(PAIR_NAME => 'DTS', PAIR_VALUE => RH(N).DTS);
+        JSLRH_ITM.PUT(PAIR_NAME => 'STS', PAIR_VALUE => RH(N).STS);
+        JSLRH_ITM.PUT(PAIR_NAME => 'NREST_PRC', PAIR_VALUE => RH(N).NREST_PRC);
+        /* Объект номенклатуры - в клоллекцию номенклатур */
+        JSLRH.APPEND(ELEM => JSLRH_ITM.TO_JSON_VALUE());
+      end loop;
+    end if;
+    /* Вернем ответ */
+    return JSLRH;
+  end;
+  
   /* Конвертация сведений о посетителе стенда в JSON */
   function STAND_USER_TO_JSON
   (
@@ -177,6 +260,31 @@ create or replace package body UDO_PKG_STAND_WEB as
     JU.PUT(PAIR_NAME => 'SAGENT_NAME', PAIR_VALUE => U.SAGENT_NAME);
     /* Вернем резульат */
     return JU;
+  end;
+  
+  /* Конвертация состояния стенда в JSON */
+  function STAND_STATE_TO_JSON
+  (
+    SS                      UDO_PKG_STAND.TSTAND_STATE -- Состояние стенда
+  ) return JSON is
+    JS                      JSON;                      -- JSON-описание состояния стенда
+  begin
+    /* Инициализируем ответ */
+    JS := JSON();
+    /* Соберем объект */
+    JS.PUT(PAIR_NAME => 'NRESTS_LIMIT_PRC_MIN', PAIR_VALUE => SS.NRESTS_LIMIT_PRC_MIN);
+    JS.PUT(PAIR_NAME => 'NRESTS_LIMIT_PRC_MDL', PAIR_VALUE => SS.NRESTS_LIMIT_PRC_MDL);
+    JS.PUT(PAIR_NAME => 'NRESTS_PRC_CURR', PAIR_VALUE => SS.NRESTS_PRC_CURR);
+    JS.PUT(PAIR_NAME  => 'NOMEN_CONFS',
+           PAIR_VALUE => STAND_RACK_NOMEN_CONFS_TO_JSON(NC => SS.NOMEN_CONFS).TO_JSON_VALUE());
+    JS.PUT(PAIR_NAME  => 'NOMEN_RESTS',
+           PAIR_VALUE => STAND_RACK_NOMEN_RESTS_TO_JSON(NR => SS.NOMEN_RESTS).TO_JSON_VALUE());
+    JS.PUT(PAIR_NAME  => 'RACK_REST_PRC_HISTS',
+           PAIR_VALUE => STAND_RACK_REST_PRCHS_TO_JSON(RH => SS.RACK_REST_PRC_HISTS).TO_JSON_VALUE());
+    JS.PUT(PAIR_NAME => 'RACK_REST', PAIR_VALUE => STAND_RACK_REST_TO_JSON(R => SS.RACK_REST).TO_JSON_VALUE());
+    JS.PUT(PAIR_NAME => 'MESSAGES', PAIR_VALUE => MESSAGES_TO_JSON(MSGS => SS.MESSAGES).TO_JSON_VALUE());
+    /* Вернем резульат */
+    return JS;
   end;
   
   /* Конвертация списка сообщений в JSON */
@@ -358,17 +466,17 @@ create or replace package body UDO_PKG_STAND_WEB as
   /* Выдача списка сообщений */
   procedure MSG_GET_LIST
   (
-    CPRMS                   clob,            -- Входные параметры
-    CRES                    out clob         -- Результат работы
+    CPRMS                   clob,                    -- Входные параметры
+    CRES                    out clob                 -- Результат работы
   ) is
-    JRES                    JSON_LIST;       -- Объектное представление ответа - списка сообщений
-    JPRMS                   JSON;            -- Объектное представление параметров запроса
-    DFROM                   PKG_STD.TLDATE;  -- "Дата с" для отбора сообщений
-    STP                     PKG_STD.TSTRING; -- Тип сообщения для отбора
-    NLIMIT                  PKG_STD.TNUMBER; -- Максимальное количество отбираемых сообщений
-    NORDER                  PKG_STD.TNUMBER; -- Порядок сортировки сообщений
+    JRES                    JSON_LIST;               -- Объектное представление ответа - списка сообщений
+    JPRMS                   JSON;                    -- Объектное представление параметров запроса
+    DFROM                   PKG_STD.TLDATE;          -- "Дата с" для отбора сообщений
+    STP                     PKG_STD.TSTRING;         -- Тип сообщения для отбора
+    NLIMIT                  PKG_STD.TNUMBER;         -- Максимальное количество отбираемых сообщений
+    NORDER                  PKG_STD.TNUMBER;         -- Порядок сортировки сообщений
     MSGS                    UDO_PKG_STAND.TMESSAGES; -- Коллекция сообщений
-    SERR                    PKG_STD.TSTRING; -- Буфер для ошибок
+    SERR                    PKG_STD.TSTRING;         -- Буфер для ошибок
   begin
     /* Инициализируем выход */
     DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
@@ -405,6 +513,33 @@ create or replace package body UDO_PKG_STAND_WEB as
     JRES := MESSAGES_TO_JSON(MSGS => MSGS);
     /* Отдаём ответ */
     JRES.TO_CLOB(BUF => CRES);  
+  exception
+    when others then
+      SERR := sqlerrm;
+      CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                        NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_ERR,
+                                        SRESP_MSG    => SERR);
+      rollback;
+  end;
+  
+  /* Получение состояния стенда */
+  procedure STAND_GET_STATE
+  (
+    CPRMS                   clob,                                       -- Входные параметры
+    CRES                    out clob                                    -- Результат работы
+  ) is
+    NCOMPANY                COMPANIES.RN%type := GET_SESSION_COMPANY(); -- Рег. номер организации
+    JRES                    JSON;                                       -- Объектное представление ответа - списка сообщений
+    STAND_STATE             UDO_PKG_STAND.TSTAND_STATE;                 -- Состояние стенда
+    SERR                    PKG_STD.TSTRING;                            -- Буфер для ошибок
+  begin
+    /* Инициализируем выход */
+    DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
+    /* Получим состояние стенда */
+    UDO_PKG_STAND.STAND_GET_STATE(NCOMPANY => NCOMPANY, STAND_STATE => STAND_STATE);
+    JRES := STAND_STATE_TO_JSON(SS => STAND_STATE);
+    /* Отдаём ответ */
+    JRES.TO_CLOB(BUF => CRES);
   exception
     when others then
       SERR := sqlerrm;

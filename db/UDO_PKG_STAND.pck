@@ -21,8 +21,8 @@
   NRACK_LINE_CELLS          PKG_STD.TNUMBER := 3;                                       -- Количество ячеек (мест хранения) в ярусе
   NRACK_CELL_CAPACITY       PKG_STD.TNUMBER := 2;                                       -- Максимальное количество номенклатуры в ячейке хранения
   NRACK_CELL_SHIP_CNT       PKG_STD.TNUMBER := 1;                                       -- Количество номенклатуры, отгружаемое потребителю за одну транзакцию
-  NRESTS_LIMIT_MINIMUM      PKG_STD.TLNUMBER := 50;                                     -- Минимальный критический остаток по складу (в %)  
-  NRESTS_LIMIT_MIDDLE       PKG_STD.TLNUMBER := 50;                                     -- Средний остаток по складу (в %)  
+  NRESTS_LIMIT_PRC_MIN      PKG_STD.TLNUMBER := 40;                                     -- Минимальный критический остаток по складу (в %)  
+  NRESTS_LIMIT_PRC_MDL      PKG_STD.TLNUMBER := 60;                                     -- Средний остаток по складу (в %)  
 
   /* Константы описания движения по складу */
   SDEF_STORE_MOVE_IN        AZSGSMWAYSTYPES.GSMWAYS_MNEMO%type := 'Приход внутренний';  -- Операция прихода по умолчанию
@@ -58,7 +58,8 @@
   
   /* Константы описания типов сообщений очереди стенда */
   SMSG_TYPE_NOTIFY          UDO_T_STAND_MSG.TP%type := 'NOTIFY';                        -- Сообщение типа "Оповещение"
-  SMSG_TYPE_REST            UDO_T_STAND_MSG.TP%type := 'RESTS';                         -- Сообщение типа "Сведения об остатках"
+  SMSG_TYPE_RESTS           UDO_T_STAND_MSG.TP%type := 'RESTS';                         -- Сообщение типа "Сведения об остатках"
+  SMSG_TYPE_REST_PRC        UDO_T_STAND_MSG.TP%type := 'REST_PRC';                      -- Сообщение типа "Сведения об остатках (% загруженности)"  
   SMSG_TYPE_PRINT           UDO_T_STAND_MSG.TP%type := 'PRINT';                         -- Сообщение типа "Очередь печати"
   
   /* Константы описания порядка сортировки сообщений очереди стенда */
@@ -68,6 +69,7 @@
   /* Типы данных - конфигурация ячейки стенда */
   type TRACK_LINE_CELL_CONF is record
   (
+    NRACK_CELL              STPLCELLS.RN%type,                                          -- Регистрационный номер ячейки
     NRACK_LINE              PKG_STD.TREF,                                               -- Номер яруса стеллажа на котором находится чейка
     NRACK_LINE_CELL         PKG_STD.TREF,                                               -- Номер ячейки в ярусе стеллажа стенда
     SPREF                   STPLCELLS.PREF%type,                                        -- Префикс ячейки
@@ -83,6 +85,21 @@
   
   /* Типы данных - коллекция конфигураций ячеек ярусов стенда */
   type TRACK_LINE_CELL_CONFS is table of TRACK_LINE_CELL_CONF;
+
+  /* Типы данных - конфигурация номенклатуры стенда */
+  type TRACK_NOMEN_CONF is record
+  (
+    NNOMEN                  DICNOMNS.RN%type,                                           -- Регистрационный номер номенклатуры хранения
+    SNOMEN                  DICNOMNS.NOMEN_CODE%type,                                   -- Мнемокод номенклатуры хранения
+    NNOMMODIF               NOMMODIF.RN%type,                                           -- Регистрационный номер модификации номенклатуры хранения
+    SNOMMODIF               NOMMODIF.MODIF_CODE%type,                                   -- Мнемокод модификации номенклатуры хранения
+    NMAX_QUANT              PKG_STD.TLNUMBER,                                           -- Максимально возможное количество номенклатуры на стенде
+    NMEAS                   DICMUNTS.RN%type,                                           -- Регистрационный номер основной ЕИ номенклатуры
+    SMEAS                   DICMUNTS.MEAS_MNEMO%type                                    -- Мнемокод основной ЕИ номенклатуры
+  );
+
+  /* Типы данных - коллекция конфигураций номенклатуры стенда */
+  type TRACK_NOMEN_CONFS is table of TRACK_NOMEN_CONF;
 
   /* Типы данных - складской остаток номенклатуры */
   type TNOMEN_REST is record
@@ -141,6 +158,17 @@
     RACK_LINE_RESTS         TRACK_LINE_RESTS := TRACK_LINE_RESTS()                      -- Остатки в ярусах стеллажа
   );
   
+  /* Тип данных - история загруженности (% остатка во времени) стенда */
+  type TRACK_REST_PRC_HIST is record
+  (
+    DTS                     date,                                                       -- Дата остатка
+    STS                     PKG_STD.TSTRING,                                            -- Строковое представление даты остатка (ДД.ММ.ГГГГ ЧЧ24:ММ:СС)
+    NREST_PRC               PKG_STD.TLNUMBER                                            -- % загруженности стенда на дату
+  );
+  
+  /* Тип данных - запись истории остатков стенда */
+  type TRACK_REST_PRC_HISTS is table of TRACK_REST_PRC_HIST;
+  
   /* Типы данных - посетитель стенда */
   type TSTAND_USER is record
   (
@@ -160,7 +188,20 @@
   );
   
   /* Типы данных - коллекция сообщений */
-  type TMESSAGES is table of TMESSAGE;
+  type TMESSAGES is table of TMESSAGE;  
+  
+  /* Типы данных - состояние стенда */  
+  type TSTAND_STATE is record
+  (
+    NRESTS_LIMIT_PRC_MIN    PKG_STD.TLNUMBER,                                           -- Минимальный критический остаток по стенду (в %)  
+    NRESTS_LIMIT_PRC_MDL    PKG_STD.TLNUMBER,                                           -- Средний критический остаток по стенду (в %)  
+    NRESTS_PRC_CURR         PKG_STD.TLNUMBER,                                           -- Текущая загруженность стенда (%)
+    NOMEN_CONFS             TRACK_NOMEN_CONFS,                                          -- Конфигурация номенклатур стенда
+    NOMEN_RESTS             TNOMEN_RESTS,                                               -- Остатки номенклатур стенда
+    RACK_REST_PRC_HISTS     TRACK_REST_PRC_HISTS,                                       -- История % загруженности стенда
+    RACK_REST               TRACK_REST,                                                 -- Остатки по местам хранения стенда    
+    MESSAGES                TMESSAGES                                                   -- Сообщения стенда
+  );
   
   /* Базовое добавление сообщения в очередь */
   procedure MSG_BASE_INSERT
@@ -188,10 +229,16 @@
     SMSG                    varchar2    -- Текст сообщения
   );
 
+    /* Добавление в очередь сообщения типа "Сведения об остатках (% загруженности)" */
+  procedure MSG_INSERT_REST_PRC
+  (
+    SMSG                    varchar2    -- Текст сообщения
+  );
+  
   /* Добавление в очередь сообщения типа "Очередь печати" */
   procedure MSG_INSERT_PRINT
   (
-    SMSG                    varchar2     -- Текст сообщения
+    SMSG                    varchar2    -- Текст сообщения
   );
   
   /* Добавление в очередь сообщения */
@@ -220,22 +267,22 @@
   /* Формирование наименования стеллажа (префикс-номер) */
   function RACK_BUILD_NAME 
   (
-    SPREF                   varchar2 := SRACK_PREF, -- Префикс стеллажа
-    SNUMB                   varchar2 := SRACK_NUMB  -- Номер стеллажа
+    SPREF                   varchar2,   -- Префикс стеллажа
+    SNUMB                   varchar2    -- Номер стеллажа
   ) return varchar2;
   
   /* Формирование префикса ячейки яруса стеллажа склада */
   function RACK_LINE_CELL_BUILD_PREF
   (
-    NRACK_LINE              number,                          -- Номер яруса стеллажа в котором находится ячейка               
-    SPREF_TMPL              varchar2 := SRACK_CELL_PREF_TMPL -- Шаблон префикса
+    NRACK_LINE              number,     -- Номер яруса стеллажа в котором находится ячейка               
+    SPREF_TMPL              varchar2    -- Шаблон префикса
   ) return varchar2;
 
   /* Формирование номера ячейки яруса стеллажа склада */
   function RACK_LINE_CELL_BUILD_NUMB
   (
-    NRACK_LINE_CELL         number,                          -- Номер ячейки в ярусе стеллажа
-    SNUMB_TMPL              varchar2 := SRACK_CELL_NUMB_TMPL -- Шаблон номера
+    NRACK_LINE_CELL         number,     -- Номер ячейки в ярусе стеллажа
+    SNUMB_TMPL              varchar2    -- Шаблон номера
   ) return varchar2;
   
   /* Формирования полного имени (префикс-номер) ячейки яруса стеллажа склада (по префиксу и номеру)*/
@@ -248,11 +295,107 @@
   /* Формирования полного имени (префикс-номер) ячейки яруса стеллажа склада (по координатам)*/
   function RACK_LINE_CELL_BUILD_NAME
   (
-    NRACK_LINE              number,                           -- Номер яруса стеллажа в котором находится ячейка
-    NRACK_LINE_CELL         number,                           -- Номер ячейки в ярусе стеллажа
-    SPREF_TMPL              varchar2 := SRACK_CELL_PREF_TMPL, -- Шаблон префикса    
-    SNUMB_TMPL              varchar2 := SRACK_CELL_NUMB_TMPL  -- Шаблон номера
+    NRACK_LINE              number,     -- Номер яруса стеллажа в котором находится ячейка
+    NRACK_LINE_CELL         number,     -- Номер ячейки в ярусе стеллажа
+    SPREF_TMPL              varchar2,   -- Шаблон префикса    
+    SNUMB_TMPL              varchar2    -- Шаблон номера
   ) return varchar2;
+  
+  /* Инициализация конфигурации ячеек стенда */
+  procedure STAND_INIT_RACK_LINE_CELL_CONF
+  (
+    NCOMPANY                number,     -- Регистрационный номер организации 
+    SSTORE                  varchar2    -- Мнемокод склада стенда
+  );
+  
+  /* Инициализация конфигурации номенклатур стенда */
+  procedure STAND_INIT_RACK_NOMEN_CONF;
+
+  /* Инициализация конфигурации стенда */
+  procedure STAND_INIT_RACK_CONF
+  (
+    NCOMPANY                number,     -- Регистрационный номер организации 
+    SSTORE                  varchar2    -- Мнемокод склада стенда
+  );
+  
+  /* Получение конфигурации ячейки стенда */
+  function STAND_GET_RACK_LINE_CELL_CONF
+  (
+    NRACK_LINE              number,     -- Номер яруса стеллажа стенда
+    NRACK_LINE_CELL         number      -- Номер ячейки в ярусе стеллажа стенда
+  ) return TRACK_LINE_CELL_CONF;
+  
+  /* Получение конфигурации номенклатуры стенда (по рег. номеру модификации) */
+  function STAND_GET_RACK_NOMEN_CONF
+  (
+    NNOMMODIF               number      -- Регистрационный номер модификации номенклатуры
+  ) return TRACK_NOMEN_CONF;
+  
+  /* Получение конфигурации номенклатуры стенда (по мнемокоду номенклатуры и модификации) */
+  function STAND_GET_RACK_NOMEN_CONF
+  (
+    SNOMEN                  varchar2,   -- Мнемокод номенклатуры
+    SNOMMODIF               varchar2    -- Мнемокод модификации номенклатуры
+  ) return TRACK_NOMEN_CONF;
+  
+  /* Получение остатков стеллажа стенда по номенклатурам */
+  function STAND_GET_RACK_NOMEN_REST
+  (
+    NCOMPANY                number,           -- Регистрационный номер организации
+    SSTORE                  varchar2,         -- Мнемокод склада стенда
+    SPREF                   varchar2,         -- Префикс стеллажа стенда
+    SNUMB                   varchar2,         -- Номер стеллажа стенда
+    SCELL                   varchar2 := null, -- Наименование (префикс-номер) ячейки стеллажа (null - по всем)    
+    SNOMEN                  varchar2 := null, -- Номенклатура (null - по всем)
+    SNOMEN_MODIF            varchar2 := null  -- Модификация (null - по всем)
+  ) return TNOMEN_RESTS;
+  
+  /* Получение остатков стеллажа стенда по местам хранения */
+  function STAND_GET_RACK_REST
+  (
+    NCOMPANY                number,     -- Регистрационный номер организации
+    SSTORE                  varchar2,   -- Мнемокод склада стенда
+    SPREF                   varchar2,   -- Префикс стеллажа стенда
+    SNUMB                   varchar2    -- Номер стеллажа стенда
+  ) return TRACK_REST;
+  
+  /* Поиск контрагента-посетителя стенда по штрихкоду */
+  function STAND_GET_AGENT_BY_BARCODE
+  (
+    NCOMPANY                number,     -- Регистрационный номер организации
+    SBARCODE                varchar2    -- Штрихкод
+  ) return TSTAND_USER;
+  
+  /* Получение состояния стенда */
+  procedure STAND_GET_STATE
+  (
+    NCOMPANY                number,          -- Регистрационный номер организации
+    STAND_STATE             out TSTAND_STATE -- Состояние стенда
+  );
+
+  /* Сохранение текущих остатков по стенду */
+  procedure STAND_SAVE_RACK_REST
+  (
+    NCOMPANY                number,     -- Регистрационный номер органиазации
+    BNOTIFY_REST            boolean,    -- Флаг оповещения о текущем остатке
+    BNOTIFY_LIMIT           boolean     -- Флаг оповещения о критическом снижении остатка
+  );
+  
+  /* Проверка осуществления выдачи контрагенту-посетителю товара со стенда (см. константы NAGN_SUPPLY_*) */
+  function STAND_CHECK_SUPPLY
+  (
+    NCOMPANY                number,     -- Регистрационный номер организации
+    NAGENT                  number      -- Регистрационный номер контрагента
+  ) return number;
+  
+  /* Аутентификация посетителя стенда по штрихкоду */
+  procedure STAND_AUTH_BY_BARCODE
+  (
+    NCOMPANY                number,          -- Регистрационный номер организации
+    SBARCODE                varchar2,        -- Штрихкод
+    STAND_USER              out TSTAND_USER, -- Сведения о пользователе стенда
+    RACK_REST               out TRACK_REST   -- Сведения об остатках на стенде
+  );    
   
   /* Загрузка стенда товаром */
   procedure LOAD
@@ -303,80 +446,14 @@
     NCOMPANY                number,     -- Регистрационный номер органиазации
     NTRANSINVCUST           number      -- Регистрационный номер РНОП
   );
-  
-  /* Инициализация конфигурации ячеек стенда */
-  procedure STAND_INIT_RACK_LINE_CELL_CONF
-  (
-    NCOMPANY                number      -- Регистрационный номер организации 
-  );
-  
-  /* Сохранение текущих остатков по стенду */
-  procedure STAND_SAVE_RESTS
-  (
-    NCOMPANY                number,     -- Регистрационный номер органиазации
-    BNOTIFY_REST            boolean,    -- Флаг оповещения о текущем остатке
-    BNOTIFY_LIMIT           boolean     -- Флаг оповещения о критическом снижении остатка
-  );
-  
-  /* Получение конфигурации ячейки стенда */
-  function STAND_GET_RACK_LINE_CELL_CONF
-  (
-    NRACK_LINE              number,     -- Номер яруса стеллажа стенда
-    NRACK_LINE_CELL         number      -- Номер ячейки в ярусе стеллажа стенда
-  ) return TRACK_LINE_CELL_CONF;
-  
-  /* Получение остатков стеллажа стенда по номенклатурам */
-  function STAND_GET_RACK_NOMEN_REST
-  (
-    NCOMPANY                number,           -- Регистрационный номер организации
-    SSTORE                  varchar2,         -- Мнемокод склада стенда
-    SPREF                   varchar2,         -- Префикс стеллажа стенда
-    SNUMB                   varchar2,         -- Номер стеллажа стенда
-    SCELL                   varchar2 := null, -- Наименование (префикс-номер) ячейки стеллажа (null - по всем)    
-    SNOMEN                  varchar2 := null, -- Номенклатура (null - по всем)
-    SNOMEN_MODIF            varchar2 := null  -- Модификация (null - по всем)
-  ) return TNOMEN_RESTS;
-  
-  /* Получение остатков стеллажа стенда по местам хранения */
-  function STAND_GET_RACK_REST
-  (
-    NCOMPANY                number,           -- Регистрационный номер организации
-    SSTORE                  varchar2,         -- Мнемокод склада стенда
-    SPREF                   varchar2,         -- Префикс стеллажа стенда
-    SNUMB                   varchar2,         -- Номер стеллажа стенда
-    SNOMEN                  varchar2 := null, -- Номенклатура (null - по всем)
-    SNOMEN_MODIF            varchar2 := null  -- Модификация (null - по всем)
-  ) return TRACK_REST;
-  
-  /* Поиск контрагента-посетителя стенда по штрихкоду */
-  function STAND_GET_AGENT_BY_BARCODE
-  (
-    NCOMPANY                number,     -- Регистрационный номер организации
-    SBARCODE                varchar2    -- Штрихкод
-  ) return TSTAND_USER;
-  
-  /* Проверка осуществления выдачи контрагенту-посетителю товара со стенда (см. константы NAGN_SUPPLY_*) */
-  function STAND_CHECK_SUPPLY
-  (
-    NCOMPANY                number,     -- Регистрационный номер организации
-    NAGENT                  number      -- Регистрационный номер контрагента
-  ) return number;
-  
-  /* Аутентификация посетителя стенда по штрихкоду */
-  procedure STAND_AUTH_BY_BARCODE
-  (
-    NCOMPANY                number,          -- Регистрационный номер организации
-    SBARCODE                varchar2,        -- Штрихкод
-    STAND_USER              out TSTAND_USER, -- Сведения о пользователе стенда
-    RACK_REST               out TRACK_REST   -- Сведения об остатках на стенде
-  );    
 
 end;
 /
 create or replace package body UDO_PKG_STAND as
 
-  /* Конфигурация ячеек стенда */
-  RACK_LINE_CELL_CONFS      TRACK_LINE_CELL_CONFS;
+  /* Глобалльные переменные конфигурация стенда */
+  RACK_LINE_CELL_CONFS      TRACK_LINE_CELL_CONFS; -- Места хранения стенда
+  RACK_NOMEN_CONFS          TRACK_NOMEN_CONFS;     -- Номенклатуры стенда
   
   /* Базовое добавление сообщения в очередь */
   procedure MSG_BASE_INSERT
@@ -387,7 +464,7 @@ create or replace package body UDO_PKG_STAND as
   ) is
   begin
     /* Проверим параметры */
-    if (STP not in (SMSG_TYPE_NOTIFY, SMSG_TYPE_REST, SMSG_TYPE_PRINT)) then
+    if (STP not in (SMSG_TYPE_NOTIFY, SMSG_TYPE_RESTS, SMSG_TYPE_REST_PRC, SMSG_TYPE_PRINT)) then
       P_EXCEPTION(0, 'Тип сообщения "%s" не поддерживается!', STP);
     end if;
     if (SMSG is null) then
@@ -428,7 +505,18 @@ create or replace package body UDO_PKG_STAND as
     NRN                     UDO_T_STAND_MSG.RN%type; -- Регистрационный номер добавленного сообщения
   begin
     /* Выполним базовое добавление в очередь сообщений */
-    MSG_BASE_INSERT(STP => SMSG_TYPE_REST, SMSG => SMSG, NRN => NRN);
+    MSG_BASE_INSERT(STP => SMSG_TYPE_RESTS, SMSG => SMSG, NRN => NRN);
+  end;
+
+  /* Добавление в очередь сообщения типа "Сведения об остатках (% загруженности)" */
+  procedure MSG_INSERT_REST_PRC
+  (
+    SMSG                    varchar2                 -- Текст сообщения
+  ) is
+    NRN                     UDO_T_STAND_MSG.RN%type; -- Регистрационный номер добавленного сообщения
+  begin
+    /* Выполним базовое добавление в очередь сообщений */
+    MSG_BASE_INSERT(STP => SMSG_TYPE_REST_PRC, SMSG => SMSG, NRN => NRN);
   end;
 
   /* Добавление в очередь сообщения типа "Очередь печати" */
@@ -462,8 +550,11 @@ create or replace package body UDO_PKG_STAND as
       when SMSG_TYPE_NOTIFY then
         MSG_INSERT_NOTIFY(SMSG => SMSG);
       /* Тип сообщения - Сведения об остатках */        
-      when SMSG_TYPE_REST then
+      when SMSG_TYPE_RESTS then
         MSG_INSERT_RESTS(SMSG => SMSG);
+      /* Тип сообщения - Сведения об остатках (% загруженности) */        
+      when SMSG_TYPE_RESTS then
+        MSG_INSERT_REST_PRC(SMSG => SMSG);
       /* Тип сообщения - Очередь печати */        
       when SMSG_TYPE_PRINT then
         MSG_INSERT_PRINT(SMSG => SMSG);
@@ -537,8 +628,8 @@ create or replace package body UDO_PKG_STAND as
   /* Формирование наименования стеллажа (префикс-номер) */
   function RACK_BUILD_NAME 
   (
-    SPREF                   varchar2 := SRACK_PREF, -- Префикс стеллажа
-    SNUMB                   varchar2 := SRACK_NUMB  -- Номер стеллажа
+    SPREF                   varchar2,   -- Префикс стеллажа
+    SNUMB                   varchar2    -- Номер стеллажа
   ) return varchar2 is
   begin
     return trim(SPREF) || '-' || trim(SNUMB);
@@ -547,8 +638,8 @@ create or replace package body UDO_PKG_STAND as
   /* Формирование префикса ячейки яруса стеллажа склада */
   function RACK_LINE_CELL_BUILD_PREF
   (
-    NRACK_LINE              number,                          -- Номер яруса стеллажа в котором находится ячейка               
-    SPREF_TMPL              varchar2 := SRACK_CELL_PREF_TMPL -- Шаблон префикса
+    NRACK_LINE              number,     -- Номер яруса стеллажа в котором находится ячейка               
+    SPREF_TMPL              varchar2    -- Шаблон префикса
   ) return varchar2 is
   begin
     return SPREF_TMPL || NRACK_LINE;
@@ -557,8 +648,8 @@ create or replace package body UDO_PKG_STAND as
   /* Формирование номера ячейки яруса стеллажа склада */
   function RACK_LINE_CELL_BUILD_NUMB
   (
-    NRACK_LINE_CELL         number,                          -- Номер ячейки в ярусе стеллажа
-    SNUMB_TMPL              varchar2 := SRACK_CELL_NUMB_TMPL -- Шаблон номера
+    NRACK_LINE_CELL         number,     -- Номер ячейки в ярусе стеллажа
+    SNUMB_TMPL              varchar2    -- Шаблон номера
   ) return varchar2 is
   begin
     return SNUMB_TMPL || NRACK_LINE_CELL;
@@ -577,10 +668,10 @@ create or replace package body UDO_PKG_STAND as
   /* Формирования полного имени (префикс-номер) ячейки яруса стеллажа склада (по координатам)*/
   function RACK_LINE_CELL_BUILD_NAME
   (
-    NRACK_LINE              number,                           -- Номер яруса стеллажа в котором находится ячейка
-    NRACK_LINE_CELL         number,                           -- Номер ячейки в ярусе стеллажа
-    SPREF_TMPL              varchar2 := SRACK_CELL_PREF_TMPL, -- Шаблон префикса    
-    SNUMB_TMPL              varchar2 := SRACK_CELL_NUMB_TMPL  -- Шаблон номера
+    NRACK_LINE              number,     -- Номер яруса стеллажа в котором находится ячейка
+    NRACK_LINE_CELL         number,     -- Номер ячейки в ярусе стеллажа
+    SPREF_TMPL              varchar2,   -- Шаблон префикса    
+    SNUMB_TMPL              varchar2    -- Шаблон номера
   ) return varchar2 is
   begin
     return RACK_LINE_CELL_BUILD_NAME(SPREF => RACK_LINE_CELL_BUILD_PREF(NRACK_LINE => NRACK_LINE,
@@ -589,37 +680,789 @@ create or replace package body UDO_PKG_STAND as
                                                                         SNUMB_TMPL      => SNUMB_TMPL));
   end;  
   
+  /* Инициализация конфигурации ячеек стенда */
+  procedure STAND_INIT_RACK_LINE_CELL_CONF 
+  (
+    NCOMPANY                number,             -- Регистрационный номер организации 
+    SSTORE                  varchar2            -- Мнемокод склада стенда
+  ) is
+    NDEF_NOMEN_1              DICNOMNS.RN%type; -- Номенклатура по умолчанию (1)
+    NDEF_NOMEN_MODIF_1        NOMMODIF.RN%type; -- Модификация номенклатуры по умолчанию (1)
+    NDEF_NOMEN_2              DICNOMNS.RN%type; -- Номенклатура по умолчанию (2)
+    NDEF_NOMEN_MODIF_2        NOMMODIF.RN%type; -- Модификация номенклатуры по умолчанию (2)
+    NDEF_NOMEN_3              DICNOMNS.RN%type; -- Номенклатура по умолчанию (3)
+    NDEF_NOMEN_MODIF_3        NOMMODIF.RN%type; -- Модификация номенклатуры по умолчанию (3)
+  begin
+    /* Инициализируем коллекцию */
+    RACK_LINE_CELL_CONFS := TRACK_LINE_CELL_CONFS();
+    /* Разыменуем номенклатуры по умолчанию */
+    FIND_DICNOMNS_BY_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SNOMEN_CODE => SDEF_NOMEN_1, NRN => NDEF_NOMEN_1);
+    FIND_NOMMODIF_BY_CODE(NPRN => NDEF_NOMEN_1, SCODE => SDEF_NOMEN_MODIF_1, NFRN => NDEF_NOMEN_MODIF_1);
+    FIND_DICNOMNS_BY_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SNOMEN_CODE => SDEF_NOMEN_2, NRN => NDEF_NOMEN_2);
+    FIND_NOMMODIF_BY_CODE(NPRN => NDEF_NOMEN_2, SCODE => SDEF_NOMEN_MODIF_2, NFRN => NDEF_NOMEN_MODIF_2);
+    FIND_DICNOMNS_BY_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SNOMEN_CODE => SDEF_NOMEN_3, NRN => NDEF_NOMEN_3);
+    FIND_NOMMODIF_BY_CODE(NPRN => NDEF_NOMEN_3, SCODE => SDEF_NOMEN_MODIF_3, NFRN => NDEF_NOMEN_MODIF_3);
+    /* Обходям ярусы */
+    for I in 1 .. NRACK_LINES
+    loop
+      /* Обходим ячейки яруса */
+      for J in 1 .. NRACK_LINE_CELLS
+      loop
+        /* Добавим ячейку в коллекцию */
+        RACK_LINE_CELL_CONFS.EXTEND();
+        /* Конфигурируем ячейку общими вычисляемыми параметрами */
+        RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NRACK_LINE := I;
+        RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NRACK_LINE_CELL := J;
+        RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SPREF := RACK_LINE_CELL_BUILD_PREF(NRACK_LINE => I,
+                                                                                           SPREF_TMPL => SRACK_CELL_PREF_TMPL);
+        RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNUMB := RACK_LINE_CELL_BUILD_NUMB(NRACK_LINE_CELL => J,
+                                                                                           SNUMB_TMPL      => SRACK_CELL_NUMB_TMPL);
+        RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNAME := RACK_LINE_CELL_BUILD_NAME(SPREF => RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST)
+                                                                                                    .SPREF,
+                                                                                           SNUMB => RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST)
+                                                                                                    .SNUMB);
+        RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NCAPACITY := NRACK_CELL_CAPACITY;
+        RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NSHIP_CNT := NRACK_CELL_SHIP_CNT;
+        FIND_STPLCELLS_NUMB(NFLAG_SMART  => 0,
+                            NFLAG_OPTION => 0,
+                            NCOMPANY     => NCOMPANY,
+                            NSTORE       => null,
+                            SSTORE       => SSTORE,
+                            SCELL        => RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNAME,
+                            NRN          => RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NRACK_CELL);
+        /* Конфигурируем ячейку индивидуальными параметрами хранения */
+        case
+          /* 1 - 1 */
+          when (I = 1) and (J = 1) then
+            begin
+              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NNOMEN := NDEF_NOMEN_1;
+              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNOMEN := SDEF_NOMEN_1;
+              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NNOMMODIF := NDEF_NOMEN_MODIF_1;
+              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNOMMODIF := SDEF_NOMEN_MODIF_1;
+            end;
+          /* 1 - 2 */
+          when (I = 1) and (J = 2) then
+            begin
+              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NNOMEN := NDEF_NOMEN_2;
+              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNOMEN := SDEF_NOMEN_2;
+              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NNOMMODIF := NDEF_NOMEN_MODIF_2;
+              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNOMMODIF := SDEF_NOMEN_MODIF_2;
+            end;
+          /* 1 - 3 */
+          when (I = 1) and (J = 3) then
+            begin
+              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NNOMEN := NDEF_NOMEN_3;
+              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNOMEN := SDEF_NOMEN_3;
+              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NNOMMODIF := NDEF_NOMEN_MODIF_3;
+              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNOMMODIF := SDEF_NOMEN_MODIF_3;
+            end;
+          /* Неизвестная ячейка */
+          else
+            P_EXCEPTION(0,
+                        'Неизвестная ячейка №%s в ярусе №%s - не могу задать конфигурацию!',
+                        TO_CHAR(J),
+                        TO_CHAR(I));
+        end case;
+      end loop;
+    end loop;
+  end;
+  
+  /* Инициализация конфигурации номенклатур стенда */
+  procedure STAND_INIT_RACK_NOMEN_CONF is
+  begin
+    /* Инициализируеим коллекцию хранимых номенклатур */
+    RACK_NOMEN_CONFS := TRACK_NOMEN_CONFS();
+    /* Обходим конфигурацию ячеек стенда для того что бы сформировать коллекцию хранимых номенклатур */
+    if ((RACK_LINE_CELL_CONFS is not null) and (RACK_LINE_CELL_CONFS.COUNT > 0)) then
+      /* Наполним коллекцию хранимых номенклатур теми, которые указаны в ячейках */
+      declare
+        BADD boolean := false;
+      begin
+        /* Идем по из сконфигурированных ячеек стенеда */
+        for I in RACK_LINE_CELL_CONFS.FIRST .. RACK_LINE_CELL_CONFS.LAST
+        loop
+          BADD := true;
+          if (RACK_NOMEN_CONFS.COUNT > 0) then
+            /* Ищем в коллекции хранимых номенклатур... */
+            for J in RACK_NOMEN_CONFS.FIRST .. RACK_NOMEN_CONFS.LAST
+            loop
+              /* ...такую же, как в ячейке */
+              if (RACK_NOMEN_CONFS(J).NNOMMODIF = RACK_LINE_CELL_CONFS(I).NNOMMODIF) then
+                /* Такая есть - увеличим хранимое на стенд количество (он всегда загружается полностью) */
+                BADD := false;
+                RACK_NOMEN_CONFS(J).NMAX_QUANT := RACK_NOMEN_CONFS(J).NMAX_QUANT + RACK_LINE_CELL_CONFS(I).NCAPACITY;
+              end if;
+            end loop;
+          end if;
+          /* Номенклатуры как в ячейке ещё нет в коллекции храниямх - значит добавим её */
+          if (BADD) then
+            RACK_NOMEN_CONFS.EXTEND();
+            RACK_NOMEN_CONFS(RACK_NOMEN_CONFS.LAST).SNOMEN := RACK_LINE_CELL_CONFS(I).SNOMEN;
+            RACK_NOMEN_CONFS(RACK_NOMEN_CONFS.LAST).NNOMEN := RACK_LINE_CELL_CONFS(I).NNOMEN;
+            RACK_NOMEN_CONFS(RACK_NOMEN_CONFS.LAST).SNOMMODIF := RACK_LINE_CELL_CONFS(I).SNOMMODIF;
+            RACK_NOMEN_CONFS(RACK_NOMEN_CONFS.LAST).NNOMMODIF := RACK_LINE_CELL_CONFS(I).NNOMMODIF;
+            RACK_NOMEN_CONFS(RACK_NOMEN_CONFS.LAST).NMAX_QUANT := RACK_LINE_CELL_CONFS(I).NCAPACITY;
+            begin
+              select MU.RN,
+                     MU.MEAS_MNEMO
+                into RACK_NOMEN_CONFS(RACK_NOMEN_CONFS.LAST).NMEAS,
+                     RACK_NOMEN_CONFS(RACK_NOMEN_CONFS.LAST).SMEAS
+                from DICNOMNS DN,
+                     DICMUNTS MU
+               where DN.RN = RACK_LINE_CELL_CONFS(I).NNOMEN
+                 and DN.UMEAS_MAIN = MU.RN;
+            exception
+              when others then
+                P_EXCEPTION(0,
+                            'Не удалось определить основную ЕИ для номенклатуры "%s" (RN: %s)!',
+                            RACK_LINE_CELL_CONFS(I).SNOMEN,
+                            TO_CHAR(RACK_LINE_CELL_CONFS(I).NNOMEN));
+            end;          
+          end if;
+        end loop;
+      end;
+      /* Убедимся, что есть хоть что-то в нашей конфигурации */
+      if (RACK_NOMEN_CONFS.COUNT = 0) then
+        P_EXCEPTION(0,
+                    'Не удалось определить конфигурацию номенклатур стенда!');
+      end if;
+    /* Нет настроек мест хранения стенда */
+    else
+      P_EXCEPTION(0, 'Места хранения стенда ещё не сконфигурированы!');
+    end if;
+  end;
+  
+  /* Инициализация конфигурации стенда */
+  procedure STAND_INIT_RACK_CONF
+  (
+    NCOMPANY                number,     -- Регистрационный номер организации 
+    SSTORE                  varchar2    -- Мнемокод склада стенда
+  ) is
+  begin
+    /* Инициализируем места хранения */
+    STAND_INIT_RACK_LINE_CELL_CONF(NCOMPANY => NCOMPANY, SSTORE => SSTORE);
+    /* Инициализируем номенклатуры хранения */
+    STAND_INIT_RACK_NOMEN_CONF();
+  end;
+  
+  /* Получение конфигурации ячейки стенда */
+  function STAND_GET_RACK_LINE_CELL_CONF
+  (
+    NRACK_LINE              number,     -- Номер яруса стеллажа стенда
+    NRACK_LINE_CELL         number      -- Номер ячейки в ярусе стеллажа стенда
+  ) return TRACK_LINE_CELL_CONF is
+  begin
+    /* Обходим конфигурацию ячеек стенда и находим нужную */
+    if ((RACK_LINE_CELL_CONFS is not null) and (RACK_LINE_CELL_CONFS.COUNT > 0)) then
+      for I in RACK_LINE_CELL_CONFS.FIRST .. RACK_LINE_CELL_CONFS.LAST
+      loop
+        /* Если нашлась нужная ячейка... */
+        if ((RACK_LINE_CELL_CONFS(I).NRACK_LINE = NRACK_LINE) and
+           (RACK_LINE_CELL_CONFS(I).NRACK_LINE_CELL = NRACK_LINE_CELL)) then
+          /* ...вернём её */
+          return RACK_LINE_CELL_CONFS(I);
+        end if;
+      end loop;
+    else
+      P_EXCEPTION(0, 'Не задана конфигурация ячеек стенда!');
+    end if;
+    /* Если мы здесь - то очевидно ничего не нашли */
+    P_EXCEPTION(0,
+                'Для чейчки №%s яруса №%s стенда конфигурация не определена!',
+                TO_CHAR(NRACK_LINE_CELL),
+                TO_CHAR(NRACK_LINE));
+  end;
+  
+  /* Получение конфигурации номенклатуры стенда (по рег. номеру модификации) */
+  function STAND_GET_RACK_NOMEN_CONF
+  (
+    NNOMMODIF               number      -- Регистрационный номер модификации номенклатуры
+  ) return TRACK_NOMEN_CONF is
+  begin
+    /* Обходим конфигурацию номенклатур стенда и находим нужную */
+    if ((RACK_NOMEN_CONFS is not null) and (RACK_NOMEN_CONFS.COUNT > 0)) then
+      for I in RACK_NOMEN_CONFS.FIRST .. RACK_NOMEN_CONFS.LAST
+      loop
+        /* Если нашлась нужная номенклатура... */
+        if (RACK_NOMEN_CONFS(I).NNOMMODIF = NNOMMODIF) then
+          /* ...вернём её */
+          return RACK_NOMEN_CONFS(I);
+        end if;
+      end loop;
+    else
+      P_EXCEPTION(0, 'Не задана конфигурация номенклатуры стенда!');
+    end if;
+    /* Если мы здесь - то очевидно ничего не нашли */
+    P_EXCEPTION(0,
+                'Для модификации номенклатуры (RN: %s) конфигурация не определена!',
+                TO_CHAR(NNOMMODIF));
+  end;
+
+  /* Получение конфигурации номенклатуры стенда (по мнемокоду номенклатуры и модификации) */
+  function STAND_GET_RACK_NOMEN_CONF
+  (
+    SNOMEN                  varchar2,   -- Мнемокод номенклатуры
+    SNOMMODIF               varchar2    -- Мнемокод модификации номенклатуры
+  ) return TRACK_NOMEN_CONF is
+  begin
+    /* Обходим конфигурацию номенклатур стенда и находим нужную */
+    if ((RACK_NOMEN_CONFS is not null) and (RACK_NOMEN_CONFS.COUNT > 0)) then
+      for I in RACK_NOMEN_CONFS.FIRST .. RACK_NOMEN_CONFS.LAST
+      loop
+        /* Если нашлась нужная номенклатура... */
+        if ((RACK_NOMEN_CONFS(I).SNOMEN = SNOMEN) and (RACK_NOMEN_CONFS(I).SNOMMODIF = SNOMMODIF)) then
+          /* ...вернём её */
+          return RACK_NOMEN_CONFS(I);
+        end if;
+      end loop;
+    else
+      P_EXCEPTION(0, 'Не задана конфигурация номенклатуры стенда!');
+    end if;
+    /* Если мы здесь - то очевидно ничего не нашли */
+    P_EXCEPTION(0,
+                'Для модификации "%s" номенклатуры "%s" конфигурация не определена!',
+                SNOMMODIF,
+                SNOMEN);
+  end;
+
+
+  /* Получение остатков стеллажа стенда по номенклатурам */
+  function STAND_GET_RACK_NOMEN_REST
+  (
+    NCOMPANY                number,             -- Регистрационный номер организации
+    SSTORE                  varchar2,           -- Мнемокод склада стенда
+    SPREF                   varchar2,           -- Префикс стеллажа стенда
+    SNUMB                   varchar2,           -- Номер стеллажа стенда
+    SCELL                   varchar2 := null,   -- Наименование (префикс-номер) ячейки стеллажа (null - по всем)
+    SNOMEN                  varchar2 := null,   -- Номенклатура (null - по всем)
+    SNOMEN_MODIF            varchar2 := null    -- Модификация (null - по всем)
+  ) return TNOMEN_RESTS is
+    NSTORE                  PKG_STD.TREF;       -- Рег. номер склада
+    NRACK                   PKG_STD.TREF;       -- Рег. номер стеллажа
+    NCELL                   PKG_STD.TREF;       -- Рег. номер ячейки
+    BADD                    boolean;            -- Флаг необходимости добавления номенклатуры в коллекцию
+    N                       PKG_STD.TNUMBER;    -- Порядковый номер номенклатуры в результирующей коллекции
+    NREST                   PKG_STD.TLNUMBER;   -- Остаток по текущей номенклатуре в текущем месте хранения
+    NTMP                    PKG_STD.TLNUMBER;   -- Буфер для рассчетов
+    RES                     TNOMEN_RESTS;       -- Результат работы
+    /* Добавление номенклатуры в результирующую коллекцию */
+    procedure ADD_NOMEN
+    (
+      SNOMEN                varchar2,           -- Мнемокод добавляемой номенклатуры
+      SNOMEN_MODIF          varchar2,           -- Мнемокод добавляемой модификации номенклатуры
+      ARR                   in out TNOMEN_RESTS -- Коллекция для добалвения
+    ) is
+      NOMEN_CONF            TRACK_NOMEN_CONF;   -- Конфигурация номенклатуры стенда
+    begin
+      /* Инициализируем коллекцию, если надо */
+      if (ARR is null) then
+        ARR := TNOMEN_RESTS();
+      end if;
+      /* Найдём номенклатуру в конфигурации стенда */
+      NOMEN_CONF := STAND_GET_RACK_NOMEN_CONF(SNOMEN => SNOMEN, SNOMMODIF => SNOMEN_MODIF);
+      /* Добавим элемент в коллекцию */
+      ARR.EXTEND();
+      ARR(ARR.LAST).NNOMEN := NOMEN_CONF.NNOMEN;
+      ARR(ARR.LAST).SNOMEN := NOMEN_CONF.SNOMEN;
+      ARR(ARR.LAST).NNOMMODIF := NOMEN_CONF.NNOMMODIF;
+      ARR(ARR.LAST).SNOMMODIF := NOMEN_CONF.SNOMMODIF;
+      ARR(ARR.LAST).NREST := 0;
+      ARR(ARR.LAST).NMEAS := NOMEN_CONF.NMEAS;
+      ARR(ARR.LAST).SMEAS := NOMEN_CONF.SMEAS;
+    end;
+  begin
+    /* Проверим параметры */
+    if (((SNOMEN is null) and (SNOMEN_MODIF is not null)) or ((SNOMEN is not null) and (SNOMEN_MODIF is null))) then
+      P_EXCEPTION(0,
+                  'Обязательно одновременное указание номенклатуры и модификации!');
+    end if;
+    /* Найдём рег. номер склада */
+    FIND_DICSTORE_NUMB(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SNUMB => SSTORE, NRN => NSTORE);
+    /* Найдем рег. номер стеллажа */
+    P_STPLRACKS_FIND(NFLAG_SMART => 0,
+                     NCOMPANY    => NCOMPANY,
+                     SSTORE      => SSTORE,
+                     SPREF       => SPREF,
+                     SNUMB       => SNUMB,
+                     NRN         => NRACK);
+    /* Найдём рег. номер ячейки */
+    FIND_STPLCELLS_NUMB(NFLAG_SMART  => 0,
+                        NFLAG_OPTION => 1,
+                        NCOMPANY     => NCOMPANY,
+                        NSTORE       => NSTORE,
+                        SSTORE       => SSTORE,
+                        SCELL        => SCELL,
+                        NRN          => NCELL);
+    /* Инициализируем выход */
+    RES := TNOMEN_RESTS();
+    /* Если номенклатура задана - то сразу добавим её в коллекцию (результат всегда должен быть в коллекции, даже если остатков нет) */
+    if ((SNOMEN is not null) and (SNOMEN_MODIF is not null)) then
+      ADD_NOMEN(SNOMEN => SNOMEN, SNOMEN_MODIF => SNOMEN_MODIF, ARR => RES);
+    end if;
+    /* Обходим остатки номенклатур по местам хранения */
+    for NMNS in (select DN.RN NNOMEN,
+                        DN.NOMEN_CODE SNOMEN,
+                        NM.RN NNOMMODIF,
+                        NM.MODIF_CODE SNOMMODIF,
+                        RACK_LINE_CELL_BUILD_NAME(SPREF => C.PREF, SNUMB => C.NUMB) SCELL
+                   from STPLGOODSSUPPLY SG,
+                        GOODSSUPPLY     G,
+                        GOODSPARTIES    GP,
+                        STPLRACKS       R,
+                        STPLCELLS       C,
+                        INCOMDOC        IND,
+                        DICNOMNS        DN,
+                        NOMMODIF        NM
+                  where G.COMPANY = NCOMPANY
+                    and G.STORE = NSTORE
+                    and G.RN = SG.GOODSSUPPLY
+                    and R.RN = NRACK
+                    and R.RN = C.PRN
+                    and C.RN = SG.CELL
+                    and G.PRN = GP.RN
+                    and GP.INDOC = IND.RN
+                    and IND.CODE = SDEF_STORE_PARTY
+                    and GP.NOMMODIF = NM.RN
+                    and NM.PRN = DN.RN
+                    and ((NCELL is null) or ((NCELL is not null) and (C.RN = NCELL)))
+                    and ((SNOMEN is null) or ((SNOMEN is not null) and (DN.NOMEN_CODE = SNOMEN)))
+                    and ((SNOMEN_MODIF is null) or ((SNOMEN_MODIF is not null) and (NM.MODIF_CODE = SNOMEN_MODIF)))
+                  group by DN.RN,
+                           DN.NOMEN_CODE,
+                           NM.RN,
+                           NM.MODIF_CODE,
+                           RACK_LINE_CELL_BUILD_NAME(SPREF => C.PREF, SNUMB => C.NUMB))
+    loop
+      /* Попробуем найти номенклатуру в коллекции */
+      BADD := true;
+      if (RES.COUNT > 0) then
+        for I in RES.FIRST .. RES.LAST
+        loop
+          /* Если такая уже есть... */
+          if (RES(I).NNOMMODIF = NMNS.NNOMMODIF) then
+            /* ...скажем что не надо добавлять и запомним её номер - туда будем копить остатки */
+            BADD := false;
+            N    := I;
+            exit;
+          end if;
+        end loop;
+      end if;
+      /* Добавим номенклатуру в коллекцию, если надо */
+      if (BADD) then
+        ADD_NOMEN(SNOMEN => SNOMEN, SNOMEN_MODIF => SNOMEN_MODIF, ARR => RES);
+        /* Запомним номер нового элемента - туда накапливаем остатки */
+        N := RES.LAST;
+      end if;
+      /* Вычислим остаток по данной номенклатуре */
+      P_STPLGOODSSUPPLY_GETREST(NFLAG_SMART   => 0,
+                                NCOMPANY      => NCOMPANY,
+                                SSTORE        => SSTORE,
+                                SCELL         => NMNS.SCELL,
+                                SNOMEN        => NMNS.SNOMEN,
+                                SNOMMODIF     => NMNS.SNOMMODIF,
+                                SNOMMODIFPACK => null,
+                                SINDOC        => SDEF_STORE_PARTY,
+                                SSERNUMB      => null,
+                                SCOUNTRY      => null,
+                                SGTD          => null,
+                                NQUANT        => NREST,
+                                NQUANTALT     => NTMP,
+                                NQUANTPACK    => NTMP);
+      /* Накопим остаток */
+      RES(N).NREST := NREST + RES(N).NREST;
+    end loop;
+    /* Вернем результат */
+    return RES;
+  end;
+
+  /* Получение остатков стеллажа стенда по местам хранения */
+  function STAND_GET_RACK_REST
+  (
+    NCOMPANY                number,               -- Регистрационный номер организации
+    SSTORE                  varchar2,             -- Мнемокод склада стенда
+    SPREF                   varchar2,             -- Префикс стеллажа стенда
+    SNUMB                   varchar2              -- Номер стеллажа стенда
+  ) return TRACK_REST is
+    CELL_CONF               TRACK_LINE_CELL_CONF; -- Конфигурация ячейки (места хранения) стенда
+    RES                     TRACK_REST;           -- Результат работы
+  begin
+    /* Находим стеллаж и инициализируем результат */
+    begin
+      select T.RN,
+             T.STORE,
+             S.AZS_NUMBER,
+             trim(T.PREF),
+             trim(T.NUMB),
+             RACK_BUILD_NAME(SPREF => T.PREF, SNUMB => T.NUMB),
+             NRACK_LINES
+        into RES.NRACK,
+             RES.NSTORE,
+             RES.SSTORE,
+             RES.SRACK_PREF,
+             RES.SRACK_NUMB,
+             RES.SRACK_NAME,
+             RES.NRACK_LINES_CNT
+        from STPLRACKS    T,
+             AZSAZSLISTMT S
+       where T.COMPANY = NCOMPANY
+         and T.STORE = S.RN
+         and S.AZS_NUMBER = SSTORE
+         and trim(T.PREF) = SPREF
+         and trim(T.NUMB) = SNUMB;
+    exception
+      when NO_DATA_FOUND then
+        P_EXCEPTION(0,
+                    'Стеллаж "%s" на складе "%s" не определён!',
+                    RACK_BUILD_NAME(SPREF => SPREF, SNUMB => SNUMB),
+                    SSTORE);
+    end;
+    /* Скажем, что стеллаж пустой */
+    RES.BEMPTY := true;
+    /* Инициализируем коллекцию ярусов */
+    RES.RACK_LINE_RESTS := TRACK_LINE_RESTS();
+    /* Обходим ярусы (согласно конфигурации стенда) */
+    for L in 1 .. RES.NRACK_LINES_CNT
+    loop
+      /* Добавим новый ярус */
+      RES.RACK_LINE_RESTS.EXTEND();
+      RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS := TRACK_LINE_CELL_RESTS();
+      /* Инициализируем его */
+      RES.RACK_LINE_RESTS(L).NRACK_LINE := L;
+      RES.RACK_LINE_RESTS(L).NRACK_LINE_CELLS_CNT := NRACK_LINE_CELLS;
+      /* Скажем что ярус пустой */
+      RES.RACK_LINE_RESTS(L).BEMPTY := true;
+      /* Обходим ячейки яруса (согласно конфигурации стенда) */
+      for C in 1 .. RES.RACK_LINE_RESTS(L).NRACK_LINE_CELLS_CNT
+      loop
+        /* Считаем конфигурацию ячейки стенда */
+        CELL_CONF := STAND_GET_RACK_LINE_CELL_CONF(NRACK_LINE => L, NRACK_LINE_CELL => C);
+        /* Добавим ячейку в ярус */
+        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS.EXTEND();
+        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS := TNOMEN_RESTS();
+        /* Проинициализируем ячейку */
+        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NRACK_CELL := CELL_CONF.NRACK_CELL;
+        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).SRACK_CELL_PREF := CELL_CONF.SPREF;
+        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).SRACK_CELL_NUMB := CELL_CONF.SNUMB;
+        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).SRACK_CELL_NAME := CELL_CONF.SNAME;
+        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NRACK_LINE := CELL_CONF.NRACK_LINE;
+        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NRACK_LINE_CELL := CELL_CONF.NRACK_LINE_CELL;
+        /* Скажем что ячейка пустая */
+        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).BEMPTY := true;
+        /* Теперь наполним ячейку остатками номенклатуры (строго согласно конфигурации ячейки) */
+        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS := STAND_GET_RACK_NOMEN_REST(NCOMPANY     => NCOMPANY,
+                                                                                                SSTORE       => RES.SSTORE,
+                                                                                                SPREF        => RES.SRACK_PREF,
+                                                                                                SNUMB        => RES.SRACK_NUMB,
+                                                                                                SCELL        => RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C)
+                                                                                                                .SRACK_CELL_NAME,
+                                                                                                SNOMEN       => CELL_CONF.SNOMEN,
+                                                                                                SNOMEN_MODIF => CELL_CONF.SNOMMODIF);
+        /* Если запас по номенклатуре не нулевой, то выставим ячейке, ярусу и стеллажу флаг заполненности */
+        if (RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS.COUNT > 0) then
+          for N in RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS.FIRST .. RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C)
+                                                                                       .NOMEN_RESTS.LAST
+          loop
+            if (RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).NREST <> 0) then
+              RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).BEMPTY := false;
+              RES.RACK_LINE_RESTS(L).BEMPTY := false;
+              RES.BEMPTY := false;
+              exit;
+            end if;
+          end loop;
+        end if;
+      end loop;
+    end loop;
+    /* Вернем результат */
+    return RES;
+  end;
+  
+  /* Поиск контрагента-посетителя стенда по штрихкоду */
+  function STAND_GET_AGENT_BY_BARCODE
+  (
+    NCOMPANY                number,             -- Регистрационный номер организации
+    SBARCODE                varchar2            -- Штрихкод
+  ) return TSTAND_USER is
+    NVERSION                VERSIONS.RN%type;   -- Версия раздела "Контрагенты"
+    NDP_BARCODE             DOCS_PROPS.RN%type; -- Регистрационный номер дополнительного свойства для хранения штрихкода
+    RES                     TSTAND_USER;        -- Результат работы
+  begin
+    /* Определим версию раздела "Контрагенты" */
+    FIND_VERSION_BY_COMPANY(NCOMPANY => NCOMPANY, SUNITCODE => 'AGNLIST', NVERSION => NVERSION);  
+    /* Определим регистрационный номер дополнительного свойства для хранения штрихкода */
+    FIND_DOCS_PROPS_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SCODE => SDP_BARCODE, NRN => NDP_BARCODE);  
+    /* Найдем контрагента с указанным штрихкодом */
+    begin
+      select AG.RN,
+             AG.AGNABBR,
+             AG.AGNNAME
+        into RES.NAGENT,
+             RES.SAGENT,
+             RES.SAGENT_NAME
+        from AGNLIST AG
+       where AG.VERSION = NVERSION
+         and F_DOCS_PROPS_GET_STR_VALUE(NPROPERTY => NDP_BARCODE, SUNITCODE => 'AGNLIST', NDOCUMENT => AG.RN) =
+             SBARCODE;
+    exception
+      when TOO_MANY_ROWS then
+        P_EXCEPTION(0,
+                    'Найдено более одного контрагента со штрихкодом "%s"!',
+                    SBARCODE);
+      when NO_DATA_FOUND then
+        P_EXCEPTION(0, 'Контрагент со штрихкодом "%s" не определён!', SBARCODE);
+    end;  
+    /* Вернем результат */
+    return RES;
+  end;
+  
+  /* Получение состояния стенда */
+  procedure STAND_GET_STATE
+  (
+    NCOMPANY                number,                -- Регистрационный номер организации
+    STAND_STATE             out TSTAND_STATE       -- Состояние стенда
+  ) is
+    RESTS_HIST_TMP          TMESSAGES;             -- Буфер для истории остатков
+    NREST_PRC_TOTAL         PKG_STD.TLNUMBER := 0; -- Буфер для % остатков номенклатур
+    NR_TMP                  TNOMEN_RESTS;          -- Буфер для остатков номенклатуры стенда
+    N                       PKG_STD.TNUMBER;       -- Маркер записей истории
+  begin
+    /* Минимальный критический остаток по стенду (в %) */
+    STAND_STATE.NRESTS_LIMIT_PRC_MIN := NRESTS_LIMIT_PRC_MIN;
+    /* Средний критический остаток по стенду (в %) */
+    STAND_STATE.NRESTS_LIMIT_PRC_MDL := NRESTS_LIMIT_PRC_MDL;
+    /* Конфигурация номенклатур стенда */
+    STAND_STATE.NOMEN_CONFS := RACK_NOMEN_CONFS;
+    /* Остатки номенклатур стенда сумма % остатка номенклатур от максимального объема хранения */
+    STAND_STATE.NOMEN_RESTS := TNOMEN_RESTS();
+    if ((RACK_NOMEN_CONFS is not null) and (RACK_NOMEN_CONFS.COUNT > 0)) then
+      for I in RACK_NOMEN_CONFS.FIRST .. RACK_NOMEN_CONFS.LAST
+      loop
+        NR_TMP := STAND_GET_RACK_NOMEN_REST(NCOMPANY     => NCOMPANY,
+                                            SSTORE       => SSTORE_GOODS,
+                                            SPREF        => SRACK_PREF,
+                                            SNUMB        => SRACK_NUMB,
+                                            SNOMEN       => RACK_NOMEN_CONFS(I).SNOMEN,
+                                            SNOMEN_MODIF => RACK_NOMEN_CONFS(I).SNOMMODIF);
+        if (NR_TMP.COUNT > 0) then
+          for J in NR_TMP.FIRST .. NR_TMP.LAST
+          loop
+            /* Сохраним остатки номенклатуры */
+            STAND_STATE.NOMEN_RESTS.EXTEND();
+            STAND_STATE.NOMEN_RESTS(STAND_STATE.NOMEN_RESTS.LAST) := NR_TMP(J);
+            /* Так же рассчитаем сумму % остатка данной номенклатуры от максимального объема хранения */
+            NREST_PRC_TOTAL := NREST_PRC_TOTAL + NR_TMP(J).NREST / RACK_NOMEN_CONFS(I).NMAX_QUANT * 100;
+          end loop;
+        end if;
+      end loop;
+    else
+      P_EXCEPTION(0, 'Стенд не сконфигурирован!');
+    end if;
+    /* Текущая загруженность стенда (%) */
+    STAND_STATE.NRESTS_PRC_CURR := ROUND(NREST_PRC_TOTAL / (RACK_NOMEN_CONFS.COUNT * 100) * 100, 0);
+    /* История остатков номенклатур стенда */
+    STAND_STATE.RACK_REST_PRC_HISTS := TRACK_REST_PRC_HISTS();
+    RESTS_HIST_TMP                  := MSG_GET_LIST(DFROM  => null,
+                                                    STP    => SMSG_TYPE_REST_PRC,
+                                                    NLIMIT => 10,
+                                                    NORDER => NMSG_ORDER_ASC);
+    for I in 1 .. 10
+    loop
+      STAND_STATE.RACK_REST_PRC_HISTS.EXTEND();
+      if (RESTS_HIST_TMP.COUNT > 0) then
+        if (RESTS_HIST_TMP.EXISTS(I)) then
+          N := I;
+        else
+          N := RESTS_HIST_TMP.LAST;
+        end if;
+        STAND_STATE.RACK_REST_PRC_HISTS(STAND_STATE.RACK_REST_PRC_HISTS.LAST).DTS := RESTS_HIST_TMP(N).DTS;
+        STAND_STATE.RACK_REST_PRC_HISTS(STAND_STATE.RACK_REST_PRC_HISTS.LAST).STS := RESTS_HIST_TMP(N).STS;
+        begin
+          STAND_STATE.RACK_REST_PRC_HISTS(STAND_STATE.RACK_REST_PRC_HISTS.LAST).NREST_PRC := TO_NUMBER(RESTS_HIST_TMP(N).SMSG);
+        exception
+          when others then
+            STAND_STATE.RACK_REST_PRC_HISTS(STAND_STATE.RACK_REST_PRC_HISTS.LAST).NREST_PRC := 0;
+        end;      
+      else
+        STAND_STATE.RACK_REST_PRC_HISTS(STAND_STATE.RACK_REST_PRC_HISTS.LAST).DTS := null;
+        STAND_STATE.RACK_REST_PRC_HISTS(STAND_STATE.RACK_REST_PRC_HISTS.LAST).STS := null;
+        STAND_STATE.RACK_REST_PRC_HISTS(STAND_STATE.RACK_REST_PRC_HISTS.LAST).NREST_PRC := 0;
+      end if;
+    end loop;
+    /* Остатки по местам хранения стенда */
+    STAND_STATE.RACK_REST := STAND_GET_RACK_REST(NCOMPANY => NCOMPANY,
+                                                 SSTORE   => SSTORE_GOODS,
+                                                 SPREF    => SRACK_PREF,
+                                                 SNUMB    => SRACK_NUMB);
+    /* Сообщения стенда */
+    STAND_STATE.MESSAGES := MSG_GET_LIST(DFROM  => null,
+                                         STP    => SMSG_TYPE_NOTIFY,
+                                         NLIMIT => 10,
+                                         NORDER => NMSG_ORDER_DESC);
+  end;
+  
+  /* Сохранение текущих остатков по стенду */
+  procedure STAND_SAVE_RACK_REST
+  (
+    NCOMPANY                number,                -- Регистрационный номер органиазации
+    BNOTIFY_REST            boolean,               -- Флаг оповещения о текущем остатке
+    BNOTIFY_LIMIT           boolean                -- Флаг оповещения о критическом снижении остатка
+  ) is
+    NREST_PRC_TOTAL         PKG_STD.TLNUMBER := 0; -- Буфер для % остатков номенклатур
+    SRESTS                  PKG_STD.TLSTRING;      -- Строка остатков для сообщения
+    NR_TMP                  TNOMEN_RESTS;          -- Буфер для остатков номенклатуры стенда
+    NR                      TNOMEN_RESTS;          -- Текущие остатки номенклатуры стенда
+  begin
+    /* Инициализируем основную коллекцию остатков */
+    NR := TNOMEN_RESTS();
+    /* Получим остатки по стенду (по всем номенклатурам, которые в нём должны храниться) */
+    if ((RACK_NOMEN_CONFS is not null) and (RACK_NOMEN_CONFS.COUNT > 0)) then
+      for I in RACK_NOMEN_CONFS.FIRST .. RACK_NOMEN_CONFS.LAST
+      loop
+        NR_TMP := STAND_GET_RACK_NOMEN_REST(NCOMPANY     => NCOMPANY,
+                                            SSTORE       => SSTORE_GOODS,
+                                            SPREF        => SRACK_PREF,
+                                            SNUMB        => SRACK_NUMB,
+                                            SNOMEN       => RACK_NOMEN_CONFS(I).SNOMEN,
+                                            SNOMEN_MODIF => RACK_NOMEN_CONFS(I).SNOMMODIF);
+        if (NR_TMP.COUNT > 0) then
+          for J in NR_TMP.FIRST .. NR_TMP.LAST
+          loop
+            /* Добавим остаток в коллекцию */
+            NR.EXTEND();
+            NR(NR.LAST) := NR_TMP(J);
+            /* Вычисляем сумму % остатка номенклатур от общего объема хранения и собираем сообщение для остатков */
+            NREST_PRC_TOTAL := NREST_PRC_TOTAL + NR(NR.LAST).NREST / RACK_NOMEN_CONFS(I).NMAX_QUANT * 100;
+            SRESTS          := SRESTS || NR(NR.LAST).SNOMMODIF || ' - ' || NR(NR.LAST).NREST || '; ';
+          end loop;
+        end if;
+      end loop;
+    else
+      P_EXCEPTION(0, 'Стенд не сконфигурирован!');
+    end if;
+    if (NR.COUNT = 0) then
+      P_EXCEPTION(0, 'Не удалось определить остатки номенклатур стенда!');
+    end if;
+    /* Корректируем остаток относительно максимальной возможности загрузки */
+    NREST_PRC_TOTAL := ROUND(NREST_PRC_TOTAL / (RACK_NOMEN_CONFS.COUNT * 100) * 100, 0);
+    /* Запомним остатки по стенду */
+    MSG_INSERT_RESTS(SMSG => UDO_PKG_STAND_WEB.STAND_RACK_NOMEN_RESTS_TO_JSON(NR => NR).TO_CHAR());
+    MSG_INSERT_REST_PRC(SMSG => NREST_PRC_TOTAL);
+    /* Если просили оповестить об остатках в принципе */
+    if (BNOTIFY_REST) then
+      if (NREST_PRC_TOTAL = 0) then
+        MSG_INSERT_NOTIFY(SMSG => 'На стенде больше нет товара');
+      else
+        MSG_INSERT_NOTIFY(SMSG => 'Стенд загружен на ' || TO_CHAR(NREST_PRC_TOTAL) || '%. Текущий остаток по стенду: ' ||
+                                  SRESTS);
+      end if;
+    end if;
+    /* Если просили оповестить о критическом снижении остатка */
+    if (BNOTIFY_LIMIT) then
+      /* Оповещаем, если они ниже критического лимита или их нет вообще */
+      if (NREST_PRC_TOTAL = 0) then
+        MSG_INSERT_NOTIFY(SMSG => 'На стенде больше нет товара! Загрузите стенд!');
+      else
+        if (NREST_PRC_TOTAL < NRESTS_LIMIT_PRC_MIN) then
+          MSG_INSERT_NOTIFY(SMSG => 'Текущая загруженность стенда ' || TO_CHAR(NREST_PRC_TOTAL) ||
+                                    '% ниже критической отметки в ' || TO_CHAR(NRESTS_LIMIT_PRC_MIN) ||
+                                    '%! Приготовьтесь загрузить стенд!');
+        end if;
+      end if;
+    end if;
+  end;
+  
+  /* Проверка осуществления выдачи контрагенту-посетителю товара со стенда (см. константы NAGN_SUPPLY_*) */
+  function STAND_CHECK_SUPPLY
+  (
+    NCOMPANY                number,          -- Регистрационный номер организации
+    NAGENT                  number           -- Регистрационный номер контрагента
+  ) return number is
+    NRES                    PKG_STD.TNUMBER; -- Результат работы
+  begin
+    /* Пробуем найти РНОПотр с данным контрагентом, по складу стенда, с номенклатурой стенда, с типом и префиксом по умолчанию для стенда */
+    begin
+      select count(*)
+        into NRES
+        from TRANSINVCUST      T,
+             DOCTYPES          DT,
+             AZSAZSLISTMT      ST
+       where T.COMPANY = NCOMPANY
+         and trim(T.PREF) = STRINVCUST_PREF
+         and T.DOCTYPE = DT.RN
+         and DT.DOCCODE = STRINVCUST_TYPE
+         and T.AGENT = NAGENT
+         and T.STORE = ST.RN
+         and ST.AZS_NUMBER = SSTORE_GOODS;
+    exception
+      when others then
+        P_EXCEPTION(0,
+                    'Ошибка поиска расходных накладных на отпуск потребителям для контрагента (RN: %s)!',
+                    TO_CHAR(NAGENT));
+    end;    
+    /* Таких нет... */
+    if (NRES = 0) then
+      /* ...значит не отгружали данному контрагенту */
+      NRES := NAGN_SUPPLY_NOT_YET;
+    else
+      /* ...или есть и тогда - отгружали */
+      NRES := NAGN_SUPPLY_ALREADY;
+    end if;  
+    /* Вернем результат */
+    return NRES;
+  end;  
+  
+  /* Аутентификация посетителя стенда по штрихкоду */
+  procedure STAND_AUTH_BY_BARCODE
+  (
+    NCOMPANY                number,          -- Регистрационный номер организации
+    SBARCODE                varchar2,        -- Штрихкод    
+    STAND_USER              out TSTAND_USER, -- Сведения о пользователе стенда
+    RACK_REST               out TRACK_REST   -- Сведения об остатках на стенде
+  ) is
+  begin
+    /* Найдем контрагента по штрихкоду */
+    STAND_USER := STAND_GET_AGENT_BY_BARCODE(NCOMPANY => NCOMPANY, SBARCODE => SBARCODE);  
+    /* Проверим, что отгрузки данному контрагенту ещё не было (если надо, конечно) */
+    if (NALLOW_MULTI_SUPPLY = NALLOW_MULTI_SUPPLY_NO) then
+      if (STAND_CHECK_SUPPLY(NCOMPANY => NCOMPANY, NAGENT => STAND_USER.NAGENT) = NAGN_SUPPLY_ALREADY) then
+        P_EXCEPTION(0,
+                    'Извините, отгрузка для посетителя "%s" уже производилась!',
+                    STAND_USER.SAGENT_NAME);
+      end if;
+    end if;  
+    /* Получим остатки по стеллажу, который обслуживает стенд */
+    RACK_REST := STAND_GET_RACK_REST(NCOMPANY     => NCOMPANY,
+                                     SSTORE       => SSTORE_GOODS,
+                                     SPREF        => SRACK_PREF,
+                                     SNUMB        => SRACK_NUMB);
+  end;
+  
   /* Загрузка стенда товаром */
   procedure LOAD
   (
-    NCOMPANY                number                              -- Регистрационный номер организации 
+    NCOMPANY                number                        -- Регистрационный номер организации 
   ) is
     /* Типы данных */
-    type TNOMEN is record                                       -- Номенклатура загрузки
+    type TNOMEN is record                                 -- Номенклатура загрузки
     (
-      SNOMEN                DICNOMNS.NOMEN_CODE%type,           -- Мнемокод номенклатуры загруки
-      NNOMEN                DICNOMNS.RN%type,                   -- Рег. номер номенклатуры загруки
-      SNOMMODIF             NOMMODIF.MODIF_CODE%type,           -- Мнемокод модификации номенклатуры загрузки
-      NNOMMODIF             NOMMODIF.RN%type,                   -- Рег. номер модификации номенклатуры загрузки
-      NQUANT                INCOMEFROMDEPSSPEC.QUANT_PLAN%type, -- Количество номенклатуры в формируемом "Приходе из подразделения"
-      NINCOMEFROMDEPSSPEC   INCOMEFROMDEPSSPEC.RN%type          -- Рег. номер сформированной позиции спецификации "Приходе из подразделения" для этой номенклатуры
+      RACK_NOMEN_CONF       TRACK_NOMEN_CONF,             -- Конфигурация номенклатуры стенда
+      NINCOMEFROMDEPSSPEC   INCOMEFROMDEPSSPEC.RN%type    -- Рег. номер сформированной позиции спецификации "Приходе из подразделения" для этой номенклатуры
     );
-    type TNOMENS is table of TNOMEN;                            -- Коллекция номенклатур загрузки   
+    type TNOMENS is table of TNOMEN;                      -- Коллекция номенклатур загрузки   
     /* Переменные */
-    NCRN                    INCOMEFROMDEPS.RN%type;             -- Каталог размещения документов "Приход из подразделения"
-    NJUR_PERS               JURPERSONS.RN%type;                 -- Регистрационный номер юридического лица "Прихода из подразделения" (основное ЮЛ организации)
-    SJUR_PERS               JURPERSONS.CODE%type;               -- Мнемокод номер юридического лица "Прихода из подразделения" (основное ЮЛ организации)
-    SDOC_NUMB               INCOMEFROMDEPS.DOC_NUMB%type;       -- Номер формируемого "Прихода из подразделения"
-    SOUT_DEPARTMENT         INS_DEPARTMENT.CODE%type;           -- Подразделение-отправитель формируемого "Прихода из подразделения"
-    SAGENT                  AGNLIST.AGNABBR%type;               -- МОЛ формируемого "Прихода из подразделения"
-    SCURRENCY               CURNAMES.CURCODE%type;              -- Валюта формируемого "Прихода из подразделения" (базовая валюта организации)
-    NINCOMEFROMDEPS         INCOMEFROMDEPS.RN%type;             -- Рег. номер сформированного "Прихода из подразделения"
-    NINCOMEFROMDEPSSPEC     INCOMEFROMDEPSSPEC.RN%type;         -- Рег. номер сформированной позиции спецификации "Прихода из подразделения"
-    NSTRPLRESJRNL           STRPLRESJRNL.RN%type;               -- Рег. номер сформированной записи резервирования по местам хранения
-    CELL_CONF               TRACK_LINE_CELL_CONF;               -- Конфигурация ячейки (места хранения) стенда
-    NWARNING                PKG_STD.TREF;                       -- Флаг предупреждения процедуры отработки прихода
-    SMSG                    PKG_STD.TSTRING;                    -- Текст сообщения процедуры отработки прихода
-    NOMENS                  TNOMENS;                            -- Коллекция загружаемых номенклатур
+    NCRN                    INCOMEFROMDEPS.RN%type;       -- Каталог размещения документов "Приход из подразделения"
+    NJUR_PERS               JURPERSONS.RN%type;           -- Регистрационный номер юридического лица "Прихода из подразделения" (основное ЮЛ организации)
+    SJUR_PERS               JURPERSONS.CODE%type;         -- Мнемокод номер юридического лица "Прихода из подразделения" (основное ЮЛ организации)
+    SDOC_NUMB               INCOMEFROMDEPS.DOC_NUMB%type; -- Номер формируемого "Прихода из подразделения"
+    SOUT_DEPARTMENT         INS_DEPARTMENT.CODE%type;     -- Подразделение-отправитель формируемого "Прихода из подразделения"
+    SAGENT                  AGNLIST.AGNABBR%type;         -- МОЛ формируемого "Прихода из подразделения"
+    SCURRENCY               CURNAMES.CURCODE%type;        -- Валюта формируемого "Прихода из подразделения" (базовая валюта организации)
+    NINCOMEFROMDEPS         INCOMEFROMDEPS.RN%type;       -- Рег. номер сформированного "Прихода из подразделения"
+    NINCOMEFROMDEPSSPEC     INCOMEFROMDEPSSPEC.RN%type;   -- Рег. номер сформированной позиции спецификации "Прихода из подразделения"
+    NSTRPLRESJRNL           STRPLRESJRNL.RN%type;         -- Рег. номер сформированной записи резервирования по местам хранения
+    CELL_CONF               TRACK_LINE_CELL_CONF;         -- Конфигурация ячейки (места хранения) стенда
+    NWARNING                PKG_STD.TREF;                 -- Флаг предупреждения процедуры отработки прихода
+    SMSG                    PKG_STD.TSTRING;              -- Текст сообщения процедуры отработки прихода
+    NOMENS                  TNOMENS;                      -- Коллекция загружаемых номенклатур
   begin
     /* Определим рег. номер каталога */
     FIND_ROOT_CATALOG(NCOMPANY => NCOMPANY, SCODE => 'IncomFromDeps', NCRN => NCRN);
@@ -658,47 +1501,19 @@ create or replace package body UDO_PKG_STAND as
         P_EXCEPTION(0,
                     'Для склада "%s" не указано материально ответственное лицо!',
                     SSTORE_PRODUCE);
-    end;
-  
-    /* Обходим конфигурацию ячеек стенда для того что бы сформировать коллекцию загружаемых номенклатур */
-    if ((RACK_LINE_CELL_CONFS is not null) and (RACK_LINE_CELL_CONFS.COUNT > 0)) then
-      /* Инициализируеим коллекцию загружаемых номенклатур */
-      NOMENS := TNOMENS();
-      /* Наполним её... */
-      declare
-        BADD boolean := false;
-      begin
-        /* ...найдем для каждой из сконфигурированных ячеек стенеда... */
-        for I in RACK_LINE_CELL_CONFS.FIRST .. RACK_LINE_CELL_CONFS.LAST
+    end;  
+
+    /* Инициализируеим коллекцию загружаемых номенклатур */
+    NOMENS := TNOMENS();
+
+    /* Обходим конфигурацию номенклатур стенда для того что бы сформировать коллекцию загружаемых номенклатур */
+    if ((RACK_NOMEN_CONFS is not null) and (RACK_NOMEN_CONFS.COUNT > 0)) then      
+        for I in RACK_NOMEN_CONFS.FIRST .. RACK_NOMEN_CONFS.LAST
         loop
-          BADD := true;
-          if (NOMENS.COUNT > 0) then
-            /* ...в коллекции загружаемых номенклатур... */
-            for J in NOMENS.FIRST .. NOMENS.LAST
-            loop
-              /* ...аналог */
-              if (NOMENS(J).NNOMMODIF = RACK_LINE_CELL_CONFS(I).NNOMMODIF) then
-                /* ...если нашли - то увеличим загружаемое в стенд количество (он всегда загружается полностью) */
-                BADD := false;
-                NOMENS(J).NQUANT := NOMENS(J).NQUANT + RACK_LINE_CELL_CONFS(I).NCAPACITY;
-              end if;
-            end loop;
-          end if;
-          /* ...не нашли номенклатуры ячейки в коллекции для загрузки - значит добавим её, иначе ячейка будет пустой */
-          if (BADD) then
             NOMENS.EXTEND();
-            NOMENS(NOMENS.LAST).SNOMEN := RACK_LINE_CELL_CONFS(I).SNOMEN;
-            NOMENS(NOMENS.LAST).NNOMEN := RACK_LINE_CELL_CONFS(I).NNOMEN;
-            NOMENS(NOMENS.LAST).SNOMMODIF := RACK_LINE_CELL_CONFS(I).SNOMMODIF;
-            NOMENS(NOMENS.LAST).NNOMMODIF := RACK_LINE_CELL_CONFS(I).NNOMMODIF;
-            NOMENS(NOMENS.LAST).NQUANT := RACK_LINE_CELL_CONFS(I).NCAPACITY;
-          end if;
+            NOMENS(NOMENS.LAST).RACK_NOMEN_CONF := RACK_NOMEN_CONFS(I);
+            NOMENS(NOMENS.LAST).NINCOMEFROMDEPSSPEC := null;
         end loop;
-      end;
-      if (NOMENS.COUNT = 0) then
-        P_EXCEPTION(0,
-                    'Не удалось определить коллекцию загружаемых номенклатур!');
-      end if;
     else
       P_EXCEPTION(0, 'Стенд не сконфигурирован!');
     end if;
@@ -744,16 +1559,16 @@ create or replace package body UDO_PKG_STAND as
     loop
       P_INCOMEFROMDEPSSPEC_INSERT(NCOMPANY        => NCOMPANY,
                                   NPRN            => NINCOMEFROMDEPS,
-                                  SNOMEN          => NOMENS(I).SNOMEN,
-                                  SNOMMODIF       => NOMENS(I).SNOMMODIF,
+                                  SNOMEN          => NOMENS(I).RACK_NOMEN_CONF.SNOMEN,
+                                  SNOMMODIF       => NOMENS(I).RACK_NOMEN_CONF.SNOMMODIF,
                                   SNOMNPACK       => null,
                                   SARTICLE        => null,
                                   SCELL           => null,
                                   SPARTY_AGENT    => null,
                                   SSUPPLY         => null,
                                   SSTORE          => null,
-                                  NQUANT_PLAN     => NOMENS(I).NQUANT,
-                                  NQUANT_FACT     => NOMENS(I).NQUANT,
+                                  NQUANT_PLAN     => NOMENS(I).RACK_NOMEN_CONF.NMAX_QUANT,
+                                  NQUANT_FACT     => NOMENS(I).RACK_NOMEN_CONF.NMAX_QUANT,
                                   NQUANT_PLAN_ALT => 0,
                                   NQUANT_FACT_ALT => 0,
                                   DSROK           => null,
@@ -784,7 +1599,7 @@ create or replace package body UDO_PKG_STAND as
         NINCOMEFROMDEPSSPEC := null;
         for N in NOMENS.FIRST .. NOMENS.LAST
         loop
-          if (NOMENS(N).NNOMMODIF = CELL_CONF.NNOMMODIF) then
+          if (NOMENS(N).RACK_NOMEN_CONF.NNOMMODIF = CELL_CONF.NNOMMODIF) then
             NINCOMEFROMDEPSSPEC := NOMENS(N).NINCOMEFROMDEPSSPEC;
           end if;
         end loop;
@@ -846,7 +1661,7 @@ create or replace package body UDO_PKG_STAND as
     MSG_INSERT_NOTIFY(SMSG => 'Стнед успешно загружен...');
   
     /* Запомним остатки по стенду */
-    STAND_SAVE_RESTS(NCOMPANY => NCOMPANY, BNOTIFY_REST => true, BNOTIFY_LIMIT => false);
+    STAND_SAVE_RACK_REST(NCOMPANY => NCOMPANY, BNOTIFY_REST => true, BNOTIFY_LIMIT => false);
   end;
 
   /* Откат последней загрузки стенда */
@@ -913,7 +1728,7 @@ create or replace package body UDO_PKG_STAND as
     P_INCOMEFROMDEPS_DELETE(NCOMPANY => NCOMPANY, NRN => NINCOMEFROMDEPS);
 
     /* Запомним остатки по стенду */
-    STAND_SAVE_RESTS(NCOMPANY => NCOMPANY, BNOTIFY_REST => false, BNOTIFY_LIMIT => true);    
+    STAND_SAVE_RACK_REST(NCOMPANY => NCOMPANY, BNOTIFY_REST => false, BNOTIFY_LIMIT => true);    
   end;
 
   /* Отгрузка со стенда посетителю */
@@ -1143,7 +1958,7 @@ create or replace package body UDO_PKG_STAND as
                               STRINVCUST_PREF || '-' || SNUMB || ' от ' || TO_CHAR(sysdate, 'dd.mm.yyyy'));
   
     /* Запомним остатки по стенду */
-    STAND_SAVE_RESTS(NCOMPANY => NCOMPANY, BNOTIFY_REST => false, BNOTIFY_LIMIT => true);
+    STAND_SAVE_RACK_REST(NCOMPANY => NCOMPANY, BNOTIFY_REST => false, BNOTIFY_LIMIT => true);
   end;
 
   /* Откат отгрузки со стенда */
@@ -1204,7 +2019,7 @@ create or replace package body UDO_PKG_STAND as
     MSG_INSERT_NOTIFY(SMSG => 'Отгрузка посетителю "' || SCUSTOMER || '" была отменена...');
   
     /* Запомним остатки по стенду */
-    STAND_SAVE_RESTS(NCOMPANY => NCOMPANY, BNOTIFY_REST => true, BNOTIFY_LIMIT => false);
+    STAND_SAVE_RACK_REST(NCOMPANY => NCOMPANY, BNOTIFY_REST => true, BNOTIFY_LIMIT => false);
   end;
   
   /* Заполнение списка отмеченных для печати документов (автономная транзакция) */
@@ -1365,7 +2180,7 @@ create or replace package body UDO_PKG_STAND as
     PRINT_CLEAR_SELECTLIST(NIDENT => NIDENT);
     /* Оповестим пользователей о том, что отчет поставлен в очередь */
     MSG_INSERT_NOTIFY(SMSG => 'Накладаня "' || STRANSINVCUST || '" для посетителя "' || SAGENT ||
-                              '" поставлена в очередь');
+                              '" поставлена в очередь печати');
     /* Оповестим службу автоматической печати, о том, что надо следить за отчетом */
     MSG_INSERT_PRINT(SMSG => NPQ);
   exception
@@ -1376,521 +2191,8 @@ create or replace package body UDO_PKG_STAND as
        raise;
   end;
   
-  /* Инициализация конфигурации ячеек стенда */
-  procedure STAND_INIT_RACK_LINE_CELL_CONF 
-  (
-    NCOMPANY                number              -- Регистрационный номер организации 
-  ) is
-    NDEF_NOMEN_1              DICNOMNS.RN%type; -- Номенклатура по умолчанию (1)
-    NDEF_NOMEN_MODIF_1        NOMMODIF.RN%type; -- Модификация номенклатуры по умолчанию (1)
-    NDEF_NOMEN_2              DICNOMNS.RN%type; -- Номенклатура по умолчанию (2)
-    NDEF_NOMEN_MODIF_2        NOMMODIF.RN%type; -- Модификация номенклатуры по умолчанию (2)
-    NDEF_NOMEN_3              DICNOMNS.RN%type; -- Номенклатура по умолчанию (3)
-    NDEF_NOMEN_MODIF_3        NOMMODIF.RN%type; -- Модификация номенклатуры по умолчанию (3)
-  begin
-    /* Инициализируем коллекцию */
-    RACK_LINE_CELL_CONFS := TRACK_LINE_CELL_CONFS();
-    /* Разыменуем номенклатуры по умолчанию */
-    FIND_DICNOMNS_BY_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SNOMEN_CODE => SDEF_NOMEN_1, NRN => NDEF_NOMEN_1);
-    FIND_NOMMODIF_BY_CODE(NPRN => NDEF_NOMEN_1, SCODE => SDEF_NOMEN_MODIF_1, NFRN => NDEF_NOMEN_MODIF_1);
-    FIND_DICNOMNS_BY_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SNOMEN_CODE => SDEF_NOMEN_2, NRN => NDEF_NOMEN_2);
-    FIND_NOMMODIF_BY_CODE(NPRN => NDEF_NOMEN_2, SCODE => SDEF_NOMEN_MODIF_2, NFRN => NDEF_NOMEN_MODIF_2);
-    FIND_DICNOMNS_BY_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SNOMEN_CODE => SDEF_NOMEN_3, NRN => NDEF_NOMEN_3);
-    FIND_NOMMODIF_BY_CODE(NPRN => NDEF_NOMEN_3, SCODE => SDEF_NOMEN_MODIF_3, NFRN => NDEF_NOMEN_MODIF_3);
-    /* Обходям ярусы */
-    for I in 1 .. NRACK_LINES
-    loop
-      /* Обходим ячейки яруса */
-      for J in 1 .. NRACK_LINE_CELLS
-      loop
-        /* Добавим ячейку в коллекцию */
-        RACK_LINE_CELL_CONFS.EXTEND();
-        RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NRACK_LINE := I;
-        RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NRACK_LINE_CELL := J;
-        RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SPREF := RACK_LINE_CELL_BUILD_PREF(NRACK_LINE => I);
-        RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNUMB := RACK_LINE_CELL_BUILD_NUMB(NRACK_LINE_CELL => J); 
-        RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNAME := RACK_LINE_CELL_BUILD_NAME(NRACK_LINE => I, NRACK_LINE_CELL => J);
-        RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NCAPACITY := NRACK_CELL_CAPACITY;
-        RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NSHIP_CNT := NRACK_CELL_SHIP_CNT;
-        /* Конфигурируем ячейку */
-        case
-          /* 1 - 1 */
-          when (I = 1) and (J = 1) then
-            begin
-              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NNOMEN := NDEF_NOMEN_1;
-              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNOMEN := SDEF_NOMEN_1;
-              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NNOMMODIF := NDEF_NOMEN_MODIF_1;
-              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNOMMODIF := SDEF_NOMEN_MODIF_1;
-            end;
-          /* 1 - 2 */
-          when (I = 1) and (J = 2) then
-            begin
-              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NNOMEN := NDEF_NOMEN_2;
-              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNOMEN := SDEF_NOMEN_2;
-              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NNOMMODIF := NDEF_NOMEN_MODIF_2;
-              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNOMMODIF := SDEF_NOMEN_MODIF_2;
-            end;
-          /* 1 - 3 */
-          when (I = 1) and (J = 3) then
-            begin
-              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NNOMEN := NDEF_NOMEN_3;
-              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNOMEN := SDEF_NOMEN_3;
-              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NNOMMODIF := NDEF_NOMEN_MODIF_3;
-              RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNOMMODIF := SDEF_NOMEN_MODIF_3;
-            end;
-          /* Неизвестная ячейка */
-          else
-            P_EXCEPTION(0,
-                        'Неизвестная ячейка №%s в ярусе №%s - не могу задать конфигурацию!',
-                        TO_CHAR(J),
-                        TO_CHAR(I));
-        end case;
-      end loop;
-    end loop;
-  end;
-  
-  /* Сохранение текущих остатков по стенду */
-  procedure STAND_SAVE_RESTS
-  (
-    NCOMPANY                number,                   -- Регистрационный номер органиазации
-    BNOTIFY_REST            boolean,                  -- Флаг оповещения о текущем остатке
-    BNOTIFY_LIMIT           boolean                   -- Флаг оповещения о критическом снижении остатка
-  ) is
-    NTOTAL                  PKG_STD.TLNUMBER := 0;    -- Текущий итог по остаткам
-    SRESTS                  PKG_STD.TLSTRING;         -- Строка остатков для сообщения
-    NR                      TNOMEN_RESTS;             -- Текущие остатки номенклатуры стенда
-  begin
-    /* Получим остатки по стенду */
-    NR := STAND_GET_RACK_NOMEN_REST(NCOMPANY => NCOMPANY,
-                                    SSTORE   => SSTORE_GOODS,
-                                    SPREF    => SRACK_PREF,
-                                    SNUMB    => SRACK_NUMB);
-    /* Запомним остатки по стенду */
-    MSG_INSERT_RESTS(SMSG => UDO_PKG_STAND_WEB.STAND_RACK_NOMEN_REST_TO_JSON(NR => NR).TO_CHAR());
-    /* Суммируем остатки если они есть и выставляем по коллекции номенклатуру и ЕИ для сообщений*/
-    if ((NR is not null) and (NR.COUNT > 0)) then
-      for N in NR.FIRST .. NR.LAST
-      loop
-        NTOTAL := NTOTAL + NR(N).NREST;
-        SRESTS := SRESTS || NR(N).SNOMMODIF || ' - ' || NR(N).NREST || '; ';
-      end loop;
-    end if;
-    /* Если просили оповестить об остатках в принципе */
-    if (BNOTIFY_REST) then
-      if (NTOTAL = 0) then
-        MSG_INSERT_NOTIFY(SMSG => 'На стенде больше нет товара');
-      else
-        MSG_INSERT_NOTIFY(SMSG => 'Текущий остаток по стенду: ' || SRESTS);
-      end if;
-    end if;
-    /* Если просили оповестить о критическом снижении остатка */
-    if (BNOTIFY_LIMIT) then
-      /* Оповещаем, если они ниже критического лимита или их нет вообще */
-      if (NTOTAL = 0) then
-        MSG_INSERT_NOTIFY(SMSG => 'На стенде больше нет товара! Загрузите стенд!');
-      else
-        if ((NTOTAL / (NRACK_LINES * NRACK_LINE_CELLS * NRACK_CELL_CAPACITY) * 100) < NRESTS_LIMIT_MINIMUM) then
-          MSG_INSERT_NOTIFY(SMSG => 'Текущая загруженность стенда ' ||
-                                    TO_CHAR(ROUND(NTOTAL / (NRACK_LINES * NRACK_LINE_CELLS * NRACK_CELL_CAPACITY) * 100,
-                                                  2)) || '% ниже критической отметки в ' ||
-                                    TO_CHAR(NRESTS_LIMIT_MINIMUM) || '%! Приготовьтесь загрузить стенд!');
-        end if;
-      end if;
-    end if;
-  end;
-  
-  /* Получение конфигурации ячейки стенда */
-  function STAND_GET_RACK_LINE_CELL_CONF
-  (
-    NRACK_LINE              number,     -- Номер яруса стеллажа стенда
-    NRACK_LINE_CELL         number      -- Номер ячейки в ярусе стеллажа стенда
-  ) return TRACK_LINE_CELL_CONF is
-  begin
-    /* Обходим конфигурацию ячеек стенда и находим нужную */
-    if ((RACK_LINE_CELL_CONFS is not null) and (RACK_LINE_CELL_CONFS.COUNT > 0)) then
-      for I in RACK_LINE_CELL_CONFS.FIRST .. RACK_LINE_CELL_CONFS.LAST
-      loop
-        /* Если нашлась нужная ячейка... */
-        if ((RACK_LINE_CELL_CONFS(I).NRACK_LINE = NRACK_LINE) and
-           (RACK_LINE_CELL_CONFS(I).NRACK_LINE_CELL = NRACK_LINE_CELL)) then
-          /* ...вернём её */
-          return RACK_LINE_CELL_CONFS(I);
-        end if;
-      end loop;
-    else
-      P_EXCEPTION(0, 'Не задана конфигурация ячеек стенда!');
-    end if;
-    /* Если мы здесь - то очевидно ничего не нашли */
-    P_EXCEPTION(0,
-                'Для чейчки №%s яруса №%s стенда конфигурация не определена!',
-                TO_CHAR(NRACK_LINE_CELL),
-                TO_CHAR(NRACK_LINE));
-  end;
-  
-  /* Получение остатков стеллажа стенда по номенклатурам */
-  function STAND_GET_RACK_NOMEN_REST
-  (
-    NCOMPANY                number,           -- Регистрационный номер организации
-    SSTORE                  varchar2,         -- Мнемокод склада стенда
-    SPREF                   varchar2,         -- Префикс стеллажа стенда
-    SNUMB                   varchar2,         -- Номер стеллажа стенда
-    SCELL                   varchar2 := null, -- Наименование (префикс-номер) ячейки стеллажа (null - по всем)
-    SNOMEN                  varchar2 := null, -- Номенклатура (null - по всем)
-    SNOMEN_MODIF            varchar2 := null  -- Модификация (null - по всем)
-  ) return TNOMEN_RESTS is
-    NSTORE                  PKG_STD.TREF;     -- Рег. номер склада
-    NRACK                   PKG_STD.TREF;     -- Рег. номер стеллажа
-    NCELL                   PKG_STD.TREF;     -- Рег. номер ячейки
-    BADD                    boolean;          -- Флаг необходимости добавления номенклатуры в коллекцию
-    N                       PKG_STD.TNUMBER;  -- Порядковый номер номенклатуры в результирующей коллекции
-    NREST                   PKG_STD.TLNUMBER; -- Остаток по текущей номенклатуре в текущем месте хранения
-    NTMP                    PKG_STD.TLNUMBER; -- Буфер для рассчетов
-    RES                     TNOMEN_RESTS;     -- Результат работы
-  begin
-    /* Проверим параметры */
-    if (((SNOMEN is null) and (SNOMEN_MODIF is not null)) or ((SNOMEN is not null) and (SNOMEN_MODIF is null))) then
-      P_EXCEPTION(0,
-                  'Обязательно одновременное указание номенклатуры и модификации!');
-    end if;
-    /* Найдём рег. номер склада */
-    FIND_DICSTORE_NUMB(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SNUMB => SSTORE, NRN => NSTORE);
-    /* Найдем рег. номер стеллажа */
-    P_STPLRACKS_FIND(NFLAG_SMART => 0,
-                     NCOMPANY    => NCOMPANY,
-                     SSTORE      => SSTORE,
-                     SPREF       => SPREF,
-                     SNUMB       => SNUMB,
-                     NRN         => NRACK);
-    /* Найдём рег. номер ячейки */
-    FIND_STPLCELLS_NUMB(NFLAG_SMART  => 0,
-                        NFLAG_OPTION => 1,
-                        NCOMPANY     => NCOMPANY,
-                        NSTORE       => NSTORE,
-                        SSTORE       => SSTORE,
-                        SCELL        => SCELL,
-                        NRN          => NCELL);
-    /* Инициализируем выход */
-    RES := TNOMEN_RESTS();
-    /* Обходим номенклатуры */
-    for NMNS in (select DN.RN NNOMEN,
-                        DN.NOMEN_CODE SNOMEN,
-                        NM.RN NNOMMODIF,
-                        NM.MODIF_CODE SNOMMODIF,
-                        DM.RN NMEAS,
-                        DM.MEAS_MNEMO SMEAS,
-                        RACK_LINE_CELL_BUILD_NAME(SPREF => C.PREF, SNUMB => C.NUMB) SCELL
-                   from STPLGOODSSUPPLY SG,
-                        GOODSSUPPLY     G,
-                        GOODSPARTIES    GP,
-                        STPLRACKS       R,
-                        STPLCELLS       C,
-                        INCOMDOC        IND,
-                        DICNOMNS        DN,
-                        NOMMODIF        NM,
-                        DICMUNTS        DM
-                  where G.COMPANY = NCOMPANY
-                    and G.STORE = NSTORE
-                    and G.RN = SG.GOODSSUPPLY
-                    and R.RN = NRACK
-                    and R.RN = C.PRN
-                    and C.RN = SG.CELL
-                    and G.PRN = GP.RN
-                    and GP.INDOC = IND.RN
-                    and IND.CODE = SDEF_STORE_PARTY
-                    and GP.NOMMODIF = NM.RN
-                    and NM.PRN = DN.RN
-                    and DN.UMEAS_MAIN = DM.RN
-                    and ((NCELL is null) or ((NCELL is not null) and (C.RN = NCELL)))
-                    and ((SNOMEN is null) or ((SNOMEN is not null) and (DN.NOMEN_CODE = SNOMEN)))
-                    and ((SNOMEN_MODIF is null) or ((SNOMEN_MODIF is not null) and (NM.MODIF_CODE = SNOMEN_MODIF)))
-                  group by DN.RN,
-                           DN.NOMEN_CODE,
-                           NM.RN,
-                           NM.MODIF_CODE,
-                           DM.RN,
-                           DM.MEAS_MNEMO,
-                           RACK_LINE_CELL_BUILD_NAME(SPREF => C.PREF, SNUMB => C.NUMB))
-    loop
-      /* Попробуем найти номенклатуру в коллекции */
-      BADD := true;
-      if (RES.COUNT > 0) then
-        for I in RES.FIRST .. RES.LAST
-        loop
-          if (RES(I).NNOMMODIF = NMNS.NNOMMODIF) then
-            BADD := false;
-            N    := I;
-            exit;
-          end if;
-        end loop;
-      end if;
-      /* Добавим номенклатуру в коллекцию, если надо */
-      if (BADD) then
-        /* Новый элемент */
-        RES.EXTEND();
-        N := RES.LAST;
-        /* Инициализируем номенклатуру */
-        RES(N).NNOMEN := NMNS.NNOMEN;
-        RES(N).SNOMEN := NMNS.SNOMEN;
-        RES(N).NNOMMODIF := NMNS.NNOMMODIF;
-        RES(N).SNOMMODIF := NMNS.SNOMMODIF;
-        RES(N).NREST := 0;
-        RES(N).NMEAS := NMNS.NMEAS;
-        RES(N).SMEAS := NMNS.SMEAS;
-      end if;
-      /* Вычислим остаток по данной номенклатуре */
-      P_STPLGOODSSUPPLY_GETREST(NFLAG_SMART   => 0,
-                                NCOMPANY      => NCOMPANY,
-                                SSTORE        => SSTORE,
-                                SCELL         => NMNS.SCELL,
-                                SNOMEN        => NMNS.SNOMEN,
-                                SNOMMODIF     => NMNS.SNOMMODIF,
-                                SNOMMODIFPACK => null,
-                                SINDOC        => SDEF_STORE_PARTY,
-                                SSERNUMB      => null,
-                                SCOUNTRY      => null,
-                                SGTD          => null,
-                                NQUANT        => NREST,
-                                NQUANTALT     => NTMP,
-                                NQUANTPACK    => NTMP);
-      /* Накопим остаток */
-      RES(N).NREST := NREST + RES(N).NREST;
-    end loop;
-    /* Вернем результат */
-    return RES;
-  end;
-
-  /* Получение остатков стеллажа стенда по местам хранения */
-  function STAND_GET_RACK_REST
-  (
-    NCOMPANY                number,            -- Регистрационный номер организации
-    SSTORE                  varchar2,          -- Мнемокод склада стенда
-    SPREF                   varchar2,          -- Префикс стеллажа стенда
-    SNUMB                   varchar2,          -- Номер стеллажа стенда
-    SNOMEN                  varchar2 := null,  -- Номенклатура (null - по всем)
-    SNOMEN_MODIF            varchar2 := null   -- Модификация (null - по всем)    
-  ) return TRACK_REST is
-    CELL                    STPLCELLS%rowtype; -- Запись ячейки стеллажа
-    RES                     TRACK_REST;        -- Результат работы
-  begin
-    /* Находим стеллаж и инициализируем результат */
-    begin
-      select T.RN,
-             T.STORE,
-             S.AZS_NUMBER,
-             trim(T.PREF),
-             trim(T.NUMB),
-             RACK_BUILD_NAME(SPREF => T.PREF, SNUMB => T.NUMB),
-             NRACK_LINES
-        into RES.NRACK,
-             RES.NSTORE,
-             RES.SSTORE,
-             RES.SRACK_PREF,
-             RES.SRACK_NUMB,
-             RES.SRACK_NAME,
-             RES.NRACK_LINES_CNT
-        from STPLRACKS    T,
-             AZSAZSLISTMT S
-       where T.COMPANY = NCOMPANY
-         and T.STORE = S.RN
-         and S.AZS_NUMBER = SSTORE
-         and trim(T.PREF) = SPREF
-         and trim(T.NUMB) = SNUMB;
-    exception
-      when NO_DATA_FOUND then
-        P_EXCEPTION(0,
-                    'Стеллаж "%s" на складе "%s" не определён!',
-                    RACK_BUILD_NAME(SPREF => SPREF, SNUMB => SNUMB),
-                    SSTORE);
-    end;
-    /* Скажем, что стеллаж пустой */
-    RES.BEMPTY := true;
-    /* Инициализируем коллекцию ярусов */
-    RES.RACK_LINE_RESTS := TRACK_LINE_RESTS();
-    /* Обходим ярусы (согласно конфигурации стенда) */
-    for L in 1 .. RES.NRACK_LINES_CNT
-    loop
-      /* Добавим новый ярус */
-      RES.RACK_LINE_RESTS.EXTEND();
-      RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS := TRACK_LINE_CELL_RESTS();
-      /* Инициализируем его */
-      RES.RACK_LINE_RESTS(L).NRACK_LINE := L;
-      RES.RACK_LINE_RESTS(L).NRACK_LINE_CELLS_CNT := NRACK_LINE_CELLS;
-      /* Скажем что ярус пустой */
-      RES.RACK_LINE_RESTS(L).BEMPTY := true;
-      /* Обходим ячейки яруса (согласно конфигурации стенда) */
-      for C in 1 .. RES.RACK_LINE_RESTS(L).NRACK_LINE_CELLS_CNT
-      loop
-        /* Найдём рег. номер ячейки */
-        FIND_STPLCELLS_NUMB(NFLAG_SMART  => 0,
-                            NFLAG_OPTION => 0,
-                            NCOMPANY     => NCOMPANY,
-                            NSTORE       => RES.NSTORE,
-                            SSTORE       => RES.SSTORE,
-                            SCELL        => RACK_LINE_CELL_BUILD_NAME(NRACK_LINE => L, NRACK_LINE_CELL => C),
-                            NRN          => CELL.RN);
-        /* Считаем ячейку */
-        begin
-          select T.* into CELL from STPLCELLS T where T.RN = CELL.RN;
-        exception
-          when NO_DATA_FOUND then
-            PKG_MSG.RECORD_NOT_FOUND(NFLAG_SMART => 0, NDOCUMENT => CELL.RN, SUNIT_TABLE => 'STPLCELLS');
-        end;
-        /* Добавим ячейку в ярус */
-        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS.EXTEND();
-        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS := TNOMEN_RESTS();
-        /* Проинициализируем ячейку */
-        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NRACK_CELL := CELL.RN;
-        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).SRACK_CELL_PREF := trim(CELL.PREF);
-        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).SRACK_CELL_NUMB := trim(CELL.NUMB);
-        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).SRACK_CELL_NAME := RACK_LINE_CELL_BUILD_NAME(SPREF => CELL.PREF,
-                                                                                                    SNUMB => CELL.NUMB);
-        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NRACK_LINE := L;
-        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NRACK_LINE_CELL := C;
-        /* Скажем что ячейка пустая */
-        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).BEMPTY := true;
-        /* Теперь наполним ячейку остатками номенклатуры */
-        RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS := STAND_GET_RACK_NOMEN_REST(NCOMPANY     => NCOMPANY,
-                                                                                                SSTORE       => RES.SSTORE,
-                                                                                                SPREF        => RES.SRACK_PREF,
-                                                                                                SNUMB        => RES.SRACK_NUMB,
-                                                                                                SCELL        => RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C)
-                                                                                                                .SRACK_CELL_NAME,
-                                                                                                SNOMEN       => SNOMEN,
-                                                                                                SNOMEN_MODIF => SNOMEN_MODIF);
-      
-      
-        /* Если запас по номенклатуре не нулевой, то выставим ячейке, ярусу и стеллажу флаг заполненности */
-        if (RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS.COUNT > 0) then
-          for N in RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS.FIRST .. RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C)
-                                                                                       .NOMEN_RESTS.LAST
-          loop
-            if (RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS(N).NREST <> 0) then
-              RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).BEMPTY := false;
-              RES.RACK_LINE_RESTS(L).BEMPTY := false;
-              RES.BEMPTY := false;
-              exit;
-            end if;
-          end loop;
-        end if;
-      end loop;
-    end loop;
-    /* Вернем результат */
-    return RES;
-  end;
-  
-  /* Поиск контрагента-посетителя стенда по штрихкоду */
-  function STAND_GET_AGENT_BY_BARCODE
-  (
-    NCOMPANY                number,             -- Регистрационный номер организации
-    SBARCODE                varchar2            -- Штрихкод
-  ) return TSTAND_USER is
-    NVERSION                VERSIONS.RN%type;   -- Версия раздела "Контрагенты"
-    NDP_BARCODE             DOCS_PROPS.RN%type; -- Регистрационный номер дополнительного свойства для хранения штрихкода
-    RES                     TSTAND_USER;        -- Результат работы
-  begin
-    /* Определим версию раздела "Контрагенты" */
-    FIND_VERSION_BY_COMPANY(NCOMPANY => NCOMPANY, SUNITCODE => 'AGNLIST', NVERSION => NVERSION);
-  
-    /* Определим регистрационный номер дополнительного свойства для хранения штрихкода */
-    FIND_DOCS_PROPS_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SCODE => SDP_BARCODE, NRN => NDP_BARCODE);
-  
-    /* Найдем контрагента с указанным штрихкодом */
-    begin
-      select AG.RN,
-             AG.AGNABBR,
-             AG.AGNNAME
-        into RES.NAGENT,
-             RES.SAGENT,
-             RES.SAGENT_NAME
-        from AGNLIST AG
-       where AG.VERSION = NVERSION
-         and F_DOCS_PROPS_GET_STR_VALUE(NPROPERTY => NDP_BARCODE, SUNITCODE => 'AGNLIST', NDOCUMENT => AG.RN) =
-             SBARCODE;
-    exception
-      when TOO_MANY_ROWS then
-        P_EXCEPTION(0,
-                    'Найдено более одного контрагента со штрихкодом "%s"!',
-                    SBARCODE);
-      when NO_DATA_FOUND then
-        P_EXCEPTION(0, 'Контрагент со штрихкодом "%s" не определён!', SBARCODE);
-    end;
-  
-    /* Вернем результат */
-    return RES;
-  end;
-  
-  /* Проверка осуществления выдачи контрагенту-посетителю товара со стенда (см. константы NAGN_SUPPLY_*) */
-  function STAND_CHECK_SUPPLY
-  (
-    NCOMPANY                number,          -- Регистрационный номер организации
-    NAGENT                  number           -- Регистрационный номер контрагента
-  ) return number is
-    NRES                    PKG_STD.TNUMBER; -- Результат работы
-  begin
-    /* Пробуем найти РНОПотр с данным контрагентом, по складу стенда, с номенклатурой стенда, с типом и префиксом по умолчанию для стенда */
-    begin
-      select count(*)
-        into NRES
-        from TRANSINVCUST      T,
-             DOCTYPES          DT,
-             AZSAZSLISTMT      ST
-       where T.COMPANY = NCOMPANY
-         and trim(T.PREF) = STRINVCUST_PREF
-         and T.DOCTYPE = DT.RN
-         and DT.DOCCODE = STRINVCUST_TYPE
-         and T.AGENT = NAGENT
-         and T.STORE = ST.RN
-         and ST.AZS_NUMBER = SSTORE_GOODS;
-    exception
-      when others then
-        P_EXCEPTION(0,
-                    'Ошибка поиска расходных накладных на отпуск потребителям для контрагента (RN: %s)!',
-                    TO_CHAR(NAGENT));
-    end;
-    
-    /* Таких нет... */
-    if (NRES = 0) then
-      /* ...значит не отгружали данному контрагенту */
-      NRES := NAGN_SUPPLY_NOT_YET;
-    else
-      /* ...или есть и тогда - отгружали */
-      NRES := NAGN_SUPPLY_ALREADY;
-    end if;
-  
-    /* Вернем результат */
-    return NRES;
-  end;  
-  
-  /* Аутентификация посетителя стенда по штрихкоду */
-  procedure STAND_AUTH_BY_BARCODE
-  (
-    NCOMPANY                number,          -- Регистрационный номер организации
-    SBARCODE                varchar2,        -- Штрихкод    
-    STAND_USER              out TSTAND_USER, -- Сведения о пользователе стенда
-    RACK_REST               out TRACK_REST   -- Сведения об остатках на стенде
-  ) is
-  begin
-    /* Найдем контрагента по штрихкоду */
-    STAND_USER := STAND_GET_AGENT_BY_BARCODE(NCOMPANY => NCOMPANY, SBARCODE => SBARCODE);
-  
-    /* Проверим, что отгрузки данному контрагенту ещё не было (если надо, конечно) */
-    if (NALLOW_MULTI_SUPPLY = NALLOW_MULTI_SUPPLY_NO) then
-      if (STAND_CHECK_SUPPLY(NCOMPANY => NCOMPANY, NAGENT => STAND_USER.NAGENT) = NAGN_SUPPLY_ALREADY) then
-        P_EXCEPTION(0,
-                    'Извините, отгрузка для посетителя "%s" уже производилась!',
-                    STAND_USER.SAGENT_NAME);
-      end if;
-    end if;
-  
-    /* Получим остатки по стеллажу, который обслуживает стенд */
-    RACK_REST := STAND_GET_RACK_REST(NCOMPANY     => NCOMPANY,
-                                     SSTORE       => SSTORE_GOODS,
-                                     SPREF        => SRACK_PREF,
-                                     SNUMB        => SRACK_NUMB);
-  end;
-
 begin
-  /* Инициализация коллеции номенклатур стенда */
-  STAND_INIT_RACK_LINE_CELL_CONF(NCOMPANY => GET_SESSION_COMPANY());
+  /* Инициализация настроек стенда */
+  STAND_INIT_RACK_CONF(NCOMPANY => GET_SESSION_COMPANY(), SSTORE => SSTORE_GOODS);
 end;
 /

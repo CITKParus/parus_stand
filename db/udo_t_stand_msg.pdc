@@ -35,4 +35,4 @@ alter table UDO_T_STAND_MSG
 -- Create/Recreate check constraints 
 alter table UDO_T_STAND_MSG
   add constraint UDO_C_STAND_MSG_TP_CH
-  check (TP in ('NOTIFY', 'RESTS', 'PRINT'));
+  check (TP in ('NOTIFY', 'RESTS', 'REST_PRC', 'PRINT'));
