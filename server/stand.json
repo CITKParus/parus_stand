@@ -1,0 +1,10 @@
+{
+    "apps": [
+        {
+            "name": "Stand",
+            "script": "./stand.js",
+            "watch": true,
+            "ignore_watch": ["node_modules"]
+        }
+    ]
+}
