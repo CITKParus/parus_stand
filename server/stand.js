@@ -6,8 +6,10 @@
 //---------------------
 //подключение библиотек
 //---------------------
-const http = require("http");
-const config = require("./config");
+
+const http = require("http"); //библиотека для работы с HTTP
+const config = require("./config"); //настройки сервиса
+const parusClient = require("./parus_client"); //низкоуровневый клиент ПП Парус 8 !!!! убарть !!!!
 
 //-----------
 //точка входа
@@ -25,4 +27,10 @@ function run() {
 }
 
 //старутем
-run();
+//run();
+parusClient.parusServerAction({
+    prms: { SACTION: "STAND_GET_STATE", SSESSION: "931D8EEAC7394A748065758114DF22E0" },
+    callBack: resp => {
+        console.log(resp);
+    }
+});
