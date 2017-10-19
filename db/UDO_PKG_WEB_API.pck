@@ -830,7 +830,7 @@ create or replace package body UDO_PKG_WEB_API as
         when SACTION_LOGOUT then
           begin
             /* Завершим сессию */
-            PKG_SESSION.LOGOFF_WEB(sCONNECT => JPRMS.GET(SREQ_SESSION_KEY).VALUE_OF());
+            PKG_SESSION.LOGOFF_WEB(SCONNECT => JPRMS.GET(SREQ_SESSION_KEY).VALUE_OF());
             /* Скажем что всё прошло хорошо */
             CRES := RESP_MAKE(NRESP_FORMAT => NRESP_FORMAT_JSON,
                               NRESP_STATE  => NRESP_STATE_OK,
