@@ -13,26 +13,41 @@ const conf = require("./config"); //настройки сервиса
 const parus = require("./parus"); //библиотека высокоуровневых функций стенда
 const utils = require("./utils"); //вспомогательные функции
 
-//-----------
-//точка входа
-//-----------
+//-------------------------
+//глобальные идентификаторы
+//-------------------------
+
+let srv = {};
+
+//-------
+//функции
+//-------
 
 //запуск сервиса
 function run() {
     //скажем, что стартуем
     utils.log({ msg: "Starting server..." });
     //опишем WEB-сервис
-    var srv = http.createServer((req, res) => {
-        const resp = { data: "HI! I'M STAND SERVER! CONNECTING TO PARUS SYSTEM AT " + conf.PARUS_HTTP_ADDRESS };
+    srv = http.createServer((req, res) => {
         //разбираем параметры запроса
         utils.parseRequestParams(req, rp => {
             //если запрос не нормальный
             if (rp === utils.REQUEST_STATE_ERR) {
                 //не будем его обрабатывать
-                utils.log({ type: utils.LOG_TYPE_ERR, msg: "Bad server request!" });
+                utils.log({ type: utils.LOG_TYPE_ERR, msg: "New request: Bad server request!" });
             } else {
+                utils.log({ msg: "New request: " + JSON.stringify(rp) });
                 //выполняем действие на сервере ПП Парус 8
-                parus.makeAction(rp, res);
+                parus.makeAction(rp).then(
+                    r => {
+                        res.writeHead(200, { "Content-Type": "application/json" });
+                        res.end(JSON.stringify(r));
+                    },
+                    e => {
+                        res.writeHead(200, { "Content-Type": "application/json" });
+                        res.end(JSON.stringify(e));
+                    }
+                );
             }
         });
     });
@@ -45,20 +60,39 @@ function run() {
 
 //останов сервиса
 function stop() {
-    utils.log({ msg: "Server stoped!" });
+    //сначала прекратим приём сообщений
+    utils.log({ msg: "Stoping server..." });
+    srv.close(e => {
+        utils.log({ msg: "Done" });
+        //теперь закроем сессию ПП Парус
+        parus.makeAction({ action: parus.PARUS_ACTION_LOGOUT }).then(
+            r => {
+                //завершаем процесс нормально
+                process.exit(0);
+            },
+            e => {
+                //завершаем процесс с кодом ошибки
+                process.exit(1);
+            }
+        );
+    });
 }
 
 //обработка события "выход" жизненного цикла процесса
 process.on("exit", code => {
-    //остановим сервис
-    stop();
+    //сообщим о завершении процесса
+    utils.log({ msg: "Process killed with code " + code });
 });
 
 //перехват CTRL + C
 process.on("SIGINT", () => {
     //инициируем выход из процесса
-    process.exit(0);
+    stop();
 });
+
+//-----------
+//точка входа
+//-----------
 
 //старутем
 run();

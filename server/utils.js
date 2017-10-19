@@ -23,6 +23,7 @@ const SERVER_STATE_OK = "OK"; //состояние сервера - всё но�
 //типовые сообщения состояния ответов сервера
 const SERVER_RE_MSG_ERROR = "Ошибка внешнего сервиса!"; //ошибка при обращении к внешнему сервису
 const SERVER_RE_MSG_UNEXPECTED_RESPONSE = "Неожиданный ответ внешнего сервиса!"; //ошибка при разборе ответа внешнего сервиса
+const SERVER_RE_MSG_BAD_REQUEST = "Запрос некорректен (проверьте указание кода действия)!"; //некорректный запрос
 
 //типы информационных сообщений
 const LOG_TYPE_INFO = "log_info"; //сообщение с информацией
@@ -54,12 +55,12 @@ function buildServerResp(state, message) {
 
 //сборка стандартного отрицательного ответа сервера стенда
 function buildErrResp(message) {
-    buildServerResp(SERVER_STATE_ERR, message);
+    return buildServerResp(SERVER_STATE_ERR, message);
 }
 
 //сборка стандартного положительного ответа сервера стенда
 function buildOkResp(message) {
-    buildServerResp(SERVER_STATE_OK, message);
+    return buildServerResp(SERVER_STATE_OK, message);
 }
 
 //протоколирование
@@ -170,6 +171,7 @@ exports.SERVER_STATE_ERR = SERVER_STATE_ERR;
 exports.SERVER_STATE_OK = SERVER_STATE_OK;
 exports.SERVER_RE_MSG_ERROR = SERVER_RE_MSG_ERROR;
 exports.SERVER_RE_MSG_UNEXPECTED_RESPONSE = SERVER_RE_MSG_UNEXPECTED_RESPONSE;
+exports.SERVER_RE_MSG_BAD_REQUEST = SERVER_RE_MSG_BAD_REQUEST;
 exports.buildServerResp = buildServerResp;
 exports.buildErrResp = buildErrResp;
 exports.buildOkResp = buildOkResp;
