@@ -7,6 +7,7 @@
 //подключение библиотек
 //---------------------
 
+const conf = require("./config"); //настройки сервиса
 const pc = require("./parus_client"); //низкоуровневый клиент ПП Парус 8
 const utils = require("./utils"); //вспомогательные функции
 
@@ -14,56 +15,242 @@ const utils = require("./utils"); //вспомогательные функци�
 //глобальные идентификаторы
 //-------------------------
 
+//состояние сервиса
 let PARUS_SESSION = ""; //идентификатор сессии ПП Парус 8
+const PARUS_MAX_CONN_ATTEMPT = 3; //максимальное количество попыток создания подключения к ПП Парус 8
+
+//команды HTTP-сервера ПП Парус 8
+const PARUS_ACTION_VERIFY = "VERIFY";
+const PARUS_ACTION_DOWNLOAD = "DOWNLOAD";
+const PARUS_ACTION_LOGIN = "LOGIN";
+const PARUS_ACTION_LOGOUT = "LOGOUT";
+const PARUS_ACTION_AUTH_BY_BARCODE = "AUTH_BY_BARCODE";
+const PARUS_ACTION_SHIPMENT = "SHIPMENT";
+const PARUS_ACTION_MSG_INSERT = "MSG_INSERT";
+const PARUS_ACTION_MSG_GET_LIST = "MSG_GET_LIST";
+const PARUS_ACTION_STAND_GET_STATE = "STAND_GET_STATE";
 
 //-------
 //функции
 //-------
 
 //начало сеанса
-function logIn() {
+function logIn(attempt) {
     return new Promise((resolve, reject) => {
+        //проверим наличие сессии
         if (!PARUS_SESSION) {
-            utils.log({ msp: "No Parus session! Logging in..." });
+            //создадим её, если нет
+            utils.log({ msg: "No Parus session! Logging in (attempt " + attempt + ")..." });
             pc.parusServerAction({
-                prms: { SACTION: pc.PARUS_ACTION_LOGIN, SSESSION: "931D8EEAC7394A748065758114DF22E0" },
+                prms: {
+                    SACTION: PARUS_ACTION_LOGIN,
+                    SUSER: conf.PARUS_USER_NAME,
+                    SPASSWORD: conf.PARUS_USER_PASSWORD,
+                    SCOMPANY: conf.PARUS_COMPANY
+                },
                 callBack: resp => {
-                    console.log(resp);
+                    //проверим результат создания сессии
+                    if (resp.state == utils.SERVER_STATE_ERR) {
+                        //не получилось - скажем об этом
+                        utils.log({ type: utils.LOG_TYPE_ERR, msg: "Can't create session: " + resp.message });
+                        //если ещё есть попытки подключения
+                        if (attempt < PARUS_MAX_CONN_ATTEMPT) {
+                            //используем их
+                            let attRest = PARUS_MAX_CONN_ATTEMPT - attempt;
+                            utils.log({ msg: attRest + " more attempts. Trying one more time!" });
+                            logIn(++attempt).then(
+                                r => {
+                                    resolve(r);
+                                },
+                                e => {
+                                    reject(e);
+                                }
+                            );
+                        } else {
+                            //всё, сдаёмся
+                            reject(resp);
+                        }
+                    } else {
+                        //получилось - запоминаем сессию и выходим с успехом
+                        PARUS_SESSION = resp.message.SSESSION;
+                        utils.log({ msg: "Session (ID: " + PARUS_SESSION + ") created " });
+                        resolve(resp);
+                    }
                 }
             });
         } else {
+            //верифицируем, если она есть
+            utils.log({ msg: "Session exists (ID: " + PARUS_SESSION + "). Cheking..." });
+            pc.parusServerAction({
+                prms: { SACTION: PARUS_ACTION_VERIFY, SSESSION: PARUS_SESSION },
+                callBack: resp => {
+                    //проверим результат верификации
+                    if (resp.state == utils.SERVER_STATE_ERR) {
+                        //верификация не удалась - скажем об этом...
+                        utils.log({
+                            type: utils.LOG_TYPE_ERR,
+                            msg: "Can't validate session (ID: " + PARUS_SESSION + "). Relogging in... "
+                        });
+                        //...забудем кривую сессию
+                        PARUS_SESSION = "";
+                        //и попробуем сделать новую
+                        logIn(1).then(
+                            r => {
+                                resolve(r);
+                            },
+                            e => {
+                                reject(e);
+                            }
+                        );
+                    } else {
+                        //верификация удалась - ресолвим с успехом
+                        utils.log({ msg: "Session (ID: " + PARUS_SESSION + ") validated " });
+                        resolve(resp);
+                    }
+                }
+            });
         }
     });
 }
 
 //окончание сеанса
-function logOut() {}
-
-//окончание сеанса
+function logOut() {
+    return new Promise((resolve, reject) => {
+        //проверим наличие сессии
+        if (!PARUS_SESSION) {
+            //её нет - и делать нечего
+            utils.log({ msg: "No Parus session to be terminated" });
+            resolve("");
+        } else {
+            //сессия есть - будем закрывать её на сервере ПП Парус 8
+            utils.log({ msg: "Closing Parus session (ID: " + PARUS_SESSION + ")..." });
+            pc.parusServerAction({
+                prms: { SACTION: PARUS_ACTION_LOGOUT, SSESSION: PARUS_SESSION },
+                callBack: resp => {
+                    //проверим результат завершения сессии
+                    if (resp.state == utils.SERVER_STATE_ERR) {
+                        //завершение не удалось
+                        utils.log({
+                            type: utils.LOG_TYPE_ERR,
+                            msg: "Can't terminate session (ID: " + PARUS_SESSION + "): " + resp.message
+                        });
+                        reject(resp);
+                    } else {
+                        utils.log({ msg: "Session (ID: " + PARUS_SESSION + ") terminated " });
+                        //забудем сессию
+                        PARUS_SESSION = "";
+                        //завершение удалась - ресолвим с успехом
+                        resolve(utils.buildOkResp("Terminated"));
+                    }
+                }
+            });
+        }
+    });
+}
 
 //получение состояния стенда
-function getStandState() {
-    /*
-parusClient.parusServerAction({
-    prms: { SACTION: "STAND_GET_STATE", SSESSION: "931D8EEAC7394A748065758114DF22E0" },
-    callBack: resp => {
-        console.log(resp);
-    }
-});
-*/
-    console.log("getStandState");
+function getStandState(prms) {
+    return new Promise(function(resolve, reject) {
+        //исполняем действие на сервере ПП Парус 8
+        pc.parusServerAction({
+            prms: { SACTION: PARUS_ACTION_STAND_GET_STATE, SSESSION: PARUS_SESSION },
+            callBack: resp => {
+                //проверим результат выполнения
+                if (resp.state == utils.SERVER_STATE_ERR) {
+                    //завершение не удалось
+                    reject(resp);
+                } else {
+                    //завершение удалась - ресолвим с успехом
+                    resolve(resp);
+                }
+            }
+        });
+    });
 }
 
 //выполнение действия ПП Парус 8
-function makeAction(prms, res) {
-    //console.log("makeAction");
-    //console.log(prms);
-    //res.writeHead(200, { "Content-Type": "application/json" });
-    //res.end(JSON.stringify(resp));
+function makeAction(prms) {
+    return new Promise(function(resolve, reject) {
+        //здесь будем хранить функцию исполняющую действие на сервере (должна возвращать Promise)
+        let actionFunction;
+        //определим функцию исполнения действия
+        switch (prms.action) {
+            //завершение сеанса
+            case PARUS_ACTION_LOGOUT: {
+                actionFunction = logOut;
+                break;
+            }
+            //получение состояния стенда
+            case PARUS_ACTION_STAND_GET_STATE: {
+                actionFunction = getStandState;
+                break;
+            }
+            //какая-то неизвестная нам функция
+            default: {
+                actionFunction = utils.SERVER_RE_MSG_BAD_REQUEST;
+                break;
+            }
+        }
+        //если с функцией не определились
+        if (actionFunction === utils.SERVER_RE_MSG_BAD_REQUEST) {
+            //закроем этот промис сообщением о том, что не смогли найти нужную функцию
+            resolve(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
+        } else {
+            //если просят всё что угодно, кроме завершения сессии
+            if (prms.action != PARUS_ACTION_LOGOUT) {
+                return (
+                    //всегда перед вызовом функций делаем сессию ПП Парус 8 (если она уже есть - будет просто валидирована, если валидация не удастся - пересоздана)
+                    logIn(1)
+                        //смотрим что у нас с созданием/верификацией сессии ПП Парус 8
+                        .then(
+                            //сессия ПП Парус 8- ОК, можно выполнять функцию-действие ПП Парус 8
+                            r => {
+                                utils.log({ msg: "Executing Parus action '" + prms.action + "'" });
+                                return actionFunction(prms);
+                            },
+                            //вообще не получилось с сессией (может сервер ПП Парус 8 не стартован)
+                            e => {
+                                throw e;
+                            }
+                        )
+                        //здесь перехватываем результаты функции-действия ПП Парус 8 (всегда ресолвим, что бы наш сервис всегда отдавал ответ, положительный или отрицательный)
+                        .then(
+                            r => {
+                                utils.log({ msg: "Done!" });
+                                resolve(r);
+                            },
+                            e => {
+                                utils.log({ type: utils.LOG_TYPE_ERR, msg: "Execution error: " + e.message });
+                                resolve(e);
+                            }
+                        )
+                );
+            } else {
+                //завершаем сессию
+                actionFunction().then(
+                    r => {
+                        resolve(r);
+                    },
+                    e => {
+                        reject(e);
+                    }
+                );
+            }
+        }
+    });
 }
 
 //----------------
 //интерфейс модуля
 //----------------
 
+exports.PARUS_ACTION_VERIFY = PARUS_ACTION_VERIFY;
+exports.PARUS_ACTION_DOWNLOAD = PARUS_ACTION_DOWNLOAD;
+exports.PARUS_ACTION_LOGIN = PARUS_ACTION_LOGIN;
+exports.PARUS_ACTION_LOGOUT = PARUS_ACTION_LOGOUT;
+exports.PARUS_ACTION_AUTH_BY_BARCODE = PARUS_ACTION_AUTH_BY_BARCODE;
+exports.PARUS_ACTION_SHIPMENT = PARUS_ACTION_SHIPMENT;
+exports.PARUS_ACTION_MSG_INSERT = PARUS_ACTION_MSG_INSERT;
+exports.PARUS_ACTION_MSG_GET_LIST = PARUS_ACTION_MSG_GET_LIST;
+exports.PARUS_ACTION_STAND_GET_STATE = PARUS_ACTION_STAND_GET_STATE;
 exports.makeAction = makeAction;
