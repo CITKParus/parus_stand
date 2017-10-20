@@ -1,5 +1,5 @@
 /*
-    Сервис взаимодействия стенда с ПП Парус 8
+    Сервер стенда
     Главный модуль
 */
 
@@ -9,8 +9,8 @@
 
 const http = require("http"); //библиотека для работы с HTTP
 const qs = require("querystring"); //парсер параметров запросов
-const conf = require("./config"); //настройки сервиса
-const parus = require("./parus"); //библиотека высокоуровневых функций стенда
+const conf = require("./config"); //настройки сервера
+const parus = require("./parus"); //библиотека высокоуровневого взаимодействия с ПП Парус 8
 const utils = require("./utils"); //вспомогательные функции
 
 //-------------------------
@@ -23,11 +23,11 @@ let srv = {};
 //функции
 //-------
 
-//запуск сервиса
+//запуск сервера
 function run() {
     //скажем, что стартуем
     utils.log({ msg: "Starting server..." });
-    //опишем WEB-сервис
+    //опишем WEB-сервер
     srv = http.createServer((req, res) => {
         //разбираем параметры запроса
         utils.parseRequestParams(req, rp => {
@@ -51,14 +51,14 @@ function run() {
             }
         });
     });
-    //запускаем WEB-сервис
+    //запускаем WEB-сервер
     srv.listen(conf.SERVER_PORT, () => {
         utils.log({ msg: "Server started at port " + srv.address().port });
         utils.log({ msg: "Available ip's: " + utils.getIPs().join(", ") });
     });
 }
 
-//останов сервиса
+//останов сервера
 function stop() {
     //сначала прекратим приём сообщений
     utils.log({ msg: "Stoping server..." });

@@ -1,5 +1,5 @@
 /*
-    Сервис взаимодействия стенда с ПП Парус 8
+    Сервер стенда
     Вспомогательные функции
 */
 
@@ -20,22 +20,22 @@ const mp = require("multiparty"); //парсинг данных форм зап�
 const SERVER_STATE_ERR = "ERR"; //состояние сервера - ошибка
 const SERVER_STATE_OK = "OK"; //состояние сервера - всё нормально
 
-//типовые сообщения состояния ответов сервера
+//типовые сообщения ответов сервера
 const SERVER_RE_MSG_ERROR = "Ошибка внешнего сервиса!"; //ошибка при обращении к внешнему сервису
 const SERVER_RE_MSG_UNEXPECTED_RESPONSE = "Неожиданный ответ внешнего сервиса!"; //ошибка при разборе ответа внешнего сервиса
-const SERVER_RE_MSG_BAD_REQUEST = "Запрос некорректен (проверьте указание кода действия)!"; //некорректный запрос
+const SERVER_RE_MSG_BAD_REQUEST = "Запрос некорректен (проверьте указание кода действия)!"; //некорректный запрос от клиента
 
-//типы информационных сообщений
+//типы сообщений протокола работы сервера
 const LOG_TYPE_INFO = "log_info"; //сообщение с информацией
 const LOG_TYPE_ERR = "log_error"; //сообщение об ошибке
 
-//типы ошибочных запросов к серверу
+//состояния запросов к серверу
 const REQUEST_STATE_ERR = 0; //некорректный запрос
 const REQUEST_STATE_OK = 1; //корректный запрос
 
-//типы содержимого запросов к серверу
+//типы передачи POST-параметров в запросах к серверу
 const REQUEST_CT_FORM_URLENCODED = "application/x-www-form-urlencoded";
-const REQUEST_CT_FORM_DATE = "multipart/form-data";
+const REQUEST_CT_FORM_DATA = "multipart/form-data";
 
 //методы запросов к серверу
 const REQUEST_METHOD_POST = "POST"; //POST-запрос
@@ -87,7 +87,7 @@ function log(prms) {
     }
 }
 
-//получение списка IP-адресов
+//получение списка IP-адресов хоста сервера
 function getIPs() {
     let ips = [];
     //получим список сетевых интерфейсов
@@ -131,7 +131,7 @@ function parseRequestParams(request, callBack) {
             });
         } else {
             //если параметры в формате multipart/form-data
-            if (String(request.headers["content-type"]).startsWith(REQUEST_CT_FORM_DATE)) {
+            if (String(request.headers["content-type"]).startsWith(REQUEST_CT_FORM_DATA)) {
                 let form = new mp.Form();
                 //установим обработчик ошибок разбора формы
                 form.on("error", function(err) {
@@ -163,15 +163,19 @@ function parseRequestParams(request, callBack) {
 //----------------
 //интерфейс модуля
 //----------------
-exports.LOG_TYPE_INFO = LOG_TYPE_INFO;
-exports.LOG_TYPE_ERR = LOG_TYPE_ERR;
-exports.REQUEST_STATE_ERR = REQUEST_STATE_ERR;
-exports.REQUEST_STATE_OK = REQUEST_STATE_OK;
 exports.SERVER_STATE_ERR = SERVER_STATE_ERR;
 exports.SERVER_STATE_OK = SERVER_STATE_OK;
 exports.SERVER_RE_MSG_ERROR = SERVER_RE_MSG_ERROR;
 exports.SERVER_RE_MSG_UNEXPECTED_RESPONSE = SERVER_RE_MSG_UNEXPECTED_RESPONSE;
 exports.SERVER_RE_MSG_BAD_REQUEST = SERVER_RE_MSG_BAD_REQUEST;
+exports.LOG_TYPE_INFO = LOG_TYPE_INFO;
+exports.LOG_TYPE_ERR = LOG_TYPE_ERR;
+exports.REQUEST_STATE_ERR = REQUEST_STATE_ERR;
+exports.REQUEST_STATE_OK = REQUEST_STATE_OK;
+exports.REQUEST_CT_FORM_URLENCODED = REQUEST_CT_FORM_URLENCODED;
+exports.REQUEST_CT_FORM_DATA = REQUEST_CT_FORM_DATA;
+exports.REQUEST_METHOD_POST = REQUEST_METHOD_POST;
+exports.REQUEST_METHOD_GET = REQUEST_METHOD_GET;
 exports.buildServerResp = buildServerResp;
 exports.buildErrResp = buildErrResp;
 exports.buildOkResp = buildOkResp;
