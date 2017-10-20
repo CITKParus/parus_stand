@@ -168,6 +168,31 @@ function getStandState(prms) {
     });
 }
 
+//аутентификация пользователя по штрих-коду
+function authUserByBarcode(prms) {
+    return new Promise(function(resolve, reject) {
+        //проверим наличие параметров
+        if (prms.barcode) {
+            //исполняем действие на сервере ПП Парус 8
+            pc.parusServerAction({
+                prms: { SACTION: PARUS_ACTION_AUTH_BY_BARCODE, SSESSION: PARUS_SESSION, SBARCODE: prms.barcode },
+                callBack: resp => {
+                    //проверим результат выполнения
+                    if (resp.state == utils.SERVER_STATE_ERR) {
+                        //завершение не удалось
+                        reject(resp);
+                    } else {
+                        //завершение удалась - ресолвим с успехом
+                        resolve(resp);
+                    }
+                }
+            });
+        } else {
+            reject(utils.buildErrResp("Не указан штрих-код!"));
+        }
+    });
+}
+
 //выполнение действия ПП Парус 8
 function makeAction(prms) {
     return new Promise(function(resolve, reject) {
@@ -185,6 +210,11 @@ function makeAction(prms) {
                 actionFunction = getStandState;
                 break;
             }
+            //
+            case PARUS_ACTION_AUTH_BY_BARCODE: {
+                actionFunction = authUserByBarcode;
+                break;
+            }
             //какая-то неизвестная нам функция
             default: {
                 actionFunction = utils.SERVER_RE_MSG_BAD_REQUEST;
@@ -194,6 +224,7 @@ function makeAction(prms) {
         //если с функцией не определились
         if (actionFunction === utils.SERVER_RE_MSG_BAD_REQUEST) {
             //закроем этот промис сообщением о том, что не смогли найти нужную функцию
+            utils.log({ type: utils.LOG_TYPE_ERR, msg: "Bad request" });
             resolve(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
         } else {
             //если просят всё что угодно, кроме завершения сессии

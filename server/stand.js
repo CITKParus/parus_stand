@@ -17,7 +17,11 @@ const utils = require("./utils"); //вспомогательные функци�
 //глобальные идентификаторы
 //-------------------------
 
+//экземпляр сервера
 let srv = {};
+
+//заголовок ответа сервера
+const STAND_RESP_HEADER = { "Content-Type": "application/json" };
 
 //-------
 //функции
@@ -40,11 +44,11 @@ function run() {
                 //выполняем действие на сервере ПП Парус 8
                 parus.makeAction(rp).then(
                     r => {
-                        res.writeHead(200, { "Content-Type": "application/json" });
+                        res.writeHead(200, STAND_RESP_HEADER);
                         res.end(JSON.stringify(r));
                     },
                     e => {
-                        res.writeHead(200, { "Content-Type": "application/json" });
+                        res.writeHead(200, STAND_RESP_HEADER);
                         res.end(JSON.stringify(e));
                     }
                 );
