@@ -20,15 +20,15 @@ let PARUS_SESSION = ""; //идентификатор сессии ПП Пару�
 const PARUS_MAX_CONN_ATTEMPT = 3; //максимальное количество попыток создания подключения к ПП Парус 8
 
 //команды HTTP-сервера ПП Парус 8
-const PARUS_ACTION_VERIFY = "VERIFY";
-const PARUS_ACTION_DOWNLOAD = "DOWNLOAD";
-const PARUS_ACTION_LOGIN = "LOGIN";
-const PARUS_ACTION_LOGOUT = "LOGOUT";
-const PARUS_ACTION_AUTH_BY_BARCODE = "AUTH_BY_BARCODE";
-const PARUS_ACTION_SHIPMENT = "SHIPMENT";
-const PARUS_ACTION_MSG_INSERT = "MSG_INSERT";
-const PARUS_ACTION_MSG_GET_LIST = "MSG_GET_LIST";
-const PARUS_ACTION_STAND_GET_STATE = "STAND_GET_STATE";
+const PARUS_ACTION_VERIFY = "VERIFY"; //верификация сессии ПП Парус 8
+const PARUS_ACTION_DOWNLOAD = "DOWNLOAD"; //выгрузка файла с сервера ПП Парус 8
+const PARUS_ACTION_LOGIN = "LOGIN"; //создание сессии ПП Парус 8
+const PARUS_ACTION_LOGOUT = "LOGOUT"; //завершение сессии ПП Парус 8
+const PARUS_ACTION_AUTH_BY_BARCODE = "AUTH_BY_BARCODE"; //аутентификация посетителя стенда по штрихкоду
+const PARUS_ACTION_SHIPMENT = "SHIPMENT"; //откгрузка товара посетителю
+const PARUS_ACTION_MSG_INSERT = "MSG_INSERT"; //добавление сообщения в очедерь уведомлений стенда
+const PARUS_ACTION_MSG_GET_LIST = "MSG_GET_LIST"; //получение списка сообщений очереди уведомлений стенда
+const PARUS_ACTION_STAND_GET_STATE = "STAND_GET_STATE"; //получение состояния стенда
 
 //-------
 //функции
@@ -193,6 +193,45 @@ function authUserByBarcode(prms) {
     });
 }
 
+//отгрузка товара посетителю
+function shipment(prms) {
+    return new Promise(function(resolve, reject) {
+        //проверим наличие параметров
+        if (prms.customer) {
+            if (prms.rack_line) {
+                if (prms.rack_line_cell) {
+                    //исполняем действие на сервере ПП Парус 8
+                    pc.parusServerAction({
+                        prms: {
+                            SACTION: PARUS_ACTION_SHIPMENT,
+                            SSESSION: PARUS_SESSION,
+                            SCUSTOMER: prms.customer,
+                            NRACK_LINE: prms.rack_line,
+                            NRACK_LINE_CELL: prms.rack_line_cell
+                        },
+                        callBack: resp => {
+                            //проверим результат выполнения
+                            if (resp.state == utils.SERVER_STATE_ERR) {
+                                //завершение не удалось
+                                reject(resp);
+                            } else {
+                                //завершение удалась - ресолвим с успехом
+                                resolve(resp);
+                            }
+                        }
+                    });
+                } else {
+                    reject(utils.buildErrResp("Не указано место хранения яруса стеллажа стенда!"));
+                }
+            } else {
+                reject(utils.buildErrResp("Не указан ярус стеллажа стенда!"));
+            }
+        } else {
+            reject(utils.buildErrResp("Не указан посетитель стенда!"));
+        }
+    });
+}
+
 //выполнение действия ПП Парус 8
 function makeAction(prms) {
     return new Promise(function(resolve, reject) {
@@ -210,9 +249,14 @@ function makeAction(prms) {
                 actionFunction = getStandState;
                 break;
             }
-            //
+            //аутентификация посетителя стенда по штрихкоду
             case PARUS_ACTION_AUTH_BY_BARCODE: {
                 actionFunction = authUserByBarcode;
+                break;
+            }
+            //отгрузка товара посетителю
+            case PARUS_ACTION_SHIPMENT: {
+                actionFunction = shipment;
                 break;
             }
             //какая-то неизвестная нам функция
