@@ -1,104 +1,118 @@
-ï»¿create or replace package UDO_PKG_STAND_WEB as
+create or replace package UDO_PKG_STAND_WEB as
   /*
-    WEB API ÑÑ‚ÐµÐ½Ð´Ð°
+    WEB API ñòåíäà
   */
   
-  /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð°Ñ†Ð¸Ñ ÐºÐ¾Ð½Ñ„Ð¸Ð³ÑƒÑ€Ð°Ñ†Ð¸Ð¸ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€ ÑÑ‚ÐµÐ½Ð´Ð° Ð² JSON */
+  /* Êîíâåðòàöèÿ êîíôèãóðàöèè íîìåíêëàòóð ñòåíäà â JSON */
   function STAND_RACK_NOMEN_CONFS_TO_JSON
   (
-    NC                      UDO_PKG_STAND.TRACK_NOMEN_CONFS -- ÐšÐ¾Ð½Ñ„Ð¸Ð³ÑƒÑ€Ð°Ñ†Ð¸Ñ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€Ñ‹ ÑÑ‚ÐµÐ½Ð´Ð°
+    NC                      UDO_PKG_STAND.TRACK_NOMEN_CONFS -- Êîíôèãóðàöèÿ íîìåíêëàòóðû ñòåíäà
   ) return JSON_LIST;
   
-  /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð°Ñ†Ð¸Ñ Ð¾ÑÑ‚Ð°Ñ‚ÐºÐ¾Ð² Ð¿Ð¾ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€Ðµ ÑÑ‚ÐµÐ½Ð´Ð° Ð² JSON */
+  /* Êîíâåðòàöèÿ îñòàòêîâ ïî íîìåíêëàòóðå ñòåíäà â JSON */
   function STAND_RACK_NOMEN_RESTS_TO_JSON
   (
-    NR                      UDO_PKG_STAND.TNOMEN_RESTS -- ÐžÑÑ‚Ð°Ñ‚ÐºÐ¸ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€Ñ‹
+    NR                      UDO_PKG_STAND.TNOMEN_RESTS -- Îñòàòêè íîìåíêëàòóðû
   ) return JSON_LIST;
   
-  /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð°Ñ†Ð¸Ñ Ð¾ÑÑ‚Ð°Ñ‚ÐºÐ¾Ð² Ð¿Ð¾ ÑÑ‚ÐµÐ»Ð»Ð°Ð¶Ñƒ ÑÑ‚ÐµÐ½Ð´Ð° Ð² JSON */
+  /* Êîíâåðòàöèÿ îñòàòêîâ ïî ñòåëëàæó ñòåíäà â JSON */
   function STAND_RACK_REST_TO_JSON
   (
-    R                       UDO_PKG_STAND.TRACK_REST -- ÐžÑÑ‚Ð°Ñ‚ÐºÐ¸ ÑÑ‚ÐµÐ½Ð´Ð°
+    R                       UDO_PKG_STAND.TRACK_REST -- Îñòàòêè ñòåíäà
   ) return JSON;
   
-  /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð°Ñ†Ð¸Ñ Ð¸ÑÑ‚Ð¾Ñ€Ð¸Ð¸ Ð·Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½Ð½Ð¾ÑÑ‚Ð¸ ÑÑ‚ÐµÐ½Ð´Ð° Ð² JSON */
+  /* Êîíâåðòàöèÿ èñòîðèè çàãðóæåííîñòè ñòåíäà â JSON */
   function STAND_RACK_REST_PRCHS_TO_JSON
   (
-    RH                      UDO_PKG_STAND.TRACK_REST_PRC_HISTS -- Ð˜ÑÑ‚Ð¾Ñ€Ð¸Ñ Ð·Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½Ð½Ð¾ÑÑ‚Ð¸ ÑÑ‚ÐµÐ½Ð´Ð°
+    RH                      UDO_PKG_STAND.TRACK_REST_PRC_HISTS -- Èñòîðèÿ çàãðóæåííîñòè ñòåíäà
   ) return JSON_LIST;
   
-  /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð°Ñ†Ð¸Ñ ÑÐ²ÐµÐ´ÐµÐ½Ð¸Ð¹ Ð¾ Ð¿Ð¾ÑÐµÑ‚Ð¸Ñ‚ÐµÐ»Ðµ ÑÑ‚ÐµÐ½Ð´Ð° Ð² JSON */
+  /* Êîíâåðòàöèÿ ñâåäåíèé î ïîñåòèòåëå ñòåíäà â JSON */
   function STAND_USER_TO_JSON
   (
-    U                       UDO_PKG_STAND.TSTAND_USER -- ÐŸÐ¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ ÑÑ‚ÐµÐ½Ð´Ð°
+    U                       UDO_PKG_STAND.TSTAND_USER -- Ïîëüçîâàòåëü ñòåíäà
   ) return JSON;
   
-  /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð°Ñ†Ð¸Ñ ÑÐ¾ÑÑ‚Ð¾ÑÐ½Ð¸Ñ ÑÑ‚ÐµÐ½Ð´Ð° Ð² JSON */
+  /* Êîíâåðòàöèÿ ñîñòîÿíèÿ ñòåíäà â JSON */
   function STAND_STATE_TO_JSON
   (
-    SS                      UDO_PKG_STAND.TSTAND_STATE -- Ð¡Ð¾ÑÑ‚Ð¾ÑÐ½Ð¸Ðµ ÑÑ‚ÐµÐ½Ð´Ð°
+    SS                      UDO_PKG_STAND.TSTAND_STATE -- Ñîñòîÿíèå ñòåíäà
   ) return JSON;
   
-  /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð°Ñ†Ð¸Ñ ÑÐ¿Ð¸ÑÐºÐ° ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹ Ð² JSON */
+  /* Êîíâåðòàöèÿ ñïèñêà ñîîáùåíèé â JSON */
   function MESSAGES_TO_JSON
   (
-    MSGS                    UDO_PKG_STAND.TMESSAGES -- Ð¡Ð¿Ð¸ÑÐ¾Ðº ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹
+    MSGS                    UDO_PKG_STAND.TMESSAGES -- Ñïèñîê ñîîáùåíèé
   ) return JSON_LIST;
   
-  /* ÐÑƒÑ‚ÐµÐ½Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ†Ð¸Ñ Ð¿Ð¾ÑÐµÑ‚Ð¸Ñ‚ÐµÐ»Ñ ÑÑ‚ÐµÐ½Ð´Ð° Ð¿Ð¾ ÑˆÑ‚Ñ€Ð¸Ñ…ÐºÐ¾Ð´Ñƒ */
+  /* Àóòåíòèôèêàöèÿ ïîñåòèòåëÿ ñòåíäà ïî øòðèõêîäó */
   procedure AUTH_BY_BARCODE
   (
-    CPRMS                   clob,       -- Ð’Ñ…Ð¾Ð´Ð½Ñ‹Ðµ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ñ‹
-    CRES                    out clob    -- Ð ÐµÐ·ÑƒÐ»ÑŒÑ‚Ð°Ñ‚ Ñ€Ð°Ð±Ð¾Ñ‚Ñ‹
+    CPRMS                   clob,       -- Âõîäíûå ïàðàìåòðû
+    CRES                    out clob    -- Ðåçóëüòàò ðàáîòû
   );
 
-  /* Ð’Ñ‹Ð´Ð°Ñ‡Ð° Ð¿Ð¾ÑÐµÑ‚Ð¸Ñ‚ÐµÐ»ÑŽ Ñ‚Ð¾Ð²Ð°Ñ€Ð° ÑÐ¾ ÑÑ‚ÐµÐ½Ð´Ð° */
+  /* Âûäà÷à ïîñåòèòåëþ òîâàðà ñî ñòåíäà */
   procedure SHIPMENT
   (
-    CPRMS                   clob,       -- Ð’Ñ…Ð¾Ð´Ð½Ñ‹Ðµ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ñ‹
-    CRES                    out clob    -- Ð ÐµÐ·ÑƒÐ»ÑŒÑ‚Ð°Ñ‚ Ñ€Ð°Ð±Ð¾Ñ‚Ñ‹
+    CPRMS                   clob,       -- Âõîäíûå ïàðàìåòðû
+    CRES                    out clob    -- Ðåçóëüòàò ðàáîòû
   );
   
-  /* ÐŸÐ¾Ð¼ÐµÑ‰ÐµÐ½Ð¸Ðµ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ñ Ð² Ð¾Ñ‡ÐµÑ€ÐµÐ´ÑŒ ÑƒÐ²ÐµÐ´Ð¾Ð¼Ð»ÐµÐ½Ð¸Ð¹ */
+  /* Ïîìåùåíèå ñîîáùåíèÿ â î÷åðåäü óâåäîìëåíèé */
   procedure MSG_INSERT
   (
-    CPRMS                   clob,       -- Ð’Ñ…Ð¾Ð´Ð½Ñ‹Ðµ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ñ‹
-    CRES                    out clob    -- Ð ÐµÐ·ÑƒÐ»ÑŒÑ‚Ð°Ñ‚ Ñ€Ð°Ð±Ð¾Ñ‚Ñ‹
+    CPRMS                   clob,       -- Âõîäíûå ïàðàìåòðû
+    CRES                    out clob    -- Ðåçóëüòàò ðàáîòû
   );
   
-  /* Ð’Ñ‹Ð´Ð°Ñ‡Ð° ÑÐ¿Ð¸ÑÐºÐ° ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹ */
+  /* Óäàëåíèå ñîîáùåíèÿ èç î÷åðåäè óâåäîìëåíèé */
+  procedure MSG_DELETE
+  (
+    CPRMS                   clob,       -- Âõîäíûå ïàðàìåòðû
+    CRES                    out clob    -- Ðåçóëüòàò ðàáîòû
+  );
+  
+  /* Óñòàíîâêà ñîñòîÿíèÿ ñîîáùåíèÿ â î÷åðåäè óâåäîìëåíèé */
+  procedure MSG_SET_STATE
+  (
+    CPRMS                   clob,       -- Âõîäíûå ïàðàìåòðû
+    CRES                    out clob    -- Ðåçóëüòàò ðàáîòû
+  );
+
+  /* Âûäà÷à ñïèñêà ñîîáùåíèé */
   procedure MSG_GET_LIST
   (
-    CPRMS                   clob,       -- Ð’Ñ…Ð¾Ð´Ð½Ñ‹Ðµ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ñ‹
-    CRES                    out clob    -- Ð ÐµÐ·ÑƒÐ»ÑŒÑ‚Ð°Ñ‚ Ñ€Ð°Ð±Ð¾Ñ‚Ñ‹
+    CPRMS                   clob,       -- Âõîäíûå ïàðàìåòðû
+    CRES                    out clob    -- Ðåçóëüòàò ðàáîòû
   );
   
-  /* ÐŸÐ¾Ð»ÑƒÑ‡ÐµÐ½Ð¸Ðµ ÑÐ¾ÑÑ‚Ð¾ÑÐ½Ð¸Ñ ÑÑ‚ÐµÐ½Ð´Ð° */
+  /* Ïîëó÷åíèå ñîñòîÿíèÿ ñòåíäà */
   procedure STAND_GET_STATE
   (
-    CPRMS                   clob,       -- Ð’Ñ…Ð¾Ð´Ð½Ñ‹Ðµ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ñ‹
-    CRES                    out clob    -- Ð ÐµÐ·ÑƒÐ»ÑŒÑ‚Ð°Ñ‚ Ñ€Ð°Ð±Ð¾Ñ‚Ñ‹
+    CPRMS                   clob,       -- Âõîäíûå ïàðàìåòðû
+    CRES                    out clob    -- Ðåçóëüòàò ðàáîòû
   );
 
 end;
 /
 create or replace package body UDO_PKG_STAND_WEB as
 
-  /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð°Ñ†Ð¸Ñ ÐºÐ¾Ð½Ñ„Ð¸Ð³ÑƒÑ€Ð°Ñ†Ð¸Ð¸ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€ ÑÑ‚ÐµÐ½Ð´Ð° Ð² JSON */
+  /* Êîíâåðòàöèÿ êîíôèãóðàöèè íîìåíêëàòóð ñòåíäà â JSON */
   function STAND_RACK_NOMEN_CONFS_TO_JSON
   (
-    NC                      UDO_PKG_STAND.TRACK_NOMEN_CONFS -- ÐšÐ¾Ð½Ñ„Ð¸Ð³ÑƒÑ€Ð°Ñ†Ð¸Ñ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€Ñ‹ ÑÑ‚ÐµÐ½Ð´Ð°
+    NC                      UDO_PKG_STAND.TRACK_NOMEN_CONFS -- Êîíôèãóðàöèÿ íîìåíêëàòóðû ñòåíäà
   ) return JSON_LIST is
-    JSLCN                   JSON_LIST;                      -- JSON-ÐºÐ¾Ð»Ð»ÐµÐºÑ†Ð¸Ñ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€ ÑÑ‡ÐµÐ¹ÐºÐ¸
-    JSLCN_ITM               JSON;                           -- JSON-Ð¾Ð¿Ð¸ÑÐ°Ð½Ð¸Ðµ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€ ÑÑ‡ÐµÐ¹ÐºÐ¸
+    JSLCN                   JSON_LIST;                      -- JSON-êîëëåêöèÿ íîìåíêëàòóð ÿ÷åéêè
+    JSLCN_ITM               JSON;                           -- JSON-îïèñàíèå íîìåíêëàòóð ÿ÷åéêè
   begin
-    /* Ð˜Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð¸Ñ€ÑƒÐµÐ¼ Ð²Ñ‹Ñ…Ð¾Ð´ */
+    /* Èíèöèàëèçèðóåì âûõîä */
     JSLCN := JSON_LIST();
-    /* ÐžÐ±Ñ…Ð¾Ð´Ð¸Ð¼ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€Ñ‹, ÐµÑÐ»Ð¸ ÐµÑÑ‚ÑŒ */
+    /* Îáõîäèì íîìåíêëàòóðû, åñëè åñòü */
     if ((NC is not null) and (NC.COUNT > 0)) then
       for N in NC.FIRST .. NC.LAST
       loop
-        /* Ð¡Ð¾Ð±Ð¸Ñ€Ð°ÐµÐ¼ Ð¾Ð±ÑŠÐµÐºÑ‚ Ð¾ÑÑ‚Ð°Ñ‚ÐºÐ° Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€Ñ‹ */
+        /* Ñîáèðàåì îáúåêò îñòàòêà íîìåíêëàòóðû */
         JSLCN_ITM := JSON();
         JSLCN_ITM.PUT(PAIR_NAME => 'NNOMEN', PAIR_VALUE => NC(N).NNOMEN);
         JSLCN_ITM.PUT(PAIR_NAME => 'SNOMEN', PAIR_VALUE => NC(N).SNOMEN);
@@ -107,29 +121,29 @@ create or replace package body UDO_PKG_STAND_WEB as
         JSLCN_ITM.PUT(PAIR_NAME => 'NMAX_QUANT', PAIR_VALUE => NC(N).NMAX_QUANT);        
         JSLCN_ITM.PUT(PAIR_NAME => 'NMEAS', PAIR_VALUE => NC(N).NMEAS);
         JSLCN_ITM.PUT(PAIR_NAME => 'SMEAS', PAIR_VALUE => NC(N).SMEAS);
-        /* ÐžÐ±ÑŠÐµÐºÑ‚ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€Ñ‹ - Ð² ÐºÐ»Ð¾Ð»Ð»ÐµÐºÑ†Ð¸ÑŽ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€ */
+        /* Îáúåêò íîìåíêëàòóðû - â êëîëëåêöèþ íîìåíêëàòóð */
         JSLCN.APPEND(ELEM => JSLCN_ITM.TO_JSON_VALUE());
       end loop;
     end if;
-    /* Ð’ÐµÑ€Ð½ÐµÐ¼ Ð¾Ñ‚Ð²ÐµÑ‚ */
+    /* Âåðíåì îòâåò */
     return JSLCN;
   end;  
   
-  /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð°Ñ†Ð¸Ñ Ð¾ÑÑ‚Ð°Ñ‚ÐºÐ¾Ð² Ð¿Ð¾ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€Ðµ ÑÑ‚ÐµÐ½Ð´Ð° Ð² JSON */
+  /* Êîíâåðòàöèÿ îñòàòêîâ ïî íîìåíêëàòóðå ñòåíäà â JSON */
   function STAND_RACK_NOMEN_RESTS_TO_JSON
   (
-    NR                      UDO_PKG_STAND.TNOMEN_RESTS -- ÐžÑÑ‚Ð°Ñ‚ÐºÐ¸ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€Ñ‹
+    NR                      UDO_PKG_STAND.TNOMEN_RESTS -- Îñòàòêè íîìåíêëàòóðû
   ) return JSON_LIST is
-    JSLCN                   JSON_LIST;                 -- JSON-ÐºÐ¾Ð»Ð»ÐµÐºÑ†Ð¸Ñ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€ ÑÑ‡ÐµÐ¹ÐºÐ¸
-    JSLCN_ITM               JSON;                      -- JSON-Ð¾Ð¿Ð¸ÑÐ°Ð½Ð¸Ðµ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€ ÑÑ‡ÐµÐ¹ÐºÐ¸
+    JSLCN                   JSON_LIST;                 -- JSON-êîëëåêöèÿ íîìåíêëàòóð ÿ÷åéêè
+    JSLCN_ITM               JSON;                      -- JSON-îïèñàíèå íîìåíêëàòóð ÿ÷åéêè
   begin
-    /* Ð˜Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð¸Ñ€ÑƒÐµÐ¼ Ð²Ñ‹Ñ…Ð¾Ð´ */
+    /* Èíèöèàëèçèðóåì âûõîä */
     JSLCN := JSON_LIST();
-    /* ÐžÐ±Ñ…Ð¾Ð´Ð¸Ð¼ Ð¾ÑÑ‚Ð°Ñ‚ÐºÐ¸ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€Ñ‹, ÐµÑÐ»Ð¸ ÐµÑÑ‚ÑŒ */
+    /* Îáõîäèì îñòàòêè íîìåíêëàòóðû, åñëè åñòü */
     if ((NR is not null) and (NR.COUNT > 0)) then
       for N in NR.FIRST .. NR.LAST
       loop
-        /* Ð¡Ð¾Ð±Ð¸Ñ€Ð°ÐµÐ¼ Ð¾Ð±ÑŠÐµÐºÑ‚ Ð¾ÑÑ‚Ð°Ñ‚ÐºÐ° Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€Ñ‹ */
+        /* Ñîáèðàåì îáúåêò îñòàòêà íîìåíêëàòóðû */
         JSLCN_ITM := JSON();
         JSLCN_ITM.PUT(PAIR_NAME => 'NNOMEN', PAIR_VALUE => NR(N).NNOMEN);
         JSLCN_ITM.PUT(PAIR_NAME => 'SNOMEN', PAIR_VALUE => NR(N).SNOMEN);
@@ -138,28 +152,28 @@ create or replace package body UDO_PKG_STAND_WEB as
         JSLCN_ITM.PUT(PAIR_NAME => 'NREST', PAIR_VALUE => NR(N).NREST);
         JSLCN_ITM.PUT(PAIR_NAME => 'NMEAS', PAIR_VALUE => NR(N).NMEAS);
         JSLCN_ITM.PUT(PAIR_NAME => 'SMEAS', PAIR_VALUE => NR(N).SMEAS);
-        /* ÐžÐ±ÑŠÐµÐºÑ‚ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€Ñ‹ - Ð² ÐºÐ»Ð¾Ð»Ð»ÐµÐºÑ†Ð¸ÑŽ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€ */
+        /* Îáúåêò íîìåíêëàòóðû - â êëîëëåêöèþ íîìåíêëàòóð */
         JSLCN.APPEND(ELEM => JSLCN_ITM.TO_JSON_VALUE());
       end loop;
     end if;
-    /* Ð’ÐµÑ€Ð½ÐµÐ¼ Ð¾Ñ‚Ð²ÐµÑ‚ */
+    /* Âåðíåì îòâåò */
     return JSLCN;
   end;
   
-  /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð°Ñ†Ð¸Ñ Ð¾ÑÑ‚Ð°Ñ‚ÐºÐ¾Ð² Ð¿Ð¾ ÑÑ‚ÐµÐ»Ð»Ð°Ð¶Ñƒ ÑÑ‚ÐµÐ½Ð´Ð° Ð² JSON */
+  /* Êîíâåðòàöèÿ îñòàòêîâ ïî ñòåëëàæó ñòåíäà â JSON */
   function STAND_RACK_REST_TO_JSON
   (
-    R                       UDO_PKG_STAND.TRACK_REST -- ÐžÑÑ‚Ð°Ñ‚ÐºÐ¸ ÑÑ‚ÐµÐ½Ð´Ð°
+    R                       UDO_PKG_STAND.TRACK_REST -- Îñòàòêè ñòåíäà
   ) return JSON is
-    JS                      JSON;                    -- JSON-Ð¾Ð¿Ð¸ÑÐ°Ð½Ð¸Ðµ ÑÑ‚ÐµÐ»Ð»Ð°Ð¶Ð°
-    JSL                     JSON_LIST;               -- JSON-ÐºÐ¾Ð»Ð»ÐµÐºÑ†Ð¸Ñ ÑÑ€ÑƒÑÐ¾Ð² ÑÑ‚ÐµÐ»Ð»Ð°Ð¶Ð°
-    JSL_ITM                 JSON;                    -- JSON-Ð¾Ð¿Ð¸ÑÐ°Ð½Ð¸Ðµ ÑÑ€ÑƒÑÐ° ÑÑ‚ÐµÐ»Ð»Ð°Ð¶Ð°
-    JSLC                    JSON_LIST;               -- JSON-ÐºÐ¾Ð»Ð»ÐµÐºÑ†Ð¸Ñ ÑÑ‡ÐµÐµÐº ÑÑ€ÑƒÑÐ°
-    JSLC_ITM                JSON;                    -- JSON-Ð¾Ð¿Ð¸ÑÐ°Ð½Ð¸Ðµ ÑÑ‡ÐµÐ¹ÐºÐ¸ ÑÑ€ÑƒÑÐ°
+    JS                      JSON;                    -- JSON-îïèñàíèå ñòåëëàæà
+    JSL                     JSON_LIST;               -- JSON-êîëëåêöèÿ ÿðóñîâ ñòåëëàæà
+    JSL_ITM                 JSON;                    -- JSON-îïèñàíèå ÿðóñà ñòåëëàæà
+    JSLC                    JSON_LIST;               -- JSON-êîëëåêöèÿ ÿ÷ååê ÿðóñà
+    JSLC_ITM                JSON;                    -- JSON-îïèñàíèå ÿ÷åéêè ÿðóñà
   begin
-    /* Ð˜Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð¸Ñ€ÑƒÐµÐ¼ Ð¾Ñ‚Ð²ÐµÑ‚ */
+    /* Èíèöèàëèçèðóåì îòâåò */
     JS := JSON();
-    /* Ð¡Ð¾Ð±ÐµÑ€ÐµÐ¼ Ð¾Ð±ÑŠÐµÐºÑ‚ ÑÑ‚ÐµÐ»Ð»Ð°Ð¶Ð° */
+    /* Ñîáåðåì îáúåêò ñòåëëàæà */
     JS.PUT(PAIR_NAME => 'NRACK', PAIR_VALUE => R.NRACK);
     JS.PUT(PAIR_NAME => 'NSTORE', PAIR_VALUE => R.NSTORE);
     JS.PUT(PAIR_NAME => 'SSTORE', PAIR_VALUE => R.SSTORE);
@@ -169,21 +183,21 @@ create or replace package body UDO_PKG_STAND_WEB as
     JS.PUT(PAIR_NAME => 'NRACK_LINES_CNT', PAIR_VALUE => R.NRACK_LINES_CNT);
     JS.PUT(PAIR_NAME => 'BEMPTY', PAIR_VALUE => R.BEMPTY);
     JSL := JSON_LIST();
-    /* ÐžÐ±Ñ…Ð¾Ð´Ð¸Ð¼ ÑÑ€ÑƒÑÑ‹ ÑÑ‚ÐµÐ»Ð»Ð°Ð¶Ð° */
+    /* Îáõîäèì ÿðóñû ñòåëëàæà */
     if (R.RACK_LINE_RESTS.COUNT > 0) then
       for L in R.RACK_LINE_RESTS.FIRST .. R.RACK_LINE_RESTS.LAST
       loop
-        /* Ð¡Ð¾Ð±Ð¸Ñ€Ð°ÐµÐ¼ Ð¾Ð±ÑŠÐµÐºÑ‚ ÑÑ€ÑƒÑÐ° */
+        /* Ñîáèðàåì îáúåêò ÿðóñà */
         JSL_ITM := JSON();
         JSL_ITM.PUT(PAIR_NAME => 'NRACK_LINE', PAIR_VALUE => R.RACK_LINE_RESTS(L).NRACK_LINE);
         JSL_ITM.PUT(PAIR_NAME => 'NRACK_LINE_CELLS_CNT', PAIR_VALUE => R.RACK_LINE_RESTS(L).NRACK_LINE_CELLS_CNT);
         JSL_ITM.PUT(PAIR_NAME => 'BEMPTY', PAIR_VALUE => R.RACK_LINE_RESTS(L).BEMPTY);
-        /* ÐžÐ±Ñ…Ð¾Ð´Ð¸Ð¼ ÑÑ‡ÐµÐ¹ÐºÐ¸ ÑÑ€ÑƒÑÐ° */
+        /* Îáõîäèì ÿ÷åéêè ÿðóñà */
         JSLC := JSON_LIST();
         if (R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS.COUNT > 0) then
           for C in R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS.FIRST .. R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS.LAST
           loop
-            /* Ð¡Ð¾Ð±Ð¸Ñ€Ð°ÐµÐ¼ Ð¾Ð±ÑŠÐµÐºÑ‚ ÑÑ‡ÐµÐ¹ÐºÐ¸ */
+            /* Ñîáèðàåì îáúåêò ÿ÷åéêè */
             JSLC_ITM := JSON();
             JSLC_ITM.PUT(PAIR_NAME  => 'NRACK_CELL',
                          PAIR_VALUE => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NRACK_CELL);
@@ -198,80 +212,80 @@ create or replace package body UDO_PKG_STAND_WEB as
             JSLC_ITM.PUT(PAIR_NAME  => 'NRACK_LINE_CELL',
                          PAIR_VALUE => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NRACK_LINE_CELL);
             JSLC_ITM.PUT(PAIR_NAME => 'BEMPTY', PAIR_VALUE => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).BEMPTY);
-            /* ÐšÐ¾Ð»Ð»ÐµÐºÑ†Ð¸ÑŽ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€ - Ð² ÑÑ‡ÐµÐ¹ÐºÑƒ */
+            /* Êîëëåêöèþ íîìåíêëàòóð - â ÿ÷åéêó */
             JSLC_ITM.PUT(PAIR_NAME  => 'NOMEN_RESTS',
                          PAIR_VALUE => STAND_RACK_NOMEN_RESTS_TO_JSON(NR => R.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS)
                                        .TO_JSON_VALUE());
-            /* Ð¯Ñ‡ÐµÐ¹ÐºÑƒ - Ð² ÐºÐ¾Ð»Ð»ÐµÐºÑ†Ð¸ÑŽ ÑÑ‡ÐµÐµÐº ÑÑ€ÑƒÑÐ° */
+            /* ß÷åéêó - â êîëëåêöèþ ÿ÷ååê ÿðóñà */
             JSLC.APPEND(ELEM => JSLC_ITM.TO_JSON_VALUE());
           end loop;
         end if;
-        /* ÐšÐ¾Ð»Ð»ÐµÐºÑ†Ð¸ÑŽ ÑÑ‡ÐµÐµÐº - Ð² ÑÑ€ÑƒÑ */
+        /* Êîëëåêöèþ ÿ÷ååê - â ÿðóñ */
         JSL_ITM.PUT(PAIR_NAME => 'RACK_LINE_CELL_RESTS', PAIR_VALUE => JSLC.TO_JSON_VALUE());
-        /* Ð¯Ñ€ÑƒÑ - Ð² ÐºÐ¾Ð»Ð»ÐµÐºÑ†Ð¸ÑŽ ÑÑ€ÑƒÑÐ¾Ð² ÑÑ‚ÐµÐ»Ð»Ð°Ð¶Ð° */
+        /* ßðóñ - â êîëëåêöèþ ÿðóñîâ ñòåëëàæà */
         JSL.APPEND(ELEM => JSL_ITM.TO_JSON_VALUE());
       end loop;
     end if;
-    /* ÐšÐ¾Ð»Ð»ÐµÐºÑ†Ð¸ÑŽ ÑÑ€ÑƒÑÐ¾Ð² - Ð² ÑÑ‚ÐµÐ»Ð»Ð°Ð¶ */
+    /* Êîëëåêöèþ ÿðóñîâ - â ñòåëëàæ */
     JS.PUT(PAIR_NAME => 'RACK_LINE_RESTS', PAIR_VALUE => JSL);
-    /* Ð’ÐµÑ€Ð½ÐµÐ¼ Ñ€ÐµÐ·ÑƒÐ»ÑŒÐ°Ñ‚ */
+    /* Âåðíåì ðåçóëüàò */
     return JS;
   end;
   
-  /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð°Ñ†Ð¸Ñ Ð¸ÑÑ‚Ð¾Ñ€Ð¸Ð¸ Ð·Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½Ð½Ð¾ÑÑ‚Ð¸ ÑÑ‚ÐµÐ½Ð´Ð° Ð² JSON */
+  /* Êîíâåðòàöèÿ èñòîðèè çàãðóæåííîñòè ñòåíäà â JSON */
   function STAND_RACK_REST_PRCHS_TO_JSON
   (
-    RH                      UDO_PKG_STAND.TRACK_REST_PRC_HISTS -- Ð˜ÑÑ‚Ð¾Ñ€Ð¸Ñ Ð·Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½Ð½Ð¾ÑÑ‚Ð¸ ÑÑ‚ÐµÐ½Ð´Ð°
+    RH                      UDO_PKG_STAND.TRACK_REST_PRC_HISTS -- Èñòîðèÿ çàãðóæåííîñòè ñòåíäà
   ) return JSON_LIST is
-    JSLRH                   JSON_LIST;                         -- JSON-ÐºÐ¾Ð»Ð»ÐµÐºÑ†Ð¸Ñ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€ ÑÑ‡ÐµÐ¹ÐºÐ¸
-    JSLRH_ITM               JSON;                              -- JSON-Ð¾Ð¿Ð¸ÑÐ°Ð½Ð¸Ðµ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€ ÑÑ‡ÐµÐ¹ÐºÐ¸
+    JSLRH                   JSON_LIST;                         -- JSON-êîëëåêöèÿ íîìåíêëàòóð ÿ÷åéêè
+    JSLRH_ITM               JSON;                              -- JSON-îïèñàíèå íîìåíêëàòóð ÿ÷åéêè
   begin
-    /* Ð˜Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð¸Ñ€ÑƒÐµÐ¼ Ð²Ñ‹Ñ…Ð¾Ð´ */
+    /* Èíèöèàëèçèðóåì âûõîä */
     JSLRH := JSON_LIST();
-    /* ÐžÐ±Ñ…Ð¾Ð´Ð¸Ð¼ Ð¸ÑÑ‚Ð¾Ñ€Ð¸ÑŽ, ÐµÑÐ»Ð¸ ÐµÑÑ‚ÑŒ */
+    /* Îáõîäèì èñòîðèþ, åñëè åñòü */
     if ((RH is not null) and (RH.COUNT > 0)) then
       for N in RH.FIRST .. RH.LAST
       loop
-        /* Ð¡Ð¾Ð±Ð¸Ñ€Ð°ÐµÐ¼ Ð¾Ð±ÑŠÐµÐºÑ‚ Ð¾ÑÑ‚Ð°Ñ‚ÐºÐ° Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€Ñ‹ */
+        /* Ñîáèðàåì îáúåêò îñòàòêà íîìåíêëàòóðû */
         JSLRH_ITM := JSON();
         JSLRH_ITM.PUT(PAIR_NAME => 'DTS', PAIR_VALUE => RH(N).DTS);
         JSLRH_ITM.PUT(PAIR_NAME => 'STS', PAIR_VALUE => RH(N).STS);
         JSLRH_ITM.PUT(PAIR_NAME => 'NREST_PRC', PAIR_VALUE => RH(N).NREST_PRC);
-        /* ÐžÐ±ÑŠÐµÐºÑ‚ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€Ñ‹ - Ð² ÐºÐ»Ð¾Ð»Ð»ÐµÐºÑ†Ð¸ÑŽ Ð½Ð¾Ð¼ÐµÐ½ÐºÐ»Ð°Ñ‚ÑƒÑ€ */
+        /* Îáúåêò íîìåíêëàòóðû - â êëîëëåêöèþ íîìåíêëàòóð */
         JSLRH.APPEND(ELEM => JSLRH_ITM.TO_JSON_VALUE());
       end loop;
     end if;
-    /* Ð’ÐµÑ€Ð½ÐµÐ¼ Ð¾Ñ‚Ð²ÐµÑ‚ */
+    /* Âåðíåì îòâåò */
     return JSLRH;
   end;
   
-  /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð°Ñ†Ð¸Ñ ÑÐ²ÐµÐ´ÐµÐ½Ð¸Ð¹ Ð¾ Ð¿Ð¾ÑÐµÑ‚Ð¸Ñ‚ÐµÐ»Ðµ ÑÑ‚ÐµÐ½Ð´Ð° Ð² JSON */
+  /* Êîíâåðòàöèÿ ñâåäåíèé î ïîñåòèòåëå ñòåíäà â JSON */
   function STAND_USER_TO_JSON
   (
-    U                       UDO_PKG_STAND.TSTAND_USER -- ÐŸÐ¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ ÑÑ‚ÐµÐ½Ð´Ð°
+    U                       UDO_PKG_STAND.TSTAND_USER -- Ïîëüçîâàòåëü ñòåíäà
   ) return JSON is
-    JU                      JSON;                     -- JSON-Ð¾Ð¿Ð¸ÑÐ°Ð½Ð¸Ðµ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ ÑÑ‚ÐµÐ½Ð´Ð°
+    JU                      JSON;                     -- JSON-îïèñàíèå ïîëüçîâàòåëÿ ñòåíäà
   begin
-    /* Ð˜Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð¸Ñ€ÑƒÐµÐ¼ Ð¾Ñ‚Ð²ÐµÑ‚ */
+    /* Èíèöèàëèçèðóåì îòâåò */
     JU := JSON();
-    /* Ð¡Ð¾Ð±ÐµÑ€ÐµÐ¼ Ð¾Ð±ÑŠÐµÐºÑ‚ */
+    /* Ñîáåðåì îáúåêò */
     JU.PUT(PAIR_NAME => 'NAGENT', PAIR_VALUE => U.NAGENT);
     JU.PUT(PAIR_NAME => 'SAGENT', PAIR_VALUE => U.SAGENT);
     JU.PUT(PAIR_NAME => 'SAGENT_NAME', PAIR_VALUE => U.SAGENT_NAME);
-    /* Ð’ÐµÑ€Ð½ÐµÐ¼ Ñ€ÐµÐ·ÑƒÐ»ÑŒÐ°Ñ‚ */
+    /* Âåðíåì ðåçóëüàò */
     return JU;
   end;
   
-  /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð°Ñ†Ð¸Ñ ÑÐ¾ÑÑ‚Ð¾ÑÐ½Ð¸Ñ ÑÑ‚ÐµÐ½Ð´Ð° Ð² JSON */
+  /* Êîíâåðòàöèÿ ñîñòîÿíèÿ ñòåíäà â JSON */
   function STAND_STATE_TO_JSON
   (
-    SS                      UDO_PKG_STAND.TSTAND_STATE -- Ð¡Ð¾ÑÑ‚Ð¾ÑÐ½Ð¸Ðµ ÑÑ‚ÐµÐ½Ð´Ð°
+    SS                      UDO_PKG_STAND.TSTAND_STATE -- Ñîñòîÿíèå ñòåíäà
   ) return JSON is
-    JS                      JSON;                      -- JSON-Ð¾Ð¿Ð¸ÑÐ°Ð½Ð¸Ðµ ÑÐ¾ÑÑ‚Ð¾ÑÐ½Ð¸Ñ ÑÑ‚ÐµÐ½Ð´Ð°
+    JS                      JSON;                      -- JSON-îïèñàíèå ñîñòîÿíèÿ ñòåíäà
   begin
-    /* Ð˜Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð¸Ñ€ÑƒÐµÐ¼ Ð¾Ñ‚Ð²ÐµÑ‚ */
+    /* Èíèöèàëèçèðóåì îòâåò */
     JS := JSON();
-    /* Ð¡Ð¾Ð±ÐµÑ€ÐµÐ¼ Ð¾Ð±ÑŠÐµÐºÑ‚ */
+    /* Ñîáåðåì îáúåêò */
     JS.PUT(PAIR_NAME => 'NRESTS_LIMIT_PRC_MIN', PAIR_VALUE => SS.NRESTS_LIMIT_PRC_MIN);
     JS.PUT(PAIR_NAME => 'NRESTS_LIMIT_PRC_MDL', PAIR_VALUE => SS.NRESTS_LIMIT_PRC_MDL);
     JS.PUT(PAIR_NAME => 'NRESTS_PRC_CURR', PAIR_VALUE => SS.NRESTS_PRC_CURR);
@@ -283,71 +297,72 @@ create or replace package body UDO_PKG_STAND_WEB as
            PAIR_VALUE => STAND_RACK_REST_PRCHS_TO_JSON(RH => SS.RACK_REST_PRC_HISTS).TO_JSON_VALUE());
     JS.PUT(PAIR_NAME => 'RACK_REST', PAIR_VALUE => STAND_RACK_REST_TO_JSON(R => SS.RACK_REST).TO_JSON_VALUE());
     JS.PUT(PAIR_NAME => 'MESSAGES', PAIR_VALUE => MESSAGES_TO_JSON(MSGS => SS.MESSAGES).TO_JSON_VALUE());
-    /* Ð’ÐµÑ€Ð½ÐµÐ¼ Ñ€ÐµÐ·ÑƒÐ»ÑŒÐ°Ñ‚ */
+    /* Âåðíåì ðåçóëüàò */
     return JS;
   end;
   
-  /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð°Ñ†Ð¸Ñ ÑÐ¿Ð¸ÑÐºÐ° ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹ Ð² JSON */
+  /* Êîíâåðòàöèÿ ñïèñêà ñîîáùåíèé â JSON */
   function MESSAGES_TO_JSON
   (
-    MSGS                    UDO_PKG_STAND.TMESSAGES -- Ð¡Ð¿Ð¸ÑÐ¾Ðº ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹
+    MSGS                    UDO_PKG_STAND.TMESSAGES -- Ñïèñîê ñîîáùåíèé
   ) return JSON_LIST is
-    JL                      JSON_LIST;              -- JSON-Ð¾Ð¿Ð¸ÑÐ°Ð½Ð¸Ðµ cÐ¿Ð¸ÑÐºÐ° ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹
-    JLI                     JSON;                   -- JSON-Ð¾Ð¿Ð¸ÑÐ°Ð½Ð¸Ðµ ÑÐ»ÐµÐ¼ÐµÐ½Ñ‚Ð° ÑÐ¿Ð¸ÑÐºÐ°
+    JL                      JSON_LIST;              -- JSON-îïèñàíèå cïèñêà ñîîáùåíèé
+    JLI                     JSON;                   -- JSON-îïèñàíèå ýëåìåíòà ñïèñêà
   begin
-    /* Ð˜Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð¸Ñ€ÑƒÐµÐ¼ Ð¾Ñ‚Ð²ÐµÑ‚ */
+    /* Èíèöèàëèçèðóåì îòâåò */
     JL := JSON_LIST();
-    /* Ð•ÑÐ»Ð¸ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ñ ÐµÑÑ‚ÑŒ - Ð¾Ð±Ñ…Ð¾Ð´Ð¸Ð¼ Ð¸Ñ… */
+    /* Åñëè ñîîáùåíèÿ åñòü - îáõîäèì èõ */
     if ((MSGS is not null) and (MSGS.COUNT > 0)) then
       for I in MSGS.FIRST .. MSGS.LAST
       loop
-        /* Ð˜Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð¸Ñ€ÑƒÐµÐ¼ ÑÐ»ÐµÐ¼ÐµÐ½Ñ‚ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ñ */
+        /* Èíèöèàëèçèðóåì ýëåìåíò ñîîáùåíèÿ */
         JLI := JSON();
-        /* Ð¡Ð¾Ð±ÐµÑ€ÐµÐ¼ Ð¾Ð±ÑŠÐµÐºÑ‚ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ñ */
+        /* Ñîáåðåì îáúåêò ñîîáùåíèÿ */
         JLI.PUT(PAIR_NAME => 'NRN', PAIR_VALUE => MSGS(I).NRN);
         JLI.PUT(PAIR_NAME => 'DTS', PAIR_VALUE => MSGS(I).DTS);
         JLI.PUT(PAIR_NAME => 'STS', PAIR_VALUE => MSGS(I).STS);
         JLI.PUT(PAIR_NAME => 'STP', PAIR_VALUE => MSGS(I).STP);
         JLI.PUT(PAIR_NAME => 'SMSG', PAIR_VALUE => MSGS(I).SMSG);
-        /* ÐŸÐ¾Ð¼ÐµÑÑ‚Ð¸Ð¼ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ðµ Ð² Ð¾Ñ‚Ð²ÐµÑ‚ */
+        JLI.PUT(PAIR_NAME => 'SSTS', PAIR_VALUE => MSGS(I).SSTS);
+        /* Ïîìåñòèì ñîîáùåíèå â îòâåò */
         JL.APPEND(ELEM => JLI.TO_JSON_VALUE());
       end loop;
     end if;
-    /* Ð’ÐµÑ€Ð½ÐµÐ¼ Ñ€ÐµÐ·ÑƒÐ»ÑŒÑ‚Ð°Ñ‚ */
+    /* Âåðíåì ðåçóëüòàò */
     return JL;
   end;  
   
-  /* ÐÑƒÑ‚ÐµÐ½Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ†Ð¸Ñ Ð¿Ð¾ÑÐµÑ‚Ð¸Ñ‚ÐµÐ»Ñ ÑÑ‚ÐµÐ½Ð´Ð° Ð¿Ð¾ ÑˆÑ‚Ñ€Ð¸Ñ…ÐºÐ¾Ð´Ñƒ */
+  /* Àóòåíòèôèêàöèÿ ïîñåòèòåëÿ ñòåíäà ïî øòðèõêîäó */
   procedure AUTH_BY_BARCODE
   (
-    CPRMS                   clob,                                       -- Ð’Ñ…Ð¾Ð´Ð½Ñ‹Ðµ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ñ‹
-    CRES                    out clob                                    -- Ð ÐµÐ·ÑƒÐ»ÑŒÑ‚Ð°Ñ‚ Ñ€Ð°Ð±Ð¾Ñ‚Ñ‹
+    CPRMS                   clob,                                       -- Âõîäíûå ïàðàìåòðû
+    CRES                    out clob                                    -- Ðåçóëüòàò ðàáîòû
   ) is
-    JRES                    JSON;                                       -- Ð‘ÑƒÑ„ÐµÑ€Ð° Ð¾Ñ‚Ð²ÐµÑ‚Ð°
-    JPRMS                   JSON;                                       -- ÐžÐ±ÑŠÐµÐºÑ‚Ð½Ð¾Ðµ Ð¿Ñ€ÐµÐ´ÑÑ‚Ð°Ð²Ð»ÐµÐ½Ð¸Ðµ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ð¾Ð² Ð·Ð°Ð¿Ñ€Ð¾ÑÐ°
-    NCOMPANY                COMPANIES.RN%type := GET_SESSION_COMPANY(); -- Ð ÐµÐ³. Ð½Ð¾Ð¼ÐµÑ€ Ð¾Ñ€Ð³Ð°Ð½Ð¸Ð·Ð°Ñ†Ð¸Ð¸
-    SBARCODE                PKG_STD.TSTRING;                            -- Ð¨Ñ‚Ñ€Ð¸Ñ…ÐºÐ¾Ð´
-    U                       UDO_PKG_STAND.TSTAND_USER;                  -- ÐŸÐ¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒ ÑÑ‚ÐµÐ½Ð´Ð°
-    R                       UDO_PKG_STAND.TRACK_REST;                   -- ÐžÑÑ‚Ð°Ñ‚ÐºÐ¸ ÑÑ‚ÐµÐ½Ð´Ð°    
-    SERR                    PKG_STD.TSTRING;                            -- Ð‘ÑƒÑ„ÐµÑ€ Ð´Ð»Ñ Ð¾ÑˆÐ¸Ð±Ð¾Ðº
+    JRES                    JSON;                                       -- Áóôåðà îòâåòà
+    JPRMS                   JSON;                                       -- Îáúåêòíîå ïðåäñòàâëåíèå ïàðàìåòðîâ çàïðîñà
+    NCOMPANY                COMPANIES.RN%type := GET_SESSION_COMPANY(); -- Ðåã. íîìåð îðãàíèçàöèè
+    SBARCODE                PKG_STD.TSTRING;                            -- Øòðèõêîä
+    U                       UDO_PKG_STAND.TSTAND_USER;                  -- Ïîëüçîâàòåëü ñòåíäà
+    R                       UDO_PKG_STAND.TRACK_REST;                   -- Îñòàòêè ñòåíäà    
+    SERR                    PKG_STD.TSTRING;                            -- Áóôåð äëÿ îøèáîê
   begin
-    /* Ð˜Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð¸Ñ€ÑƒÐµÐ¼ Ð²Ñ‹Ñ…Ð¾Ð´ */
+    /* Èíèöèàëèçèðóåì âûõîä */
     DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
     JRES := JSON();
-    /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð¸Ñ€ÑƒÐµÐ¼ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ñ‹ Ð² Ð¾Ð±ÑŠÐµÐºÑ‚Ð½Ð¾Ðµ Ð¿Ñ€ÐµÐ´ÑÑ‚Ð°Ð²Ð»ÐµÐ½Ð¸Ðµ */
+    /* Êîíâåðòèðóåì ïàðàìåòðû â îáúåêòíîå ïðåäñòàâëåíèå */
     JPRMS := JSON(CPRMS);
-    /* Ð¡Ñ‡Ð¸Ñ‚Ñ‹Ð²Ð°ÐµÐ¼ ÑˆÑ‚Ñ€Ð¸Ñ…ÐºÐ¾Ð´ */
+    /* Ñ÷èòûâàåì øòðèõêîä */
     if ((not JPRMS.EXIST('SBARCODE')) or (JPRMS.GET('SBARCODE').VALUE_OF() is null)) then
-      P_EXCEPTION(0, 'Ð’ Ð·Ð°Ð¿Ñ€Ð¾ÑÐµ Ðº ÑÐµÑ€Ð²ÐµÑ€Ñƒ Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½ ÑˆÑ‚Ñ€Ð¸Ñ…ÐºÐ¾Ð´!');
+      P_EXCEPTION(0, 'Â çàïðîñå ê ñåðâåðó íå óêàçàí øòðèõêîä!');
     else
       SBARCODE := JPRMS.GET('SBARCODE').VALUE_OF();
     end if;
-    /* ÐÐ°Ð¹Ð´ÐµÐ¼ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ Ð¸ Ð´Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÑŒÐ½ÑƒÑŽ Ð¸Ð½Ñ„Ð¾Ñ€Ð¼Ð°Ñ†Ð¸ÑŽ */
+    /* Íàéäåì ïîëüçîâàòåëÿ è äîïîëíèòåëüíóþ èíôîðìàöèþ */
     UDO_PKG_STAND.STAND_AUTH_BY_BARCODE(NCOMPANY => NCOMPANY, SBARCODE => SBARCODE, STAND_USER => U, RACK_REST => R);
-    /* Ð¡Ð¾Ð±ÐµÑ€ÐµÐ¼ Ð¾Ñ‚Ð²ÐµÑ‚ */
+    /* Ñîáåðåì îòâåò */
     JRES.PUT(PAIR_NAME => 'USER', PAIR_VALUE => STAND_USER_TO_JSON(U => U).TO_JSON_VALUE());
     JRES.PUT(PAIR_NAME => 'RESTS', PAIR_VALUE => STAND_RACK_REST_TO_JSON(R => R).TO_JSON_VALUE());
-    /* ÐžÑ‚Ð´Ð°Ñ‘Ð¼ Ð¾Ñ‚Ð²ÐµÑ‚ */
+    /* Îòäà¸ì îòâåò */
     JRES.TO_CLOB(BUF => CRES);
   exception
     when others then
@@ -358,57 +373,57 @@ create or replace package body UDO_PKG_STAND_WEB as
       rollback;
   end;
   
-  /* Ð’Ñ‹Ð´Ð°Ñ‡Ð° Ð¿Ð¾ÑÐµÑ‚Ð¸Ñ‚ÐµÐ»ÑŽ Ñ‚Ð¾Ð²Ð°Ñ€Ð° ÑÐ¾ ÑÑ‚ÐµÐ½Ð´Ð° */
+  /* Âûäà÷à ïîñåòèòåëþ òîâàðà ñî ñòåíäà */
   procedure SHIPMENT
   (
-    CPRMS                   clob,                                       -- Ð’Ñ…Ð¾Ð´Ð½Ñ‹Ðµ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ñ‹
-    CRES                    out clob                                    -- Ð ÐµÐ·ÑƒÐ»ÑŒÑ‚Ð°Ñ‚ Ñ€Ð°Ð±Ð¾Ñ‚Ñ‹
+    CPRMS                   clob,                                       -- Âõîäíûå ïàðàìåòðû
+    CRES                    out clob                                    -- Ðåçóëüòàò ðàáîòû
   ) is
-    JPRMS                   JSON;                                       -- ÐžÐ±ÑŠÐµÐºÑ‚Ð½Ð¾Ðµ Ð¿Ñ€ÐµÐ´ÑÑ‚Ð°Ð²Ð»ÐµÐ½Ð¸Ðµ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ð¾Ð² Ð·Ð°Ð¿Ñ€Ð¾ÑÐ°
-    NCOMPANY                COMPANIES.RN%type := GET_SESSION_COMPANY(); -- Ð ÐµÐ³. Ð½Ð¾Ð¼ÐµÑ€ Ð¾Ñ€Ð³Ð°Ð½Ð¸Ð·Ð°Ñ†Ð¸Ð¸
-    SCUSTOMER               PKG_STD.TSTRING;                            -- ÐœÐ½ÐµÐ¼Ð¾ÐºÐ¾Ð´ ÐºÐ¾Ð½Ñ‚Ñ€Ð°Ð³ÐµÐ½Ñ‚Ð°-Ð¿Ð¾ÑÐµÑ‚Ð¸Ñ‚ÐµÐ»Ñ
-    NRACK_LINE              PKG_STD.TNUMBER;                            -- Ð¯Ñ€ÑƒÑ ÑÑ‚ÐµÐ»Ð»Ð°Ð¶Ð° Ð´Ð»Ñ Ð²Ñ‹Ð´Ð°Ñ‡Ð¸ Ñ‚Ð¾Ð²Ð°Ñ€Ð°
-    NRACK_LINE_CELL         PKG_STD.TNUMBER;                            -- Ð¯Ñ‡ÐµÐ¹ÐºÐ° ÑÑ‚ÐµÐ»Ð»Ð°Ð¶Ð° Ð´Ð»Ñ Ð²Ñ‹Ð´Ð°Ñ‡Ð¸ Ñ‚Ð¾Ð²Ð°Ñ€Ð°
-    NTRANSINVCUST           PKG_STD.TREF;                               -- Ð ÐµÐ³. Ð½Ð¾Ð¼ÐµÑ€ ÑÑ„Ð¾Ñ€Ð¼Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð½Ð¾Ð¹ Ð ÐÐžÐŸ
-    SERR                    PKG_STD.TSTRING;                            -- Ð‘ÑƒÑ„ÐµÑ€ Ð´Ð»Ñ Ð¾ÑˆÐ¸Ð±Ð¾Ðº
+    JPRMS                   JSON;                                       -- Îáúåêòíîå ïðåäñòàâëåíèå ïàðàìåòðîâ çàïðîñà
+    NCOMPANY                COMPANIES.RN%type := GET_SESSION_COMPANY(); -- Ðåã. íîìåð îðãàíèçàöèè
+    SCUSTOMER               PKG_STD.TSTRING;                            -- Ìíåìîêîä êîíòðàãåíòà-ïîñåòèòåëÿ
+    NRACK_LINE              PKG_STD.TNUMBER;                            -- ßðóñ ñòåëëàæà äëÿ âûäà÷è òîâàðà
+    NRACK_LINE_CELL         PKG_STD.TNUMBER;                            -- ß÷åéêà ñòåëëàæà äëÿ âûäà÷è òîâàðà
+    NTRANSINVCUST           PKG_STD.TREF;                               -- Ðåã. íîìåð ñôîðìèðîâàííîé ÐÍÎÏ
+    SERR                    PKG_STD.TSTRING;                            -- Áóôåð äëÿ îøèáîê
   begin
-    /* Ð˜Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð¸Ñ€ÑƒÐµÐ¼ Ð²Ñ‹Ñ…Ð¾Ð´ */
+    /* Èíèöèàëèçèðóåì âûõîä */
     DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
-    /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð¸Ñ€ÑƒÐµÐ¼ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ñ‹ Ð² Ð¾Ð±ÑŠÐµÐºÑ‚Ð½Ð¾Ðµ Ð¿Ñ€ÐµÐ´ÑÑ‚Ð°Ð²Ð»ÐµÐ½Ð¸Ðµ */
+    /* Êîíâåðòèðóåì ïàðàìåòðû â îáúåêòíîå ïðåäñòàâëåíèå */
     JPRMS := JSON(CPRMS);
-    /* Ð¡Ñ‡Ð¸Ñ‚Ñ‹Ð²Ð°ÐµÐ¼ ÐºÐ¾Ð½Ñ‚Ñ€Ð°Ð³ÐµÐ½Ñ‚Ð°-Ð¿Ð¾ÑÐµÑ‚Ð¸Ñ‚ÐµÐ»Ñ */
+    /* Ñ÷èòûâàåì êîíòðàãåíòà-ïîñåòèòåëÿ */
     if ((not JPRMS.EXIST('SCUSTOMER')) or (JPRMS.GET('SCUSTOMER').VALUE_OF() is null)) then
       P_EXCEPTION(0,
-                  'Ð’ Ð·Ð°Ð¿Ñ€Ð¾ÑÐµ Ðº ÑÐµÑ€Ð²ÐµÑ€Ñƒ Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½ Ð¼Ð½ÐµÐ¼Ð¾ÐºÐ¾Ð´ Ð¿Ð¾ÑÐµÑ‚Ð¸Ñ‚ÐµÐ»Ñ ÑÑ‚ÐµÐ½Ð´Ð°!');
+                  'Â çàïðîñå ê ñåðâåðó íå óêàçàí ìíåìîêîä ïîñåòèòåëÿ ñòåíäà!');
     else
       SCUSTOMER := JPRMS.GET('SCUSTOMER').VALUE_OF();
     end if;
-    /* Ð¡Ñ‡Ð¸Ñ‚Ñ‹Ð²Ð°ÐµÐ¼ ÑÑ€ÑƒÑ ÑÑ‚ÐµÐ»Ð»Ð°Ð¶Ð° Ð´Ð»Ñ Ð²Ñ‹Ð´Ð°Ñ‡Ð¸ Ñ‚Ð¾Ð²Ð°Ñ€Ð° */
+    /* Ñ÷èòûâàåì ÿðóñ ñòåëëàæà äëÿ âûäà÷è òîâàðà */
     if ((not JPRMS.EXIST('NRACK_LINE')) or (JPRMS.GET('NRACK_LINE').VALUE_OF() is null)) then
       P_EXCEPTION(0,
-                  'Ð’ Ð·Ð°Ð¿Ñ€Ð¾ÑÐµ Ðº ÑÐµÑ€Ð²ÐµÑ€Ñƒ Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½ ÑÑ€ÑƒÑ ÑÑ‚ÐµÐ»Ð»Ð°Ð¶Ð° Ð´Ð»Ñ Ð²Ñ‹Ð´Ð°Ñ‡Ð¸ Ñ‚Ð¾Ð²Ð°Ñ€Ð°!');
+                  'Â çàïðîñå ê ñåðâåðó íå óêàçàí ÿðóñ ñòåëëàæà äëÿ âûäà÷è òîâàðà!');
     else
       NRACK_LINE := UDO_PKG_WEB_API.UTL_CONVERT_TO_NUMBER(SSTR => JPRMS.GET('NRACK_LINE').VALUE_OF(), NSMART => 0);
     end if;
-    /* Ð¡Ñ‡Ð¸Ñ‚Ñ‹Ð²Ð°ÐµÐ¼ ÑÑ‡ÐµÐ¹ÐºÑƒ ÑÑ‚ÐµÐ»Ð»Ð°Ð¶Ð° Ð´Ð»Ñ Ð²Ñ‹Ð´Ð°Ñ‡Ð¸ Ñ‚Ð¾Ð²Ð°Ñ€Ð° */
+    /* Ñ÷èòûâàåì ÿ÷åéêó ñòåëëàæà äëÿ âûäà÷è òîâàðà */
     if ((not JPRMS.EXIST('NRACK_LINE_CELL')) or (JPRMS.GET('NRACK_LINE_CELL').VALUE_OF() is null)) then
       P_EXCEPTION(0,
-                  'Ð’ Ð·Ð°Ð¿Ñ€Ð¾ÑÐµ Ðº ÑÐµÑ€Ð²ÐµÑ€Ñƒ Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½Ð° ÑÑ‡ÐµÐ¹ÐºÐ° ÑÑ‚ÐµÐ»Ð»Ð°Ð¶Ð° Ð´Ð»Ñ Ð²Ñ‹Ð´Ð°Ñ‡Ð¸ Ñ‚Ð¾Ð²Ð°Ñ€Ð°!');
+                  'Â çàïðîñå ê ñåðâåðó íå óêàçàíà ÿ÷åéêà ñòåëëàæà äëÿ âûäà÷è òîâàðà!');
     else
       NRACK_LINE_CELL := UDO_PKG_WEB_API.UTL_CONVERT_TO_NUMBER(SSTR   => JPRMS.GET('NRACK_LINE_CELL').VALUE_OF(),
                                                                NSMART => 0);
     end if;
-    /* Ð’Ñ‹Ð´Ð°Ñ‘Ð¼ Ñ‚Ð¾Ð²Ð°Ñ€ Ð¿Ð¾ÑÐµÑ‚Ð¸Ñ‚ÐµÐ»ÑŽ (ÑÐ¿Ð¸ÑÐ°Ð½Ð¸Ðµ Ñ Ð¼ÐµÑÑ‚Ð° Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ñ) */
+    /* Âûäà¸ì òîâàð ïîñåòèòåëþ (ñïèñàíèå ñ ìåñòà õðàíåíèÿ) */
     UDO_PKG_STAND.SHIPMENT(NCOMPANY        => NCOMPANY,
                            SCUSTOMER       => SCUSTOMER,
                            NRACK_LINE      => NRACK_LINE,
                            NRACK_LINE_CELL => NRACK_LINE_CELL,
                            NTRANSINVCUST   => NTRANSINVCUST);
-    /* ÐŸÐ¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´Ð°ÐµÐ¼ Ñ‚Ñ€Ð°Ð½Ð·Ð°ÐºÑ†Ð¸ÑŽ - Ð¸Ð½Ð°Ñ‡Ðµ Ð ÐÐžÐŸ Ð±ÑƒÐ´ÐµÑ‚ Ð½Ðµ Ð²Ð¸Ð´Ð½Ð° Ð´Ð»Ñ ÑÐµÑ€Ð²Ð¸ÑÐ° Ð¿ÐµÑ‡Ð°Ñ‚Ð¸ Ð¸ Ð´Ð»Ñ Ð¾Ñ‚Ñ‡ÐµÑ‚Ð° */
+    /* Ïîäòâåðæäàåì òðàíçàêöèþ - èíà÷å ÐÍÎÏ áóäåò íå âèäíà äëÿ ñåðâèñà ïå÷àòè è äëÿ îò÷åòà */
     commit;
-    /* Ð¡Ñ‚Ð°Ð²Ð¸Ð¼ Ð² Ð¾Ñ‡ÐµÑ€ÐµÐ´ÑŒ Ð¿ÐµÑ‡Ð°Ñ‚Ð¸ ÑÑ„Ð¾Ñ€Ð¼Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð½Ñ‹Ð¹ Ð´Ð¾ÐºÑƒÐ¼ÐµÐ½Ñ‚ */
+    /* Ñòàâèì â î÷åðåäü ïå÷àòè ñôîðìèðîâàííûé äîêóìåíò */
     UDO_PKG_STAND.PRINT(NCOMPANY => NCOMPANY, NTRANSINVCUST => NTRANSINVCUST);
-    /* ÐžÑ‚Ð´Ð°Ñ‘Ð¼ Ð¾Ñ‚Ð²ÐµÑ‚ Ñ‡Ñ‚Ð¾ Ð²ÑÑ‘ Ð¿Ñ€Ð¾ÑˆÐ»Ð¾ ÑƒÑÐ¿ÐµÑˆÐ½Ð¾ */
+    /* Îòäà¸ì îòâåò ÷òî âñ¸ ïðîøëî óñïåøíî */
     CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
                                       NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_OK,
                                       SRESP_MSG    => NTRANSINVCUST);
@@ -421,36 +436,36 @@ create or replace package body UDO_PKG_STAND_WEB as
       rollback;
   end;
   
-  /* ÐŸÐ¾Ð¼ÐµÑ‰ÐµÐ½Ð¸Ðµ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ñ Ð² Ð¾Ñ‡ÐµÑ€ÐµÐ´ÑŒ ÑƒÐ²ÐµÐ´Ð¾Ð¼Ð»ÐµÐ½Ð¸Ð¹ */
+  /* Ïîìåùåíèå ñîîáùåíèÿ â î÷åðåäü óâåäîìëåíèé */
   procedure MSG_INSERT
   (
-    CPRMS                   clob,            -- Ð’Ñ…Ð¾Ð´Ð½Ñ‹Ðµ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ñ‹
-    CRES                    out clob         -- Ð ÐµÐ·ÑƒÐ»ÑŒÑ‚Ð°Ñ‚ Ñ€Ð°Ð±Ð¾Ñ‚Ñ‹
+    CPRMS                   clob,            -- Âõîäíûå ïàðàìåòðû
+    CRES                    out clob         -- Ðåçóëüòàò ðàáîòû
   ) is
-    JPRMS                   JSON;            -- ÐžÐ±ÑŠÐµÐºÑ‚Ð½Ð¾Ðµ Ð¿Ñ€ÐµÐ´ÑÑ‚Ð°Ð²Ð»ÐµÐ½Ð¸Ðµ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ð¾Ð² Ð·Ð°Ð¿Ñ€Ð¾ÑÐ°
-    STP                     PKG_STD.TSTRING; -- Ð¢Ð¸Ð¿ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ñ
-    SMSG                    PKG_STD.TSTRING; -- Ð¢ÐµÐºÑÑ‚ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ñ
-    SERR                    PKG_STD.TSTRING; -- Ð‘ÑƒÑ„ÐµÑ€ Ð´Ð»Ñ Ð¾ÑˆÐ¸Ð±Ð¾Ðº
+    JPRMS                   JSON;            -- Îáúåêòíîå ïðåäñòàâëåíèå ïàðàìåòðîâ çàïðîñà
+    STP                     PKG_STD.TSTRING; -- Òèï ñîîáùåíèÿ
+    SMSG                    PKG_STD.TSTRING; -- Òåêñò ñîîáùåíèÿ
+    SERR                    PKG_STD.TSTRING; -- Áóôåð äëÿ îøèáîê
   begin
-    /* Ð˜Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð¸Ñ€ÑƒÐµÐ¼ Ð²Ñ‹Ñ…Ð¾Ð´ */
+    /* Èíèöèàëèçèðóåì âûõîä */
     DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
-    /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð¸Ñ€ÑƒÐµÐ¼ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ñ‹ Ð² Ð¾Ð±ÑŠÐµÐºÑ‚Ð½Ð¾Ðµ Ð¿Ñ€ÐµÐ´ÑÑ‚Ð°Ð²Ð»ÐµÐ½Ð¸Ðµ */
+    /* Êîíâåðòèðóåì ïàðàìåòðû â îáúåêòíîå ïðåäñòàâëåíèå */
     JPRMS := JSON(CPRMS);
-    /* Ð¡Ñ‡Ð¸Ñ‚Ñ‹Ð²Ð°ÐµÐ¼ Ñ‚Ð¸Ð¿ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ñ */
+    /* Ñ÷èòûâàåì òèï ñîîáùåíèÿ */
     if ((not JPRMS.EXIST('STP')) or (JPRMS.GET('STP').VALUE_OF() is null)) then
-      P_EXCEPTION(0, 'Ð’ Ð·Ð°Ð¿Ñ€Ð¾ÑÐµ Ðº ÑÐµÑ€Ð²ÐµÑ€Ñƒ Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½ Ñ‚Ð¸Ð¿ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ñ!');
+      P_EXCEPTION(0, 'Â çàïðîñå ê ñåðâåðó íå óêàçàí òèï ñîîáùåíèÿ!');
     else
       STP := JPRMS.GET('STP').VALUE_OF();
     end if;
-    /* Ð¡Ñ‡Ð¸Ñ‚Ñ‹Ð²Ð°ÐµÐ¼ Ñ‚ÐµÐºÑÑ‚ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ñ */
+    /* Ñ÷èòûâàåì òåêñò ñîîáùåíèÿ */
     if ((not JPRMS.EXIST('SMSG')) or (JPRMS.GET('SMSG').VALUE_OF() is null)) then
-      P_EXCEPTION(0, 'Ð’ Ð·Ð°Ð¿Ñ€Ð¾ÑÐµ Ðº ÑÐµÑ€Ð²ÐµÑ€Ñƒ Ð½Ðµ ÑƒÐºÐ°Ð·Ð°Ð½ Ñ‚ÐµÐºÑÑ‚ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ñ!');
+      P_EXCEPTION(0, 'Â çàïðîñå ê ñåðâåðó íå óêàçàí òåêñò ñîîáùåíèÿ!');
     else
       SMSG := JPRMS.GET('SMSG').VALUE_OF();
     end if;
-    /* Ð”Ð¾Ð±Ð°Ð²Ð»ÑÐµÐ¼ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ðµ */
+    /* Äîáàâëÿåì ñîîáùåíèå */
     UDO_PKG_STAND.MSG_INSERT(STP => STP, SMSG => SMSG);
-    /* ÐžÑ‚Ð´Ð°Ñ‘Ð¼ Ð¾Ñ‚Ð²ÐµÑ‚ Ñ‡Ñ‚Ð¾ Ð²ÑÑ‘ Ð¿Ñ€Ð¾ÑˆÐ»Ð¾ ÑƒÑÐ¿ÐµÑˆÐ½Ð¾ */
+    /* Îòäà¸ì îòâåò ÷òî âñ¸ ïðîøëî óñïåøíî */
     CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
                                       NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_OK,
                                       SRESP_MSG    => '');
@@ -462,27 +477,106 @@ create or replace package body UDO_PKG_STAND_WEB as
                                         SRESP_MSG    => SERR);
       rollback;
   end;
-  
-  /* Ð’Ñ‹Ð´Ð°Ñ‡Ð° ÑÐ¿Ð¸ÑÐºÐ° ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹ */
+
+  /* Óäàëåíèå ñîîáùåíèÿ èç î÷åðåäè óâåäîìëåíèé */
+  procedure MSG_DELETE
+  (
+    CPRMS                   clob,            -- Âõîäíûå ïàðàìåòðû
+    CRES                    out clob         -- Ðåçóëüòàò ðàáîòû
+  ) is
+    JPRMS                   JSON;            -- Îáúåêòíîå ïðåäñòàâëåíèå ïàðàìåòðîâ çàïðîñà
+    NRN                     PKG_STD.TREF;    -- Òèï ñîîáùåíèÿ
+    SERR                    PKG_STD.TSTRING; -- Áóôåð äëÿ îøèáîê
+  begin
+    /* Èíèöèàëèçèðóåì âûõîä */
+    DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
+    /* Êîíâåðòèðóåì ïàðàìåòðû â îáúåêòíîå ïðåäñòàâëåíèå */
+    JPRMS := JSON(CPRMS);
+    /* Ñ÷èòûâàåì èäåíòèôèêàòîð ñîîáùåíèÿ */
+    if ((not JPRMS.EXIST('NRN')) or (JPRMS.GET('NRN').VALUE_OF() is null)) then
+      P_EXCEPTION(0, 'Â çàïðîñå ê ñåðâåðó íå óêàçàí èäåíòèôèêàòîð ñîîáùåíèÿ!');
+    else
+      NRN := UDO_PKG_WEB_API.UTL_CONVERT_TO_NUMBER(SSTR => JPRMS.GET('NRN').VALUE_OF(), NSMART => 0);
+    end if;
+    /* Óäàëÿåì ñîîáùåíèå */
+    UDO_PKG_STAND.MSG_DELETE(NRN => NRN);
+    /* Îòäà¸ì îòâåò ÷òî âñ¸ ïðîøëî óñïåøíî */
+    CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                      NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_OK,
+                                      SRESP_MSG    => '');
+  exception
+    when others then
+      SERR := sqlerrm;
+      CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                        NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_ERR,
+                                        SRESP_MSG    => SERR);
+      rollback;
+  end;
+ 
+  /* Óñòàíîâêà ñîñòîÿíèÿ ñîîáùåíèÿ â î÷åðåäè óâåäîìëåíèé */
+  procedure MSG_SET_STATE
+  (
+    CPRMS                   clob,            -- Âõîäíûå ïàðàìåòðû
+    CRES                    out clob         -- Ðåçóëüòàò ðàáîòû
+  ) is
+    JPRMS                   JSON;            -- Îáúåêòíîå ïðåäñòàâëåíèå ïàðàìåòðîâ çàïðîñà
+    NRN                     PKG_STD.TREF;    -- Òèï ñîîáùåíèÿ
+    SSTS                    PKG_STD.TSTRING; -- Ñîñòîÿíèå ñîîáùåíèÿ
+    SERR                    PKG_STD.TSTRING; -- Áóôåð äëÿ îøèáîê
+  begin
+    /* Èíèöèàëèçèðóåì âûõîä */
+    DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
+    /* Êîíâåðòèðóåì ïàðàìåòðû â îáúåêòíîå ïðåäñòàâëåíèå */
+    JPRMS := JSON(CPRMS);
+    /* Ñ÷èòûâàåì èäåíòèôèêàòîð ñîîáùåíèÿ */
+    if ((not JPRMS.EXIST('NRN')) or (JPRMS.GET('NRN').VALUE_OF() is null)) then
+      P_EXCEPTION(0, 'Â çàïðîñå ê ñåðâåðó íå óêàçàí èäåíòèôèêàòîð ñîîáùåíèÿ!');
+    else
+      NRN := UDO_PKG_WEB_API.UTL_CONVERT_TO_NUMBER(SSTR => JPRMS.GET('NRN').VALUE_OF(), NSMART => 0);
+    end if;
+    /* Ñ÷èòûâàåì óñòàíàâëèâàåìîå ñîñòîÿíèå ñîîáùåíèÿ */
+    if ((not JPRMS.EXIST('SSTS')) or (JPRMS.GET('SSTS').VALUE_OF() is null)) then
+      P_EXCEPTION(0, 'Â çàïðîñå ê ñåðâåðó íå óêàçàíî óñòàíàâëèâàåìîå ñîñòîÿíèå ñîîáùåíèÿ!');
+    else
+      SSTS := JPRMS.GET('SSTS').VALUE_OF();
+    end if;
+    /* Óñòàíàâëèâàåì ñîñòîÿíèå ñîîáùåíèÿ */
+    UDO_PKG_STAND.MSG_SET_STATE(NRN => NRN, SSTS => SSTS);
+    /* Îòäà¸ì îòâåò ÷òî âñ¸ ïðîøëî óñïåøíî */
+    CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                      NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_OK,
+                                      SRESP_MSG    => '');
+  exception
+    when others then
+      SERR := sqlerrm;
+      CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                        NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_ERR,
+                                        SRESP_MSG    => SERR);
+      rollback;
+  end;
+
+
+  /* Âûäà÷à ñïèñêà ñîîáùåíèé */
   procedure MSG_GET_LIST
   (
-    CPRMS                   clob,                    -- Ð’Ñ…Ð¾Ð´Ð½Ñ‹Ðµ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ñ‹
-    CRES                    out clob                 -- Ð ÐµÐ·ÑƒÐ»ÑŒÑ‚Ð°Ñ‚ Ñ€Ð°Ð±Ð¾Ñ‚Ñ‹
+    CPRMS                   clob,                    -- Âõîäíûå ïàðàìåòðû
+    CRES                    out clob                 -- Ðåçóëüòàò ðàáîòû
   ) is
-    JRES                    JSON_LIST;               -- ÐžÐ±ÑŠÐµÐºÑ‚Ð½Ð¾Ðµ Ð¿Ñ€ÐµÐ´ÑÑ‚Ð°Ð²Ð»ÐµÐ½Ð¸Ðµ Ð¾Ñ‚Ð²ÐµÑ‚Ð° - ÑÐ¿Ð¸ÑÐºÐ° ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹
-    JPRMS                   JSON;                    -- ÐžÐ±ÑŠÐµÐºÑ‚Ð½Ð¾Ðµ Ð¿Ñ€ÐµÐ´ÑÑ‚Ð°Ð²Ð»ÐµÐ½Ð¸Ðµ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ð¾Ð² Ð·Ð°Ð¿Ñ€Ð¾ÑÐ°
-    DFROM                   PKG_STD.TLDATE;          -- "Ð”Ð°Ñ‚Ð° Ñ" Ð´Ð»Ñ Ð¾Ñ‚Ð±Ð¾Ñ€Ð° ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹
-    STP                     PKG_STD.TSTRING;         -- Ð¢Ð¸Ð¿ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ñ Ð´Ð»Ñ Ð¾Ñ‚Ð±Ð¾Ñ€Ð°
-    NLIMIT                  PKG_STD.TNUMBER;         -- ÐœÐ°ÐºÑÐ¸Ð¼Ð°Ð»ÑŒÐ½Ð¾Ðµ ÐºÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð¾ Ð¾Ñ‚Ð±Ð¸Ñ€Ð°ÐµÐ¼Ñ‹Ñ… ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹
-    NORDER                  PKG_STD.TNUMBER;         -- ÐŸÐ¾Ñ€ÑÐ´Ð¾Ðº ÑÐ¾Ñ€Ñ‚Ð¸Ñ€Ð¾Ð²ÐºÐ¸ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹
-    MSGS                    UDO_PKG_STAND.TMESSAGES; -- ÐšÐ¾Ð»Ð»ÐµÐºÑ†Ð¸Ñ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹
-    SERR                    PKG_STD.TSTRING;         -- Ð‘ÑƒÑ„ÐµÑ€ Ð´Ð»Ñ Ð¾ÑˆÐ¸Ð±Ð¾Ðº
+    JRES                    JSON_LIST;               -- Îáúåêòíîå ïðåäñòàâëåíèå îòâåòà - ñïèñêà ñîîáùåíèé
+    JPRMS                   JSON;                    -- Îáúåêòíîå ïðåäñòàâëåíèå ïàðàìåòðîâ çàïðîñà
+    DFROM                   PKG_STD.TLDATE;          -- "Äàòà ñ" äëÿ îòáîðà ñîîáùåíèé
+    STP                     PKG_STD.TSTRING;         -- Òèï ñîîáùåíèÿ äëÿ îòáîðà
+    SSTS                    PKG_STD.TSTRING;         -- Ñîñòîÿíèå ñîîáùåíèé äëÿ îòáîðà
+    NLIMIT                  PKG_STD.TNUMBER;         -- Ìàêñèìàëüíîå êîëè÷åñòâî îòáèðàåìûõ ñîîáùåíèé
+    NORDER                  PKG_STD.TNUMBER;         -- Ïîðÿäîê ñîðòèðîâêè ñîîáùåíèé
+    MSGS                    UDO_PKG_STAND.TMESSAGES; -- Êîëëåêöèÿ ñîîáùåíèé
+    SERR                    PKG_STD.TSTRING;         -- Áóôåð äëÿ îøèáîê
   begin
-    /* Ð˜Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð¸Ñ€ÑƒÐµÐ¼ Ð²Ñ‹Ñ…Ð¾Ð´ */
+    /* Èíèöèàëèçèðóåì âûõîä */
     DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
-    /* ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð¸Ñ€ÑƒÐµÐ¼ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ñ‹ Ð² Ð¾Ð±ÑŠÐµÐºÑ‚Ð½Ð¾Ðµ Ð¿Ñ€ÐµÐ´ÑÑ‚Ð°Ð²Ð»ÐµÐ½Ð¸Ðµ */
+    /* Êîíâåðòèðóåì ïàðàìåòðû â îáúåêòíîå ïðåäñòàâëåíèå */
     JPRMS := JSON(CPRMS);
-    /* Ð¡Ñ‡Ð¸Ñ‚Ñ‹Ð²Ð°ÐµÐ¼ "Ð´Ð°Ñ‚Ñƒ Ñ" Ð´Ð»Ñ Ð¾Ñ‚Ð±Ð¾Ñ€Ð° ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹ */
+    /* Ñ÷èòûâàåì "äàòó ñ" äëÿ îòáîðà ñîîáùåíèé */
     if ((not JPRMS.EXIST('DFROM')) or (JPRMS.GET('DFROM').VALUE_OF() is null)) then
       DFROM := null;
     else
@@ -490,28 +584,34 @@ create or replace package body UDO_PKG_STAND_WEB as
                                                    NSMART    => 0,
                                                    STEMPLATE => 'dd.mm.yyyy hh24:mi:ss');
     end if;
-    /* Ð¡Ñ‡Ð¸Ñ‚Ñ‹Ð²Ð°ÐµÐ¼ Ñ‚Ð¸Ð¿ Ð´Ð»Ñ Ð¾Ñ‚Ð±Ð¾Ñ€Ð° ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹ */
+    /* Ñ÷èòûâàåì òèï äëÿ îòáîðà ñîîáùåíèé */
     if ((not JPRMS.EXIST('STP')) or (JPRMS.GET('STP').VALUE_OF() is null)) then
       STP := null;
     else
       STP := JPRMS.GET('STP').VALUE_OF();
     end if;
-    /* Ð¡Ñ‡Ð¸Ñ‚Ñ‹Ð²Ð°ÐµÐ¼ Ð¾Ð³Ñ€Ð°Ð½Ð¸Ñ‡ÐµÐ½Ð¸Ðµ Ð¿Ð¾ ÐºÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ñƒ Ð¾Ñ‚Ð¾Ð±Ñ€Ð°Ð½Ð½Ñ‹Ñ… ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹ */
+    /* Ñ÷èòûâàåì ñîñòîÿíèå äëÿ îòáîðà ñîîáùåíèé */
+    if ((not JPRMS.EXIST('SSTS')) or (JPRMS.GET('SSTS').VALUE_OF() is null)) then
+      SSTS := null;
+    else
+      SSTS := JPRMS.GET('SSTS').VALUE_OF();
+    end if;    
+    /* Ñ÷èòûâàåì îãðàíè÷åíèå ïî êîëè÷åñòâó îòîáðàííûõ ñîîáùåíèé */
     if ((not JPRMS.EXIST('NLIMIT')) or (JPRMS.GET('NLIMIT').VALUE_OF() is null)) then
       NLIMIT := null;
     else
       NLIMIT := UDO_PKG_WEB_API.UTL_CONVERT_TO_NUMBER(SSTR => JPRMS.GET('NLIMIT').VALUE_OF(), NSMART => 0);
     end if;
-    /* Ð¡Ñ‡Ð¸Ñ‚Ñ‹Ð²Ð°ÐµÐ¼ Ð¿Ð¾Ñ€ÑÐ´Ð¾Ðº ÑÐ¾Ñ€Ñ‚Ð¸Ñ€Ð¾Ð²ÐºÐ¸ Ð¾Ñ‚Ð¾Ð±Ñ€Ð°Ð½Ð½Ñ‹Ñ… ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹ */
+    /* Ñ÷èòûâàåì ïîðÿäîê ñîðòèðîâêè îòîáðàííûõ ñîîáùåíèé */
     if ((not JPRMS.EXIST('NORDER')) or (JPRMS.GET('NORDER').VALUE_OF() is null)) then
       NORDER := UDO_PKG_STAND.NMSG_ORDER_ASC;
     else
       NORDER := UDO_PKG_WEB_API.UTL_CONVERT_TO_NUMBER(SSTR => JPRMS.GET('NORDER').VALUE_OF(), NSMART => 0);
     end if;
-    /* ÐŸÐ¾Ð»ÑƒÑ‡Ð°ÐµÐ¼ ÑÐ¿Ð¸ÑÐ¾Ðº ÑÐ¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹ Ð¸ ÐºÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð¸Ñ€ÑƒÐµÐ¼ Ð¸Ñ… Ð² JSON */
-    MSGS := UDO_PKG_STAND.MSG_GET_LIST(DFROM => DFROM, STP => STP, NLIMIT => NLIMIT, NORDER => NORDER);
+    /* Ïîëó÷àåì ñïèñîê ñîáùåíèé è êîíâåðòèðóåì èõ â JSON */
+    MSGS := UDO_PKG_STAND.MSG_GET_LIST(DFROM => DFROM, STP => STP, SSTS => SSTS, NLIMIT => NLIMIT, NORDER => NORDER);
     JRES := MESSAGES_TO_JSON(MSGS => MSGS);
-    /* ÐžÑ‚Ð´Ð°Ñ‘Ð¼ Ð¾Ñ‚Ð²ÐµÑ‚ */
+    /* Îòäà¸ì îòâåò */
     JRES.TO_CLOB(BUF => CRES);  
   exception
     when others then
@@ -522,23 +622,23 @@ create or replace package body UDO_PKG_STAND_WEB as
       rollback;
   end;
   
-  /* ÐŸÐ¾Ð»ÑƒÑ‡ÐµÐ½Ð¸Ðµ ÑÐ¾ÑÑ‚Ð¾ÑÐ½Ð¸Ñ ÑÑ‚ÐµÐ½Ð´Ð° */
+  /* Ïîëó÷åíèå ñîñòîÿíèÿ ñòåíäà */
   procedure STAND_GET_STATE
   (
-    CPRMS                   clob,                                       -- Ð’Ñ…Ð¾Ð´Ð½Ñ‹Ðµ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ñ‹
-    CRES                    out clob                                    -- Ð ÐµÐ·ÑƒÐ»ÑŒÑ‚Ð°Ñ‚ Ñ€Ð°Ð±Ð¾Ñ‚Ñ‹
+    CPRMS                   clob,                                       -- Âõîäíûå ïàðàìåòðû
+    CRES                    out clob                                    -- Ðåçóëüòàò ðàáîòû
   ) is
-    NCOMPANY                COMPANIES.RN%type := GET_SESSION_COMPANY(); -- Ð ÐµÐ³. Ð½Ð¾Ð¼ÐµÑ€ Ð¾Ñ€Ð³Ð°Ð½Ð¸Ð·Ð°Ñ†Ð¸Ð¸
-    JRES                    JSON;                                       -- ÐžÐ±ÑŠÐµÐºÑ‚Ð½Ð¾Ðµ Ð¿Ñ€ÐµÐ´ÑÑ‚Ð°Ð²Ð»ÐµÐ½Ð¸Ðµ Ð¾Ñ‚Ð²ÐµÑ‚Ð° - ÑÐ¿Ð¸ÑÐºÐ° ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹
-    STAND_STATE             UDO_PKG_STAND.TSTAND_STATE;                 -- Ð¡Ð¾ÑÑ‚Ð¾ÑÐ½Ð¸Ðµ ÑÑ‚ÐµÐ½Ð´Ð°
-    SERR                    PKG_STD.TSTRING;                            -- Ð‘ÑƒÑ„ÐµÑ€ Ð´Ð»Ñ Ð¾ÑˆÐ¸Ð±Ð¾Ðº
+    NCOMPANY                COMPANIES.RN%type := GET_SESSION_COMPANY(); -- Ðåã. íîìåð îðãàíèçàöèè
+    JRES                    JSON;                                       -- Îáúåêòíîå ïðåäñòàâëåíèå îòâåòà - ñïèñêà ñîîáùåíèé
+    STAND_STATE             UDO_PKG_STAND.TSTAND_STATE;                 -- Ñîñòîÿíèå ñòåíäà
+    SERR                    PKG_STD.TSTRING;                            -- Áóôåð äëÿ îøèáîê
   begin
-    /* Ð˜Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð¸Ñ€ÑƒÐµÐ¼ Ð²Ñ‹Ñ…Ð¾Ð´ */
+    /* Èíèöèàëèçèðóåì âûõîä */
     DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
-    /* ÐŸÐ¾Ð»ÑƒÑ‡Ð¸Ð¼ ÑÐ¾ÑÑ‚Ð¾ÑÐ½Ð¸Ðµ ÑÑ‚ÐµÐ½Ð´Ð° */
+    /* Ïîëó÷èì ñîñòîÿíèå ñòåíäà */
     UDO_PKG_STAND.STAND_GET_STATE(NCOMPANY => NCOMPANY, STAND_STATE => STAND_STATE);
     JRES := STAND_STATE_TO_JSON(SS => STAND_STATE);
-    /* ÐžÑ‚Ð´Ð°Ñ‘Ð¼ Ð¾Ñ‚Ð²ÐµÑ‚ */
+    /* Îòäà¸ì îòâåò */
     JRES.TO_CLOB(BUF => CRES);
   exception
     when others then

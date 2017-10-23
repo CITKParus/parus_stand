@@ -1,8 +1,12 @@
 prompt PL/SQL Developer import file
-prompt Created on 3 ќкт€брь 2017 г. by mim__000
+prompt Created on 23 ќкт€брь 2017 г. by mikha
 set feedback off
 set define off
 prompt Loading UDO_T_WEB_API_ACTIONS...
+insert into UDO_T_WEB_API_ACTIONS (rn, action, processor, unauth)
+values (10, 'MSG_DELETE', 'UDO_PKG_STAND_WEB.MSG_DELETE', 0);
+insert into UDO_T_WEB_API_ACTIONS (rn, action, processor, unauth)
+values (11, 'MSG_SET_STATE', 'UDO_PKG_STAND_WEB.MSG_SET_STATE', 0);
 insert into UDO_T_WEB_API_ACTIONS (rn, action, processor, unauth)
 values (1, 'VERIFY', 'UDO_PKG_WEB_API.PROCESS', 0);
 insert into UDO_T_WEB_API_ACTIONS (rn, action, processor, unauth)
@@ -22,7 +26,7 @@ values (8, 'MSG_GET_LIST', 'UDO_PKG_STAND_WEB.MSG_GET_LIST', 0);
 insert into UDO_T_WEB_API_ACTIONS (rn, action, processor, unauth)
 values (9, 'STAND_GET_STATE', 'UDO_PKG_STAND_WEB.STAND_GET_STATE', 0);
 commit;
-prompt 9 records loaded
+prompt 11 records loaded
 set feedback on
 set define on
 prompt Done.
