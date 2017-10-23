@@ -27,6 +27,8 @@ const PARUS_ACTION_LOGOUT = "LOGOUT"; //завершение сессии ПП �
 const PARUS_ACTION_AUTH_BY_BARCODE = "AUTH_BY_BARCODE"; //аутентификация посетителя стенда по штрихкоду
 const PARUS_ACTION_SHIPMENT = "SHIPMENT"; //откгрузка товара посетителю
 const PARUS_ACTION_MSG_INSERT = "MSG_INSERT"; //добавление сообщения в очедерь уведомлений стенда
+const PARUS_ACTION_MSG_DELETE = "MSG_DELETE"; //удаление сообщения из очедери уведомлений стенда
+const PARUS_ACTION_MSG_SET_STATE = "MSG_SET_STATE"; //установка состояния сообщения в очедери уведомлений стенда
 const PARUS_ACTION_MSG_GET_LIST = "MSG_GET_LIST"; //получение списка сообщений очереди уведомлений стенда
 const PARUS_ACTION_STAND_GET_STATE = "STAND_GET_STATE"; //получение состояния стенда
 
@@ -265,6 +267,95 @@ function msgGetList(prms) {
     });
 }
 
+//добавление сообщения в очередь стенда
+function msgInsert(prms) {
+    return new Promise(function(resolve, reject) {
+        //проверим наличие параметров
+        if (prms) {
+            //исполняем действие на сервере ПП Парус 8
+            pc.parusServerAction({
+                prms: {
+                    SACTION: PARUS_ACTION_MSG_INSERT,
+                    SSESSION: PARUS_SESSION,
+                    STP: prms.type,
+                    SMSG: prms.message
+                },
+                callBack: resp => {
+                    //проверим результат выполнения
+                    if (resp.state == utils.SERVER_STATE_ERR) {
+                        //завершение не удалось
+                        reject(resp);
+                    } else {
+                        //завершение удалась - ресолвим с успехом
+                        resolve(resp);
+                    }
+                }
+            });
+        } else {
+            reject(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
+        }
+    });
+}
+
+//удаление сообщения из очереди стенда
+function msgDelete(prms) {
+    return new Promise(function(resolve, reject) {
+        //проверим наличие параметров
+        if (prms) {
+            //исполняем действие на сервере ПП Парус 8
+            pc.parusServerAction({
+                prms: {
+                    SACTION: PARUS_ACTION_MSG_DELETE,
+                    SSESSION: PARUS_SESSION,
+                    NRN: prms.rn
+                },
+                callBack: resp => {
+                    //проверим результат выполнения
+                    if (resp.state == utils.SERVER_STATE_ERR) {
+                        //завершение не удалось
+                        reject(resp);
+                    } else {
+                        //завершение удалась - ресолвим с успехом
+                        resolve(resp);
+                    }
+                }
+            });
+        } else {
+            reject(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
+        }
+    });
+}
+
+//установка статуса сообщения в очереди стенда
+function msgSetState(prms) {
+    return new Promise(function(resolve, reject) {
+        //проверим наличие параметров
+        if (prms) {
+            //исполняем действие на сервере ПП Парус 8
+            pc.parusServerAction({
+                prms: {
+                    SACTION: PARUS_ACTION_MSG_SET_STATE,
+                    SSESSION: PARUS_SESSION,
+                    NRN: prms.rn,
+                    SSTS: prms.status
+                },
+                callBack: resp => {
+                    //проверим результат выполнения
+                    if (resp.state == utils.SERVER_STATE_ERR) {
+                        //завершение не удалось
+                        reject(resp);
+                    } else {
+                        //завершение удалась - ресолвим с успехом
+                        resolve(resp);
+                    }
+                }
+            });
+        } else {
+            reject(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
+        }
+    });
+}
+
 //выполнение действия ПП Парус 8
 function makeAction(prms) {
     return new Promise(function(resolve, reject) {
@@ -292,9 +383,24 @@ function makeAction(prms) {
                 actionFunction = shipment;
                 break;
             }
-            //
+            //получение списка сообщений очереди уведомлений стенда
             case PARUS_ACTION_MSG_GET_LIST: {
                 actionFunction = msgGetList;
+                break;
+            }
+            //добавление сообщения в очередь уведомлений стенда
+            case PARUS_ACTION_MSG_INSERT: {
+                actionFunction = msgInsert;
+                break;
+            }
+            //удаление сообщения из очереди уведомлений стенда
+            case PARUS_ACTION_MSG_DELETE: {
+                actionFunction = msgDelete;
+                break;
+            }
+            //установка состояния сообщения в очереди уведомлений стенда
+            case PARUS_ACTION_MSG_SET_STATE: {
+                actionFunction = msgSetState;
                 break;
             }
             //какая-то неизвестная нам функция
