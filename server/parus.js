@@ -244,6 +244,7 @@ function msgGetList(prms) {
                     SSESSION: PARUS_SESSION,
                     DFROM: prms.from,
                     STP: prms.type,
+                    SSTS: prms.state,
                     NLIMIT: prms.limit,
                     NORDER: prms.order
                 },
