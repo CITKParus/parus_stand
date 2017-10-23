@@ -232,6 +232,38 @@ function shipment(prms) {
     });
 }
 
+//получение сообщений из очереди уведомлений стенда
+function msgGetList(prms) {
+    return new Promise(function(resolve, reject) {
+        //проверим наличие параметров
+        if (prms) {
+            //исполняем действие на сервере ПП Парус 8
+            pc.parusServerAction({
+                prms: {
+                    SACTION: PARUS_ACTION_MSG_GET_LIST,
+                    SSESSION: PARUS_SESSION,
+                    DFROM: prms.from,
+                    STP: prms.type,
+                    NLIMIT: prms.limit,
+                    NORDER: prms.order
+                },
+                callBack: resp => {
+                    //проверим результат выполнения
+                    if (resp.state == utils.SERVER_STATE_ERR) {
+                        //завершение не удалось
+                        reject(resp);
+                    } else {
+                        //завершение удалась - ресолвим с успехом
+                        resolve(resp);
+                    }
+                }
+            });
+        } else {
+            reject(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
+        }
+    });
+}
+
 //выполнение действия ПП Парус 8
 function makeAction(prms) {
     return new Promise(function(resolve, reject) {
@@ -257,6 +289,11 @@ function makeAction(prms) {
             //отгрузка товара посетителю
             case PARUS_ACTION_SHIPMENT: {
                 actionFunction = shipment;
+                break;
+            }
+            //
+            case PARUS_ACTION_MSG_GET_LIST: {
+                actionFunction = msgGetList;
                 break;
             }
             //какая-то неизвестная нам функция
