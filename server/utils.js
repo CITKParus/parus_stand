@@ -16,6 +16,9 @@ const mp = require("multiparty"); //парсинг данных форм зап�
 //глобальные идентификаторы
 //-------------------------
 
+//параметры протокола HTTP
+const HTTP_OK = 200; //код успешного ответа HTTP-сервера
+
 //типовые состояния ответов сервера
 const SERVER_STATE_ERR = "ERR"; //состояние сервера - ошибка
 const SERVER_STATE_OK = "OK"; //состояние сервера - всё нормально
@@ -24,6 +27,7 @@ const SERVER_STATE_OK = "OK"; //состояние сервера - всё но�
 const SERVER_RE_MSG_ERROR = "Ошибка внешнего сервиса!"; //ошибка при обращении к внешнему сервису
 const SERVER_RE_MSG_UNEXPECTED_RESPONSE = "Неожиданный ответ внешнего сервиса!"; //ошибка при разборе ответа внешнего сервиса
 const SERVER_RE_MSG_BAD_REQUEST = "Запрос некорректен (возможно вы забыли казать один из параметров)!"; //некорректный запрос от клиента
+const SERVER_RE_MSG_ACCESS_DENIED = "Доступ запрещён (проверьте идентификатор клиента)!"; //нет доступа
 
 //типы сообщений протокола работы сервера
 const LOG_TYPE_INFO = "log_info"; //сообщение с информацией
@@ -163,11 +167,13 @@ function parseRequestParams(request, callBack) {
 //----------------
 //интерфейс модуля
 //----------------
+exports.HTTP_OK = HTTP_OK;
 exports.SERVER_STATE_ERR = SERVER_STATE_ERR;
 exports.SERVER_STATE_OK = SERVER_STATE_OK;
 exports.SERVER_RE_MSG_ERROR = SERVER_RE_MSG_ERROR;
 exports.SERVER_RE_MSG_UNEXPECTED_RESPONSE = SERVER_RE_MSG_UNEXPECTED_RESPONSE;
 exports.SERVER_RE_MSG_BAD_REQUEST = SERVER_RE_MSG_BAD_REQUEST;
+exports.SERVER_RE_MSG_ACCESS_DENIED = SERVER_RE_MSG_ACCESS_DENIED;
 exports.LOG_TYPE_INFO = LOG_TYPE_INFO;
 exports.LOG_TYPE_ERR = LOG_TYPE_ERR;
 exports.REQUEST_STATE_ERR = REQUEST_STATE_ERR;

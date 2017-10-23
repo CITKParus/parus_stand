@@ -16,9 +16,6 @@ const utils = require("./utils"); //вспомогательные функци�
 //глобальные идентификаторы
 //-------------------------
 
-//параметры протокола HTTP
-const HTTP_OK = 200; //код успешного ответа HTTP-сервера
-
 //заголовок запроса к HTTP-серверу ПП Парус 8
 const PARUS_REQ_HEADERS = {
     "User-Agent": conf.SERVER_NAME, //агент
@@ -54,7 +51,7 @@ function parusServerAction(data) {
     //выполним запрос
     request(options, (error, response, body) => {
         //если пришел ответ без ошибок HTTP и транспорта
-        if (!error && response.statusCode == HTTP_OK) {
+        if (!error && response.statusCode == utils.HTTP_OK) {
             //пробуем его интерпретировать
             try {
                 let srvResp = JSON.parse(body);

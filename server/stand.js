@@ -12,6 +12,7 @@ const qs = require("querystring"); //парсер параметров запр�
 const conf = require("./config"); //настройки сервера
 const parus = require("./parus"); //библиотека высокоуровневого взаимодействия с ПП Парус 8
 const utils = require("./utils"); //вспомогательные функции
+const tokens = require("./tokens"); //библиотека проверки прав доступа клиентов сервера
 
 //-------------------------
 //глобальные идентификаторы
@@ -41,17 +42,24 @@ function run() {
                 utils.log({ type: utils.LOG_TYPE_ERR, msg: "New request: Bad server request!" });
             } else {
                 utils.log({ msg: "New request: " + JSON.stringify(rp) });
-                //выполняем действие на сервере ПП Парус 8
-                parus.makeAction(rp).then(
-                    r => {
-                        res.writeHead(200, STAND_RESP_HEADER);
-                        res.end(JSON.stringify(r));
-                    },
-                    e => {
-                        res.writeHead(200, STAND_RESP_HEADER);
-                        res.end(JSON.stringify(e));
-                    }
-                );
+                //проверим токен доступа
+                if (tokens.checkToken(rp.token)) {
+                    //выполняем действие на сервере ПП Парус 8
+                    parus.makeAction(rp).then(
+                        r => {
+                            res.writeHead(200, STAND_RESP_HEADER);
+                            res.end(JSON.stringify(r));
+                        },
+                        e => {
+                            res.writeHead(200, STAND_RESP_HEADER);
+                            res.end(JSON.stringify(e));
+                        }
+                    );
+                } else {
+                    //токен доступа не указан или указан неверно
+                    res.writeHead(200, STAND_RESP_HEADER);
+                    res.end(JSON.stringify(utils.buildErrResp(utils.SERVER_RE_MSG_ACCESS_DENIED)));
+                }
             }
         });
     });
