@@ -1,10 +1,11 @@
-﻿-- Create table
+-- Create table
 create table UDO_T_STAND_MSG
 (
   rn  NUMBER(17) not null,
   ts  DATE not null,
   tp  VARCHAR2(20) not null,
-  msg VARCHAR2(4000) not null
+  msg VARCHAR2(4000) not null,
+  sts VARCHAR2(200) not null
 )
 tablespace PARUSDATA
   pctfree 10
@@ -33,6 +34,12 @@ alter table UDO_T_STAND_MSG
     maxextents unlimited
   );
 -- Create/Recreate check constraints 
+alter table UDO_T_STAND_MSG
+  add constraint UDO_C_STAND_MSG_STS_CH
+  check (((TP = 'NOTIFY') and (STS in ('NOT_SENDED', 'SENDED'))) or 
+((TP = 'RESTS') and (STS = 'UNDEFINED')) or 
+((TP = 'REST_PRC') and (STS = 'UNDEFINED')) or 
+((TP = 'PRINT') and (STS in ('NOT_PRINTED', 'PRINTED'))));
 alter table UDO_T_STAND_MSG
   add constraint UDO_C_STAND_MSG_TP_CH
   check (TP in ('NOTIFY', 'RESTS', 'REST_PRC', 'PRINT'));
