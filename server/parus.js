@@ -9,6 +9,7 @@
 
 const conf = require("./config"); //настройки сервера
 const pc = require("./parus_client"); //низкоуровневый клиент ПП Парус 8
+const vm = require("./vending_machine_client"); //низкоуровневый клиент вендингового аппарата
 const utils = require("./utils"); //вспомогательные функции
 
 //-------------------------
@@ -202,7 +203,7 @@ function shipment(prms) {
         if (prms.customer) {
             if (prms.rack_line) {
                 if (prms.rack_line_cell) {
-                    //исполняем действие на сервере ПП Парус 8
+                    //сначала исполняем действие на сервере ПП Парус 8
                     pc.parusServerAction({
                         prms: {
                             SACTION: PARUS_ACTION_SHIPMENT,
@@ -217,8 +218,20 @@ function shipment(prms) {
                                 //завершение не удалось
                                 reject(resp);
                             } else {
-                                //завершение удалась - ресолвим с успехом
-                                resolve(resp);
+                                //завершение удалась - отдадим команду вендинговому аппарату
+                                vm.vendingMachineAction({
+                                    line: prms.rack_line_cell,
+                                    callBack: r => {
+                                        //если с вендинговым автоматом всё прошло успешно
+                                        if (r.state != utils.SERVER_STATE_ERR) {
+                                            //вернем ответ сервера ПП Парус 8
+                                            resolve(resp);
+                                        } else {
+                                            //была ошибка на вендинговом автомате - вернём её
+                                            reject(r);
+                                        }
+                                    }
+                                });
                             }
                         }
                     });
