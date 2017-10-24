@@ -35,7 +35,6 @@ const VENDING_MACHINE_RESP_STATE_OK = "OK"; //от автомата пришел
 
 //выполнение действия на вендинговом автомате
 function vendingMachineAction(data) {
-    utils.log({ msg: "Connecting to vending machine" });
     //если автомат доступен
     if (conf.VENDING_MACHINE_ENABLED) {
         utils.log({ msg: "Vending machine enabled - requesting..." });
@@ -63,7 +62,7 @@ function vendingMachineAction(data) {
                     );
                 } catch (e) {
                     //при интерпретации произошла ошибка - это неожиданный ответ, мы хотели JSON
-                    data.callBack(utils.buildErrResp(utils.SERVER_RE_MSG_UNEXPECTED_RESPONSE));
+                    data.callBack(utils.buildErrResp(utils.SERVER_RE_MSG_UNEXPECTED_RESPONSE_VENDING));
                 }
             } else {
                 //были ошибки транспорта (сети нет, или нет сервера по указанному адресу и т.п.)

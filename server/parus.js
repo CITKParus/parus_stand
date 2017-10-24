@@ -247,27 +247,33 @@ function shipment(prms) {
                                                     callBack: printResp => {
                                                         //протоколируем результат постановки в очередь
                                                         if (printResp.state == utils.SERVER_STATE_ERR) {
+                                                            //не поставилось в очередь
                                                             utils.log({
                                                                 type: utils.LOG_TYPE_ERR,
                                                                 msg:
                                                                     "Error sending document to ptint queue: " +
                                                                     resp.message
                                                             });
+                                                            //даже если документ в очередь не встал - скажем что всё ок (вендинг уже не откатишь), но выдадим специальное сообщение (без упоминания печати накладных)
+                                                            resolve(
+                                                                utils.buildOkResp(utils.SERVER_RE_MSG_SHIPED_NO_PRINT)
+                                                            );
                                                         } else {
+                                                            //поставилось в очередь печати
                                                             utils.log({
                                                                 msg: "Document sended to print queue successfully"
                                                             });
+                                                            //сделалось всё - и документ, и автомат и печать в очередь
+                                                            resolve(utils.buildOkResp(utils.SERVER_RE_MSG_SHIPED));
                                                         }
-                                                        //даже если документ в очередь не встал - скажем что всё ок (вендинг уже не откатишь)
-                                                        resolve(resp);
                                                     }
                                                 });
                                             } else {
-                                                //скажем что всё ок - нет, значит нет
+                                                //скажем что всё ок - нет, значит нет, выдаём специальное сообщение об успехе (без упоминания печати накладных)
                                                 utils.log({
                                                     msg: "Document printing disabled"
                                                 });
-                                                resolve(resp);
+                                                resolve(utils.buildOkResp(utils.SERVER_RE_MSG_SHIPED_NO_PRINT));
                                             }
                                         } else {
                                             utils.log({

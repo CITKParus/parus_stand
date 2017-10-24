@@ -70,7 +70,7 @@ function parusServerAction(data) {
                 }
             } catch (e) {
                 //при интерпретации произошла ошибка - это неожиданный ответ, мы хотели JSON
-                data.callBack(utils.buildErrResp(utils.SERVER_RE_MSG_UNEXPECTED_RESPONSE));
+                data.callBack(utils.buildErrResp(utils.SERVER_RE_MSG_UNEXPECTED_RESPONSE_PARUS));
             }
         } else {
             //были ошибки транспорта (сети нет, или нет сервера по указанному адресу и т.п.)
