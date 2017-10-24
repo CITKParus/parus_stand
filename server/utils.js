@@ -25,6 +25,8 @@ const SERVER_STATE_OK = "OK"; //состояние сервера - всё но�
 
 //типовые сообщения ответов сервера
 const SERVER_RE_MSG_ERROR = "Ошибка внешнего сервиса!"; //ошибка при обращении к внешнему сервису
+const SERVER_RE_MSG_ERROR_PARUS = "Ошибка внешнего сервиса (ПП Парус 8)!"; //ошибка при обращении к внешнему сервису (ПП Парус 8)
+const SERVER_RE_MSG_ERROR_VENDING = "Ошибка внешнего сервиса (вендинговый автомат)"; //ошибка при обращении к внешнему сервису (вендинговый автомат)
 const SERVER_RE_MSG_UNEXPECTED_RESPONSE = "Неожиданный ответ внешнего сервиса!"; //ошибка при разборе ответа внешнего сервиса
 const SERVER_RE_MSG_BAD_REQUEST = "Запрос некорректен (возможно вы забыли казать один из параметров)!"; //некорректный запрос от клиента
 const SERVER_RE_MSG_ACCESS_DENIED = "Доступ запрещён (проверьте идентификатор клиента)!"; //нет доступа
@@ -171,6 +173,8 @@ exports.HTTP_OK = HTTP_OK;
 exports.SERVER_STATE_ERR = SERVER_STATE_ERR;
 exports.SERVER_STATE_OK = SERVER_STATE_OK;
 exports.SERVER_RE_MSG_ERROR = SERVER_RE_MSG_ERROR;
+exports.SERVER_RE_MSG_ERROR_PARUS = SERVER_RE_MSG_ERROR_PARUS;
+exports.SERVER_RE_MSG_ERROR_VENDING = SERVER_RE_MSG_ERROR_VENDING;
 exports.SERVER_RE_MSG_UNEXPECTED_RESPONSE = SERVER_RE_MSG_UNEXPECTED_RESPONSE;
 exports.SERVER_RE_MSG_BAD_REQUEST = SERVER_RE_MSG_BAD_REQUEST;
 exports.SERVER_RE_MSG_ACCESS_DENIED = SERVER_RE_MSG_ACCESS_DENIED;

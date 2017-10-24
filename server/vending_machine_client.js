@@ -67,12 +67,9 @@ function vendingMachineAction(data) {
                 }
             } else {
                 //были ошибки транспорта (сети нет, или нет сервера по указанному адресу и т.п.)
-                data.callBack(utils.buildErrResp(utils.SERVER_RE_MSG_ERROR));
+                utils.log({ type: utils.LOG_TYPE_ERR, msg: "Can't connect to vending machine: " + error });
+                data.callBack(utils.buildErrResp(utils.SERVER_RE_MSG_ERROR_VENDING));
             }
-        }).on("error", err => {
-            //прочие ошибки
-            utils.log({ type: utils.LOG_TYPE_ERR, msg: "Can't connect to vending machine: " + err });
-            data.callBack(utils.buildErrResp(utils.SERVER_RE_MSG_ERROR));
         });
     } else {
         utils.log({ msg: "Vending machine disabled" });

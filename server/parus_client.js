@@ -74,11 +74,8 @@ function parusServerAction(data) {
             }
         } else {
             //были ошибки транспорта (сети нет, или нет сервера по указанному адресу и т.п.)
-            data.callBack(utils.buildErrResp(utils.SERVER_RE_MSG_ERROR));
+            data.callBack(utils.buildErrResp(utils.SERVER_RE_MSG_ERROR_PARUS));
         }
-    }).on("error", err => {
-        //прочие ошибки
-        data.callBack(utils.buildErrResp(utils.SERVER_RE_MSG_ERROR));
     });
 }
 
