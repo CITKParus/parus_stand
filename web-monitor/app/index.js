@@ -3,11 +3,16 @@
     Точка входа в приложение
 */
 
-import React from "react";
-import ReactDOM from "react-dom";
-import config from "./config";
-import Monitor from "./monitor";
+//---------------------
+//подключение библиотек
+//---------------------
 
-console.log(config.server);
+import React from "react"; //классы React
+import ReactDOM from "react-dom"; //работа с DOM в React
+import Monitor from "./monitor"; //корневой компонент монитора
+
+//-----------
+//точка входа
+//-----------
 
 ReactDOM.render(<Monitor />, document.getElementById("app-content"));
