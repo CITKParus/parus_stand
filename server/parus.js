@@ -26,7 +26,9 @@ const PARUS_ACTION_DOWNLOAD = "DOWNLOAD"; //выгрузка файла с се�
 const PARUS_ACTION_LOGIN = "LOGIN"; //создание сессии ПП Парус 8
 const PARUS_ACTION_LOGOUT = "LOGOUT"; //завершение сессии ПП Парус 8
 const PARUS_ACTION_AUTH_BY_BARCODE = "AUTH_BY_BARCODE"; //аутентификация посетителя стенда по штрихкоду
-const PARUS_ACTION_SHIPMENT = "SHIPMENT"; //откгрузка товара посетителю
+const PARUS_ACTION_SHIPMENT = "SHIPMENT"; //отгрузка товара посетителю
+const PARUS_ACTION_SHIPMENT_ROLLBACK = "SHIPMENT_ROLLBACK"; //откат отгрузки товара посетителю
+const PARUS_ACTION_PRINT = "PRINT"; //постановка отгрузочного документа в очередь печати
 const PARUS_ACTION_MSG_INSERT = "MSG_INSERT"; //добавление сообщения в очедерь уведомлений стенда
 const PARUS_ACTION_MSG_DELETE = "MSG_DELETE"; //удаление сообщения из очедери уведомлений стенда
 const PARUS_ACTION_MSG_SET_STATE = "MSG_SET_STATE"; //установка состояния сообщения в очедери уведомлений стенда
@@ -203,7 +205,7 @@ function shipment(prms) {
         if (prms.customer) {
             if (prms.rack_line) {
                 if (prms.rack_line_cell) {
-                    //сначала исполняем действие на сервере ПП Парус 8
+                    //сначала исполняем формирование отгрузочного документа на сервере ПП Парус 8
                     pc.parusServerAction({
                         prms: {
                             SACTION: PARUS_ACTION_SHIPMENT,
@@ -216,19 +218,88 @@ function shipment(prms) {
                             //проверим результат выполнения
                             if (resp.state == utils.SERVER_STATE_ERR) {
                                 //завершение не удалось
+                                utils.log({
+                                    type: utils.LOG_TYPE_ERR,
+                                    msg: "Error creating shipment document: " + resp.message
+                                });
                                 reject(resp);
                             } else {
+                                utils.log({
+                                    msg: "Shipment document created successfully. Sending command to vending machine..."
+                                });
                                 //завершение удалась - отдадим команду вендинговому аппарату
                                 vm.vendingMachineAction({
                                     line: prms.rack_line_cell,
                                     callBack: r => {
                                         //если с вендинговым автоматом всё прошло успешно
                                         if (r.state != utils.SERVER_STATE_ERR) {
-                                            //вернем ответ сервера ПП Парус 8
-                                            resolve(resp);
+                                            utils.log({
+                                                msg: "Sending document to print queue..."
+                                            });
+                                            //ставим документ в очередь печати (если печать нам доступна)
+                                            if (conf.PRINT_SERVICE_ENABLED) {
+                                                pc.parusServerAction({
+                                                    prms: {
+                                                        SACTION: PARUS_ACTION_PRINT,
+                                                        SSESSION: PARUS_SESSION,
+                                                        NTRANSINVCUST: resp.message
+                                                    },
+                                                    callBack: printResp => {
+                                                        //протоколируем результат постановки в очередь
+                                                        if (printResp.state == utils.SERVER_STATE_ERR) {
+                                                            utils.log({
+                                                                type: utils.LOG_TYPE_ERR,
+                                                                msg:
+                                                                    "Error sending document to ptint queue: " +
+                                                                    resp.message
+                                                            });
+                                                        } else {
+                                                            utils.log({
+                                                                msg: "Document sended to print queue successfully"
+                                                            });
+                                                        }
+                                                        //даже если документ в очередь не встал - скажем что всё ок (вендинг уже не откатишь)
+                                                        resolve(resp);
+                                                    }
+                                                });
+                                            } else {
+                                                //скажем что всё ок - нет, значит нет
+                                                utils.log({
+                                                    msg: "Document printing disabled"
+                                                });
+                                                resolve(resp);
+                                            }
                                         } else {
-                                            //была ошибка на вендинговом автомате - вернём её
-                                            reject(r);
+                                            utils.log({
+                                                type: utils.LOG_TYPE_ERR,
+                                                msg:
+                                                    "Vending machine error: " +
+                                                    r.message +
+                                                    " Rolling back shipment document..."
+                                            });
+                                            //была ошибка на вендинговом автомате - выполним откат товарного документа в ПП Парус 8
+                                            pc.parusServerAction({
+                                                prms: {
+                                                    SACTION: PARUS_ACTION_SHIPMENT_ROLLBACK,
+                                                    SSESSION: PARUS_SESSION,
+                                                    NTRANSINVCUST: resp.message
+                                                },
+                                                callBack: rollBackResp => {
+                                                    //протоколируем результат отката товарного документа
+                                                    if (rollBackResp.state == utils.SERVER_STATE_ERR) {
+                                                        utils.log({
+                                                            type: utils.LOG_TYPE_ERR,
+                                                            msg: "Error rolling back document: " + rollBackResp.message
+                                                        });
+                                                    } else {
+                                                        utils.log({
+                                                            msg: "Document rolled back successfully"
+                                                        });
+                                                    }
+                                                    //отдаём ошибку вендингового аппарата
+                                                    reject(r);
+                                                }
+                                            });
                                         }
                                     }
                                 });
