@@ -31,7 +31,7 @@ const STAND_RESP_HEADER = { "Content-Type": "application/json" };
 //запуск сервера
 function run() {
     //скажем, что стартуем
-    utils.log({ msg: "Starting server..." });
+    utils.log({ msg: "Starting server at port " + conf.SERVER_PORT + "..." });
     //опишем WEB-сервер
     srv = http.createServer((req, res) => {
         //разбираем параметры запроса
@@ -67,6 +67,10 @@ function run() {
     srv.listen(conf.SERVER_PORT, () => {
         utils.log({ msg: "Server started at port " + srv.address().port });
         utils.log({ msg: "Available ip's: " + utils.getIPs().join(", ") });
+    });
+    srv.on("error", e => {
+        utils.log({ type: utils.LOG_TYPE_ERR, msg: "Error while starting server: " + e.message });
+        process.exit(1);
     });
 }
 

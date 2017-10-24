@@ -11,7 +11,7 @@
 exports.SERVER_NAME = "CITK Demo Stand/0.0.1";
 
 //параметры сервера
-exports.SERVER_PORT = 3000; //порт
+exports.SERVER_PORT = 3030; //порт
 exports.SERVER_CHECK_TOKENS = true; //флаг контроля токенов доступа клиентов
 
 //параметры подключения к HTTP-серверу ПП Парус 8
