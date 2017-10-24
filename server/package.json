@@ -1,15 +1,15 @@
 {
-  "name": "parus_stand_server",
-  "version": "1.0.0",
-  "description": "WEB-API for Parus communications",
-  "main": "stand.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "Mikhail Chechnev",
-  "license": "ISC",
-  "dependencies": {
-    "multiparty": "^4.1.3",
-    "request": "^2.83.0"
-  }
+    "name": "parus_stand_server",
+    "version": "1.0.0",
+    "description": "WEB-API for stand communications",
+    "main": "stand.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "Mikhail Chechnev",
+    "license": "ISC",
+    "dependencies": {
+        "multiparty": "^4.1.3",
+        "request": "^2.83.0"
+    }
 }
