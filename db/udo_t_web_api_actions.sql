@@ -1,5 +1,5 @@
 prompt PL/SQL Developer import file
-prompt Created on 23 ќкт€брь 2017 г. by mikha
+prompt Created on 24 ќкт€брь 2017 г. by mikha
 set feedback off
 set define off
 prompt Loading UDO_T_WEB_API_ACTIONS...
@@ -25,8 +25,12 @@ insert into UDO_T_WEB_API_ACTIONS (rn, action, processor, unauth)
 values (8, 'MSG_GET_LIST', 'UDO_PKG_STAND_WEB.MSG_GET_LIST', 0);
 insert into UDO_T_WEB_API_ACTIONS (rn, action, processor, unauth)
 values (9, 'STAND_GET_STATE', 'UDO_PKG_STAND_WEB.STAND_GET_STATE', 0);
+insert into UDO_T_WEB_API_ACTIONS (rn, action, processor, unauth)
+values (12, 'SHIPMENT_ROLLBACK', 'UDO_PKG_STAND_WEB.SHIPMENT_ROLLBACK', 0);
+insert into UDO_T_WEB_API_ACTIONS (rn, action, processor, unauth)
+values (13, 'PRINT', 'UDO_PKG_STAND_WEB.PRINT', 0);
 commit;
-prompt 11 records loaded
+prompt 13 records loaded
 set feedback on
 set define on
 prompt Done.

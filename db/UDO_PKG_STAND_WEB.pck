@@ -59,6 +59,20 @@ create or replace package UDO_PKG_STAND_WEB as
     CRES                    out clob    -- Результат работы
   );
   
+  /* Откат выдачи посетителю товара со стенда */
+  procedure SHIPMENT_ROLLBACK
+  (
+    CPRMS                   clob,       -- Входные параметры
+    CRES                    out clob    -- Результат работы
+  );
+  
+  /* Постановка РНОПотр в очередь печати */
+  procedure PRINT
+  (
+    CPRMS                   clob,       -- Входные параметры
+    CRES                    out clob    -- Результат работы
+  );
+  
   /* Помещение сообщения в очередь уведомлений */
   procedure MSG_INSERT
   (
@@ -419,9 +433,79 @@ create or replace package body UDO_PKG_STAND_WEB as
                            NRACK_LINE      => NRACK_LINE,
                            NRACK_LINE_CELL => NRACK_LINE_CELL,
                            NTRANSINVCUST   => NTRANSINVCUST);
-    /* Подтверждаем транзакцию - иначе РНОП будет не видна для сервиса печати и для отчета */
-    commit;
-    /* Ставим в очередь печати сформированный документ */
+    /* Отдаём ответ что всё прошло успешно */
+    CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                      NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_OK,
+                                      SRESP_MSG    => NTRANSINVCUST);
+  exception
+    when others then
+      SERR := sqlerrm;
+      CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                        NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_ERR,
+                                        SRESP_MSG    => SERR);
+      rollback;
+  end;  
+  
+  /* Откат выдачи посетителю товара со стенда */
+  procedure SHIPMENT_ROLLBACK
+  (
+    CPRMS                   clob,                                       -- Входные параметры
+    CRES                    out clob                                    -- Результат работы
+  ) is
+    JPRMS                   JSON;                                       -- Объектное представление параметров запроса
+    NCOMPANY                COMPANIES.RN%type := GET_SESSION_COMPANY(); -- Рег. номер организации
+    NTRANSINVCUST           PKG_STD.TREF;                               -- Рег. номер откатываемой РНОП
+    SERR                    PKG_STD.TSTRING;                            -- Буфер для ошибок
+  begin
+    /* Инициализируем выход */
+    DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
+    /* Конвертируем параметры в объектное представление */
+    JPRMS := JSON(CPRMS);
+    /* Считываем регистрационный номер откатываемой расходной накладной на отпуск потребителю */
+    if ((not JPRMS.EXIST('NTRANSINVCUST')) or (JPRMS.GET('NTRANSINVCUST').VALUE_OF() is null)) then
+      P_EXCEPTION(0,
+                  'В запросе к серверу не указан регистрационный номер откатываемой расходной накладной на отпуск потребителю!');
+    else
+      NTRANSINVCUST := UDO_PKG_WEB_API.UTL_CONVERT_TO_NUMBER(SSTR => JPRMS.GET('NTRANSINVCUST').VALUE_OF(), NSMART => 0);
+    end if;
+    /* Выдаём товар посетителю (списание с места хранения) */
+    UDO_PKG_STAND.SHIPMENT_ROLLBACK(NCOMPANY => NCOMPANY, NTRANSINVCUST => NTRANSINVCUST);
+    /* Отдаём ответ что всё прошло успешно */
+    CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                      NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_OK,
+                                      SRESP_MSG    => NTRANSINVCUST);
+  exception
+    when others then
+      SERR := sqlerrm;
+      CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                        NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_ERR,
+                                        SRESP_MSG    => SERR);
+      rollback;
+  end;
+  
+  /* Постановка РНОПотр в очередь печати */
+  procedure PRINT
+  (
+    CPRMS                   clob,                                       -- Входные параметры
+    CRES                    out clob                                    -- Результат работы
+  ) is
+    JPRMS                   JSON;                                       -- Объектное представление параметров запроса
+    NCOMPANY                COMPANIES.RN%type := GET_SESSION_COMPANY(); -- Рег. номер организации
+    NTRANSINVCUST           PKG_STD.TREF;                               -- Рег. номер откатываемой РНОП
+    SERR                    PKG_STD.TSTRING;                            -- Буфер для ошибок
+  begin
+    /* Инициализируем выход */
+    DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
+    /* Конвертируем параметры в объектное представление */
+    JPRMS := JSON(CPRMS);
+    /* Считываем регистрационный номер откатываемой расходной накладной на отпуск потребителю */
+    if ((not JPRMS.EXIST('NTRANSINVCUST')) or (JPRMS.GET('NTRANSINVCUST').VALUE_OF() is null)) then
+      P_EXCEPTION(0,
+                  'В запросе к серверу не указан регистрационный номер распечатываемой расходной накладной на отпуск потребителю!');
+    else
+      NTRANSINVCUST := UDO_PKG_WEB_API.UTL_CONVERT_TO_NUMBER(SSTR => JPRMS.GET('NTRANSINVCUST').VALUE_OF(), NSMART => 0);
+    end if;
+    /* Ставим в очередь печати документ */
     UDO_PKG_STAND.PRINT(NCOMPANY => NCOMPANY, NTRANSINVCUST => NTRANSINVCUST);
     /* Отдаём ответ что всё прошло успешно */
     CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
