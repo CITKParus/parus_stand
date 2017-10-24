@@ -6,3 +6,4 @@ node_modules/
 
 # WEB-Monitor builds
 web-monitor/dist/*.js
+web-monitor/dist/*.map
