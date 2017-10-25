@@ -9,6 +9,7 @@
 
 import React from "react"; //классы React
 import RestNomen from "./rests_nomen"; //диаграмма остатков номенклатуры
+import client from "./client"; //клиент для доступа к серверу стенда
 
 //----------------
 //описание классов
@@ -18,61 +19,36 @@ class Monitor extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            nomenRests: {
-                type: "bar",
-                data: {
-                    title: "Остатки номенклатуры",
-                    labels: ["Orbit", "Dirol", "Wrigley"],
-                    datasets: [{ label: "% остатка", data: ["50", "50", "45"] }]
-                },
-                options: {
-                    categoryPercentage: 1,
-                    scales: {
-                        yAxes: [
-                            {
-                                display: true,
-                                ticks: {
-                                    suggestedMin: 0,
-                                    suggestedMax: 100
-                                }
-                            }
-                        ]
-                    }
-                }
-            }
+            nomenRests: {} //остатки номенклатур
         };
+        this.getRandomInt = this.getRandomInt.bind(this);
+        this.refreshStandState = this.refreshStandState.bind(this);
     }
     getRandomInt() {
         return Math.floor(Math.random() * (100 - 0)) + 0;
     }
+    refreshStandState() {
+        /*
+        let tmp = {
+            labels: ["Orbit", "Dirol", "Wrigley"],
+            data: [this.getRandomInt(), this.getRandomInt(), this.getRandomInt()]
+        };
+        this.setState({ nomenRests: tmp }, () => {
+            setTimeout(this.refreshStandState, 1000);
+        });
+        */
+
+        client.standServerAction({ actionData: { action: client.SERVER_ACTION_STAND_GET_STATE } }).then(
+            r => {
+                console.log(r);
+            },
+            e => {
+                console.log(e);
+            }
+        );
+    }
     componentDidMount() {
-        setInterval(() => {
-            let tmp = {
-                type: "bar",
-                data: {
-                    title: "Остатки номенклатуры",
-                    labels: ["Orbit", "Dirol", "Wrigley"],
-                    datasets: [
-                        { label: "% остатка", data: [this.getRandomInt(), this.getRandomInt(), this.getRandomInt()] }
-                    ]
-                },
-                options: {
-                    categoryPercentage: 1,
-                    scales: {
-                        yAxes: [
-                            {
-                                display: true,
-                                ticks: {
-                                    suggestedMin: 0,
-                                    suggestedMax: 100
-                                }
-                            }
-                        ]
-                    }
-                }
-            };
-            this.setState({ nomenRests: tmp });
-        }, 1000);
+        this.refreshStandState();
     }
     render() {
         return (

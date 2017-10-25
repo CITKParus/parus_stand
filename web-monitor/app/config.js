@@ -7,5 +7,9 @@
 //интерфейс модуля
 //----------------
 
-//адрес сервера сетнда
-exports.server = SERVER_URL;
+//параметры подключения к серверу стенда
+export default {
+    SERVER_URL: SERVER_URL, //адрес сервера
+    CLIENT_NAME: "CITK Demo Stand Monitoring/0.0.1", //наименование клиента
+    CLIENT_TOKEN: "50fdd530-b44a-4151-a9d7-15662f41c000" //токен доступа
+};
