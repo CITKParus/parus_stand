@@ -16,3 +16,8 @@
 .monitor-line-cell {
     text-align: center;
 }
+
+.chart-item {
+    width: 600px;
+    height: 600px;
+}

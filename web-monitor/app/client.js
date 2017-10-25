@@ -69,7 +69,6 @@ const standServerAction = prms => {
     return new Promise(function(resolve, reject) {
         //общие параметры запроса
         let method = prms.method || REQUEST_METHOD_POST; //метод (POST, GET, PUT и т.п.)
-        console.log(method);
         let params = { token: config.CLIENT_TOKEN }; //параметры передаваемые API
         //выставим параметры API для передачи на сервер (если они есть)
         if (prms.actionData) {
@@ -99,7 +98,7 @@ const standServerAction = prms => {
                 try {
                     //сервер вернул успех при отработке запроса
                     if (request.status == 200) {
-                        //функции нет, патыемся распарсить и просто отдать ответ, закрыв обещание
+                        //патыемся распарсить и просто отдать ответ, закрыв обещание
                         resolve(JSON.parse(request.responseText));
                     } else {
                         //сервер сообщил об ошибке
@@ -132,5 +131,7 @@ const standServerAction = prms => {
 
 export default {
     SERVER_ACTION_STAND_GET_STATE,
+    SERVER_STATE_ERR,
+    SERVER_STATE_OK,
     standServerAction
 };

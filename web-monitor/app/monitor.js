@@ -15,56 +15,66 @@ import client from "./client"; //клиент для доступа к серв�
 //описание классов
 //----------------
 
+//основной класс компонента
 class Monitor extends React.Component {
+    //конструктор класса
     constructor(props) {
         super(props);
         this.state = {
-            nomenRests: {} //остатки номенклатур
+            error: "",
+            nomenRests: {}
         };
-        this.getRandomInt = this.getRandomInt.bind(this);
         this.refreshStandState = this.refreshStandState.bind(this);
     }
-    getRandomInt() {
-        return Math.floor(Math.random() * (100 - 0)) + 0;
-    }
+    //обновление состояния стенда
     refreshStandState() {
-        /*
-        let tmp = {
-            labels: ["Orbit", "Dirol", "Wrigley"],
-            data: [this.getRandomInt(), this.getRandomInt(), this.getRandomInt()]
-        };
-        this.setState({ nomenRests: tmp }, () => {
-            setTimeout(this.refreshStandState, 1000);
-        });
-        */
-
         client.standServerAction({ actionData: { action: client.SERVER_ACTION_STAND_GET_STATE } }).then(
             r => {
-                console.log(r);
+                if (r.state == client.SERVER_STATE_ERR) {
+                    this.setState({ error: r.message });
+                } else {
+                    let tmp = {
+                        labels: [],
+                        data: [],
+                        max: r.message.NOMEN_CONFS[0].NMAX_QUANT
+                    };
+                    r.message.NOMEN_RESTS.forEach(rest => {
+                        tmp.labels.push(rest.SNOMMODIF);
+                        tmp.data.push(rest.NREST);
+                    });
+                    this.setState({ error: "", nomenRests: tmp }, () => {
+                        setTimeout(this.refreshStandState, 1000);
+                    });
+                }
             },
             e => {
-                console.log(e);
+                this.setState({ error: e.message, nomenRests: {} }, () => {
+                    setTimeout(this.refreshStandState, 1000);
+                });
             }
         );
     }
+    //при подключении к странице
     componentDidMount() {
         this.refreshStandState();
     }
+    //генерация содержимого
     render() {
-        return (
-            <div className="screen-center">
-                <div className="mdl-grid monitor-line">
-                    <div className="mdl-cell mdl-cell--6-col mdl-cell--middle monitor-line-cell">
-                        <RestNomen chartData={this.state.nomenRests} />
-                    </div>
-                    <div className="mdl-cell mdl-cell--6-col mdl-cell--middle monitor-line-cell">Тут журнал</div>
+        let monitror;
+        if (this.state.error) {
+            monitror = (
+                <h4>
+                    <center>{this.state.error}</center>
+                </h4>
+            );
+        } else {
+            monitror = (
+                <div>
+                    <RestNomen chartData={this.state.nomenRests} />
                 </div>
-                <div className="mdl-grid monitor-line">
-                    <div className="mdl-cell mdl-cell--6-col mdl-cell--middle monitor-line-cell">Тут график</div>
-                    <div className="mdl-cell mdl-cell--6-col mdl-cell--middle monitor-line-cell">Здесь состояние</div>
-                </div>
-            </div>
-        );
+            );
+        }
+        return <div className="screen-center">{monitror}</div>;
     }
 }
 

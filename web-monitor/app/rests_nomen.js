@@ -16,31 +16,43 @@ import _ from "lodash"; //работа с коллекциями и объект
 //----------------
 
 //параметры графиков
-Chart.defaults.global.responsive = false;
+Chart.defaults.global.responsive = true;
 
+//основной класс компонента
 class RestsNomen extends React.Component {
     //конструктор
     constructor(props) {
         super(props);
         this.state = {
-            itemChart: null, //график
+            itemChart: null,
             chartOptions: {
-                //настройки графика
                 type: "bar",
                 data: {
-                    title: "Остатки номенклатуры",
                     labels: [],
-                    datasets: [{ label: "% остатка", data: [] }]
+                    datasets: [
+                        {
+                            backgroundColor: "rgba(255, 99, 132, 0.2)",
+                            borderColor: "rgb(255, 99, 132)",
+                            borderWidth: 1,
+                            data: []
+                        }
+                    ]
                 },
                 options: {
-                    categoryPercentage: 1,
+                    title: {
+                        display: true,
+                        text: "Остатки номенклатуры"
+                    },
+                    legend: {
+                        display: false
+                    },
                     scales: {
                         yAxes: [
                             {
                                 display: true,
                                 ticks: {
-                                    suggestedMin: 0,
-                                    suggestedMax: 100
+                                    min: 0,
+                                    max: 100
                                 }
                             }
                         ]
@@ -52,15 +64,18 @@ class RestsNomen extends React.Component {
     //отрисовка графика
     drawChart() {
         if (this.props.chartData) {
-            if (this.state.itemChart) {
-                this.state.itemChart.destroy();
+            if (!_.isEqual(this.state.chartOptions.data.datasets[0].data, this.props.chartData.data)) {
+                if (this.state.itemChart) {
+                    this.state.itemChart.destroy();
+                }
+                let tmp = {};
+                _.extend(tmp, this.state.chartOptions);
+                _.extend(tmp.data.labels, this.props.chartData.labels);
+                _.extend(tmp.data.datasets[0].data, this.props.chartData.data);
+                tmp.options.scales.yAxes[0].ticks.max = this.props.chartData.max;
+                let ctx = document.getElementById("NomenRests").getContext("2d");
+                this.setState({ itemChart: new Chart(ctx, tmp) });
             }
-            let tmp = {};
-            _.extend(tmp, this.state.chartOptions);
-            _.extend(tmp.data.labels, this.props.chartData.labels);
-            _.extend(tmp.data.datasets[0].data, this.props.chartData.data);
-            let ctx = document.getElementById("NomenRests").getContext("2d");
-            this.setState({ itemChart: new Chart(ctx, tmp) });
         }
     }
     //после подключения компонента
@@ -71,8 +86,9 @@ class RestsNomen extends React.Component {
     componentWillReceiveProps() {
         this.drawChart();
     }
+    //генерация содержимого
     render() {
-        return <canvas id="NomenRests" width="350" height="350" />;
+        return <canvas id="NomenRests" className="chart-item" />;
     }
 }
 
