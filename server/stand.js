@@ -22,7 +22,12 @@ const tokens = require("./tokens"); //библиотека проверки пр
 let srv = {};
 
 //заголовок ответа сервера
-const STAND_RESP_HEADER = { "Content-Type": "application/json" };
+let STAND_RESP_HEADER = {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "*",
+    "Access-Control-Allow-Methods": "GET, POST"
+};
 
 //-------
 //функции
@@ -36,6 +41,8 @@ function run() {
     srv = http.createServer((req, res) => {
         //разбираем параметры запроса
         utils.parseRequestParams(req, rp => {
+            //скажем, что принимаем любые заголовки
+            STAND_RESP_HEADER["Access-Control-Allow-Headers"] = req.headers["access-control-request-headers"] || "*";
             //если запрос не нормальный
             if (rp === utils.REQUEST_STATE_ERR) {
                 //не будем его обрабатывать

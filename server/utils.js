@@ -165,8 +165,10 @@ function parseRequestParams(request, callBack) {
             }
         }
     } else {
-        //для GET-запроса - из адресной строки
-        callBack(url.parse(request.url, true).query);
+        //для GET-запроса - из адресной строки или заголовков (если в адресной строке пусто)
+        let q = url.parse(request.url, true).query;
+        if (JSON.stringify(q) === "{}") callBack(request.headers);
+        else callBack(q);
     }
 }
 
