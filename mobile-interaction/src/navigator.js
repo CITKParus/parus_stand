@@ -2,14 +2,17 @@ import React from "react";
 import { StackNavigator } from "react-navigation";
 import ScanerPage from "./ScanerPage";
 import SettingsPage from "./SettingsPage";
+import ShipmentPage from "./ShipmentPage";
 
 const FlowNivigator = StackNavigator(
     {
-        First: { screen: ScanerPage }
+        First: { screen: ScanerPage },
+        Second: { screen: ShipmentPage }
     },
     {
         headerMode: "none",
-        initialRouteName: "First"
+        initialRouteName: "Second",
+        mode: "modal"
     }
 );
 const AppNavigator = StackNavigator(
