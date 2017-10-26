@@ -47,6 +47,9 @@ function run() {
             if (rp === utils.REQUEST_STATE_ERR) {
                 //не будем его обрабатывать
                 utils.log({ type: utils.LOG_TYPE_ERR, msg: "New request: Bad server request!" });
+                //скажем клиенту об этом
+                res.writeHead(200, STAND_RESP_HEADER);
+                res.end(JSON.stringify(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST)));
             } else {
                 utils.log({ msg: "New request: " + JSON.stringify(rp) });
                 //проверим токен доступа
