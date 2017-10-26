@@ -1,0 +1,16 @@
+{
+  "name": "parus_stand_notifier",
+  "version": "1.0.0",
+  "description": "Node application for notifying about stand events (Telegram)",
+  "main": "notify.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Mikhail Chechnev",
+  "license": "ISC",
+  "dependencies": {
+    "lodash": "^4.17.4",
+    "node-telegram-bot-api": "^0.29.0",
+    "request": "^2.83.0"
+  }
+}
