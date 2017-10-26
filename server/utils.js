@@ -30,7 +30,7 @@ const SERVER_RE_MSG_ERROR_VENDING = "Ошибка внешнего сервис�
 const SERVER_RE_MSG_UNEXPECTED_RESPONSE = "Неожиданный ответ внешнего сервиса!"; //ошибка при разборе ответа внешнего сервиса
 const SERVER_RE_MSG_UNEXPECTED_RESPONSE_PARUS = "Неожиданный ответ внешнего сервиса (ПП Парус 8)!"; //ошибка при разборе ответа внешнего сервиса (ПП Парус 8)
 const SERVER_RE_MSG_UNEXPECTED_RESPONSE_VENDING = "Неожиданный ответ внешнего сервиса (вендинговый автомат)!"; //ошибка при разборе ответа внешнего сервиса (вендинговый автомат)
-const SERVER_RE_MSG_BAD_REQUEST = "Запрос некорректен (возможно вы забыли казать один из параметров)!"; //некорректный запрос от клиента
+const SERVER_RE_MSG_BAD_REQUEST = "Запрос некорректен (возможно вы забыли указать один из параметров)!"; //некорректный запрос от клиента
 const SERVER_RE_MSG_ACCESS_DENIED = "Доступ запрещён (проверьте идентификатор клиента)!"; //нет доступа
 const SERVER_RE_MSG_SHIPED = "Спасибо, что заинтересовались нашим стендом, не забудьте забрать накладную!"; //сообщение об успешной отгрузке товара посетителю
 const SERVER_RE_MSG_SHIPED_NO_PRINT = "Спасибо, что заинтересовались нашим стендом!"; //сообщение об успешной отгрузке товара посетителю (без печати документа отгрузки)
@@ -46,6 +46,7 @@ const REQUEST_STATE_OK = 1; //корректный запрос
 //типы передачи POST-параметров в запросах к серверу
 const REQUEST_CT_FORM_URLENCODED = "application/x-www-form-urlencoded";
 const REQUEST_CT_FORM_DATA = "multipart/form-data";
+const REQUEST_CT_JSON = "application/json";
 
 //методы запросов к серверу
 const REQUEST_METHOD_POST = "POST"; //POST-запрос
@@ -119,8 +120,11 @@ function getIPs() {
 function parseRequestParams(request, callBack) {
     //если это POST-запрос - будем разбирать тело
     if (request.method == REQUEST_METHOD_POST) {
-        //если параметры в формате application/x-www-form-urlencoded
-        if (request.headers["content-type"] == REQUEST_CT_FORM_URLENCODED) {
+        //если параметры в формате application/x-www-form-urlencoded или application/json
+        if (
+            request.headers["content-type"] == REQUEST_CT_FORM_URLENCODED ||
+            request.headers["content-type"] == REQUEST_CT_JSON
+        ) {
             //зафиксируем, что запрос - годный
             let type = REQUEST_STATE_OK;
             //POST параметры собираем из тела
@@ -137,7 +141,21 @@ function parseRequestParams(request, callBack) {
             //данных больше нет
             request.on("end", function() {
                 //вернем то чо получилось
-                callBack(type === REQUEST_STATE_ERR ? type : qs.parse(body));
+                if (type === REQUEST_STATE_ERR) {
+                    callBack(REQUEST_STATE_ERR);
+                } else {
+                    if (request.headers["content-type"] == REQUEST_CT_JSON) {
+                        try {
+                            let data = JSON.parse(body);
+                            callBack(data);
+                        } catch (e) {
+                            callBack(REQUEST_STATE_ERR);
+                        }
+                    }
+                    if (request.headers["content-type"] == REQUEST_CT_FORM_URLENCODED) {
+                        callBack(qs.parse(body));
+                    }
+                }
             });
         } else {
             //если параметры в формате multipart/form-data
@@ -194,6 +212,7 @@ exports.REQUEST_STATE_ERR = REQUEST_STATE_ERR;
 exports.REQUEST_STATE_OK = REQUEST_STATE_OK;
 exports.REQUEST_CT_FORM_URLENCODED = REQUEST_CT_FORM_URLENCODED;
 exports.REQUEST_CT_FORM_DATA = REQUEST_CT_FORM_DATA;
+exports.REQUEST_CT_JSON = REQUEST_CT_JSON;
 exports.REQUEST_METHOD_POST = REQUEST_METHOD_POST;
 exports.REQUEST_METHOD_GET = REQUEST_METHOD_GET;
 exports.buildServerResp = buildServerResp;
