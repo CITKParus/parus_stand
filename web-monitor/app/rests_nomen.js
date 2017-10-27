@@ -62,17 +62,17 @@ class RestsNomen extends React.Component {
         };
     }
     //отрисовка графика
-    drawChart() {
-        if (this.props.chartData) {
-            if (!_.isEqual(this.state.chartOptions.data.datasets[0].data, this.props.chartData.data)) {
+    drawChart(chartData) {
+        if (chartData) {
+            if (!_.isEqual(this.state.chartOptions.data.datasets[0].data, chartData.data)) {
                 if (this.state.itemChart) {
                     this.state.itemChart.destroy();
                 }
                 let tmp = {};
                 _.extend(tmp, this.state.chartOptions);
-                _.extend(tmp.data.labels, this.props.chartData.labels);
-                _.extend(tmp.data.datasets[0].data, this.props.chartData.data);
-                tmp.options.scales.yAxes[0].ticks.max = this.props.chartData.max;
+                _.extend(tmp.data.labels, chartData.labels);
+                _.extend(tmp.data.datasets[0].data, chartData.data);
+                tmp.options.scales.yAxes[0].ticks.max = chartData.max;
                 let ctx = document.getElementById("NomenRests").getContext("2d");
                 this.setState({ itemChart: new Chart(ctx, tmp) });
             }
@@ -80,11 +80,11 @@ class RestsNomen extends React.Component {
     }
     //после подключения компонента
     componentDidMount() {
-        this.drawChart();
+        this.drawChart(this.props.chartData);
     }
     //после обновления данных
-    componentWillReceiveProps() {
-        this.drawChart();
+    componentWillReceiveProps(newProps) {
+        this.drawChart(newProps.chartData);
     }
     //генерация содержимого
     render() {
