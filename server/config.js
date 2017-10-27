@@ -22,7 +22,7 @@ exports.PARUS_COMPANY = "Организация"; //регистрационны
 
 //параметры подключения к HTTP-серверу вендингового автомата
 exports.VENDING_MACHINE_HTTP_ADDRESS = "http://172.28.35.232:8080"; //адрес HTTP-сервера
-exports.VENDING_MACHINE_ENABLED = true; //флаг доступности вендингового автомата
+exports.VENDING_MACHINE_ENABLED = false; //флаг доступности вендингового автомата
 
 //параметры использования сервиса печати
 exports.PRINT_SERVICE_ENABLED = false; //флаг доступности сервиса печати
