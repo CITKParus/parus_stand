@@ -14,8 +14,7 @@ import config from "./config"; //настройки приложения
 //-------------------------
 
 //типы передачи POST-параметров в запросах к серверу
-const REQUEST_CT_FORM_URLENCODED = "application/x-www-form-urlencoded";
-const REQUEST_CT_FORM_DATA = "multipart/form-data";
+const REQUEST_CT_JSON = "application/json"; //передаём JSON
 
 //методы запросов к серверу
 const REQUEST_METHOD_POST = "POST"; //POST-запрос
@@ -67,61 +66,46 @@ const objectToReqestBodyParams = obj => {
 //выполнение действия на сервере стенда
 const standServerAction = prms => {
     return new Promise(function(resolve, reject) {
-        //общие параметры запроса
+        let headers = {}; //заголовок запроса
+        let body = null; //тело запроса
         let method = prms.method || REQUEST_METHOD_POST; //метод (POST, GET, PUT и т.п.)
         let params = { token: config.CLIENT_TOKEN }; //параметры передаваемые API
         //выставим параметры API для передачи на сервер (если они есть)
         if (prms.actionData) {
             _.extend(params, prms.actionData);
         }
-        //создадим объект запроса
-        let request = new XMLHttpRequest();
-        //будем отслеживать изменения состояния запроса
-        request.onreadystatechange = () => {
-            //сеанс связи с сервером открыт
-            if (request.readyState == 1) {
-                //выставим заголовок для GET-запросов
-                if (method == REQUEST_METHOD_GET) {
-                    //если параметры есть
-                    if (params)
-                        //то они будут записаны в заголовок запроса к серверу
-                        for (let key in params) request.setRequestHeader(key, params[key]);
-                }
-                //выставим заголовок для POST-запросов
-                if (method == REQUEST_METHOD_POST) {
-                    request.setRequestHeader("Content-type", REQUEST_CT_FORM_URLENCODED);
-                }
-            }
-            //сервер ответил
-            if (request.readyState == 4) {
-                //пробуем разбираться с тем, что прислал сервер
-                try {
-                    //сервер вернул успех при отработке запроса
-                    if (request.status == 200) {
-                        //патыемся распарсить и просто отдать ответ, закрыв обещание
-                        resolve(JSON.parse(request.responseText));
-                    } else {
-                        //сервер сообщил об ошибке
-                        reject(JSON.parse(request.responseText).serror);
-                    }
-                } catch (e) {
-                    //разобраться не удалось
-                    reject(buildErrResp(CLIENT_RE_MSG_UNEXPECTED_RESPONSE));
-                }
-            }
-        };
-        //ошибка подключения к серверу (нет связи или что-то подобное)
-        request.onerror = () => {
-            reject(buildErrResp(CLIENT_RE_MSG_ERROR));
-        };
-        //откроем асинхронный запрос к серверу
-        try {
-            request.open(method, config.SERVER_URL, true);
-        } catch (e) {
-            reject(buildErrResp(CLIENT_RE_MSG_ERROR));
+        //заголовок для GET содержит параметры
+        if (method == REQUEST_METHOD_GET) {
+            if (params) for (let key in params) headers[key] = params[key];
         }
-        //отправляем сформированный запрос на сервер (для GET запросов - пустой, для остальных - с параметрами)
-        request.send(method == REQUEST_METHOD_GET ? null : objectToReqestBodyParams(params));
+        //заголовок для POST - тип данных тела
+        if (method == REQUEST_METHOD_POST) {
+            headers["Content-type"] = REQUEST_CT_JSON;
+        }
+        //для POST в тело положим параметры
+        if (method == REQUEST_METHOD_POST) {
+            body = JSON.stringify(params);
+        }
+        //исполним запрос
+        fetch(config.SERVER_URL, { method, headers, body }).then(
+            r => {
+                //если всё успешно - разбираем JSON-ответ
+                r.json().then(
+                    jR => {
+                        //JSON успешно разобран
+                        resolve(jR);
+                    },
+                    jE => {
+                        //ошибка при парсинге - это неожиданный ответ сервера
+                        reject(buildErrResp(CLIENT_RE_MSG_UNEXPECTED_RESPONSE));
+                    }
+                );
+            },
+            e => {
+                //ошибка транспорта - сети нет, или сервер не поднят
+                reject(buildErrResp(CLIENT_RE_MSG_ERROR));
+            }
+        );
     });
 };
 
