@@ -73,7 +73,7 @@ function lineShipment(lineName, callBack) {
 
 //инициализация окружения
 function init() {
-    log("Initializing...");
+    log("Initializing ports and pins...");
     //настраиваем интерфейс UART (COM-порт по сути, к которому подключен WiFi-модуль)
     WIFI_PORT.setup(115200);
     //настраиваем пины для аппаратов отгрузки
@@ -81,6 +81,7 @@ function init() {
         line.pin.mode("output");
         line.pin.write(false);
     });
+    log("Done!");
 }
 
 //запуск WEB-сервера
@@ -88,40 +89,57 @@ function start() {
     //включим WiFi-моудль
     log("Starting up WiFi-module...");
     var wifiAdapter = wifi.setup(WIFI_PORT, function(err) {
-        //если модуль стартовал успешно
-        if (!err) {
-            //подключаемся к WiFi сети
-            log("Connecting to " + WIFI_SSID + " network...");
-            wifiAdapter.connect(WIFI_SSID, WIFI_PSWD, function(err) {
-                //если подключились к сети
-                if (!err) {
-                    log("Connected!");
-                    //создаём WEB-сервер
-                    log("Starting up WEB-server on port " + SERVER_PORT);
-                    var srv = http.createServer(function(req, res) {
-                        var a = url.parse(req.url, true);
-                        processRequest(a, function(respData) {
-                            res.writeHead(200);
-                            res.end(JSON.stringify(respData));
-                        });
-                    });
-                    //слушаем нужный порт
-                    srv.listen(SERVER_PORT);
-                    wifiAdapter.getIP(function(err, ip) {
-                        if (!err) {
-                            log("WEB-server started at " + ip + ":" + SERVER_PORT);
-                        } else {
-                            log("Error while detecting WiFi-module IP address: " + err);
-                        }
-                    });
-                } else {
-                    log("Network connection error: " + err);
-                }
-            });
-        } else {
-            //не смогли запустить WiFi-модуль
+        //таймаут инициализации (если без ошибок - будем стартовать почти сразу
+        var timeOut = 50;
+        //не смогли запустить WiFi-модуль - выставим таймаут перед инициализацией (проблемы с новой прошивкой)
+        if (err) {
+            timeOut = 2000;
             log("Hardware WiFi-module error: " + err);
+            log("Waiting for init in " + timeOut + " millisecodns...");
+        } else {
+            log("Done!");
         }
+        //стартуем сразу или по таймауту, в зависимости от наличия ошибок
+        setTimeout(() => {
+            //инициализируем WiFi-модуль
+            log("Initializing WiFi-module...");
+            wifiAdapter.init(function(err) {
+                if (err) {
+                    log("WiFi-module inittialization error: " + err);
+                    log("Trying to connect to Wi-Fi network anyway...");
+                } else {
+                    log("Done!");
+                }
+                //подключаемся к WiFi сети
+                log("Connecting to " + WIFI_SSID + " network...");
+                wifiAdapter.connect(WIFI_SSID, WIFI_PSWD, function(err) {
+                    //если подключились к сети
+                    if (!err) {
+                        log("Connected!");
+                        //создаём WEB-сервер
+                        log("Starting up WEB-server on port " + SERVER_PORT);
+                        var srv = http.createServer(function(req, res) {
+                            var a = url.parse(req.url, true);
+                            processRequest(a, function(respData) {
+                                res.writeHead(200);
+                                res.end(JSON.stringify(respData));
+                            });
+                        });
+                        //слушаем нужный порт
+                        srv.listen(SERVER_PORT);
+                        wifiAdapter.getIP(function(err, ip) {
+                            if (!err) {
+                                log("WEB-server started at " + ip + ":" + SERVER_PORT);
+                            } else {
+                                log("Error while detecting WiFi-module IP address: " + err);
+                            }
+                        });
+                    } else {
+                        log("Network connection error: " + err);
+                    }
+                });
+            });
+        }, timeOut);
     });
 }
 
