@@ -8,7 +8,9 @@
 //---------------------
 
 import React from "react"; //классы React
-import RestNomen from "./rests_nomen"; //диаграмма остатков номенклатуры
+import InfoDialog from "./info_dialog"; //информационный диалог
+import RestsNomen from "./rests_nomen"; //диаграмма остатков номенклатуры
+import RestsDynamic from "./rests_dynamic"; //диаграмма динамики общих остатков стенда
 import client from "./client"; //клиент для доступа к серверу стенда
 
 //----------------
@@ -22,7 +24,9 @@ class Monitor extends React.Component {
         super(props);
         this.state = {
             error: "",
-            nomenRests: {}
+            totalRests: -1,
+            restsNomen: {},
+            restsDynamic: {}
         };
         this.refreshStandState = this.refreshStandState.bind(this);
     }
@@ -33,22 +37,45 @@ class Monitor extends React.Component {
                 if (r.state == client.SERVER_STATE_ERR) {
                     this.setState({ error: r.message });
                 } else {
-                    let tmp = {
+                    //общий остаток по стенду
+                    let tmpTotalRests = r.message.NRESTS_PRC_CURR;
+                    //текущие остатки по номенклатурам
+                    let tmpRestsNomen = {
                         labels: [],
                         data: [],
-                        max: r.message.NOMEN_CONFS[0].NMAX_QUANT
+                        max: r.message.NOMEN_CONFS[0].NMAX_QUANT,
+                        meas: r.message.NOMEN_CONFS[0].SMEAS
                     };
                     r.message.NOMEN_RESTS.forEach(rest => {
-                        tmp.labels.push(rest.SNOMMODIF);
-                        tmp.data.push(rest.NREST);
+                        tmpRestsNomen.labels.push(rest.SNOMMODIF);
+                        tmpRestsNomen.data.push(rest.NREST);
                     });
-                    this.setState({ error: "", nomenRests: tmp }, () => {
-                        setTimeout(this.refreshStandState, 1000);
+                    //динамика общих остатков стенда
+                    let tmpRestsDynamic = {
+                        labels: [],
+                        data: [],
+                        max: 100,
+                        meas: "%"
+                    };
+                    r.message.RACK_REST_PRC_HISTS.forEach((rest, i) => {
+                        tmpRestsDynamic.labels.push(i);
+                        tmpRestsDynamic.data.push(rest.NREST_PRC);
                     });
+                    this.setState(
+                        {
+                            error: "",
+                            restsNomen: tmpRestsNomen,
+                            restsDynamic: tmpRestsDynamic,
+                            totalRests: tmpTotalRests
+                        },
+                        () => {
+                            setTimeout(this.refreshStandState, 1000);
+                        }
+                    );
                 }
             },
             e => {
-                this.setState({ error: e.message, nomenRests: {} }, () => {
+                this.setState({ error: e.message, restsNomen: {}, restsDynamic: {}, totalRests: -1 }, () => {
                     setTimeout(this.refreshStandState, 1000);
                 });
             }
@@ -60,21 +87,45 @@ class Monitor extends React.Component {
     }
     //генерация содержимого
     render() {
-        let monitror;
+        let infoDialog;
         if (this.state.error) {
-            monitror = (
-                <h4>
-                    <center>{this.state.error}</center>
-                </h4>
-            );
-        } else {
-            monitror = (
-                <div>
-                    <RestNomen chartData={this.state.nomenRests} />
-                </div>
+            infoDialog = (
+                <InfoDialog title={"Ошибка получения данных"} text={this.state.error} open={this.state.error != ""} />
             );
         }
-        return <div className="screen-center">{monitror}</div>;
+        if (this.state.totalRests == 0) {
+            infoDialog = (
+                <InfoDialog
+                    title={"Нехватка товара на сетнеде"}
+                    text={"Вендинговый автомат пуст, произведите загрузку!"}
+                    open={this.state.totalRests == 0}
+                />
+            );
+        }
+        let restsNomen = (
+            <div>
+                <RestsNomen chartData={this.state.restsNomen} />
+            </div>
+        );
+        let restsDynamic = (
+            <div>
+                <RestsDynamic chartData={this.state.restsDynamic} />
+            </div>
+        );
+        return (
+            <div className="screen-center">
+                {infoDialog}
+                <div style={{ backgroundColor: "green4" }} className="monitor-col">
+                    <div style={{ backgroundColor: "magenta3" }} className="monitor-line">
+                        {restsNomen}
+                    </div>
+                    <div style={{ backgroundColor: "yellow2" }} className="monitor-line">
+                        {restsDynamic}
+                    </div>
+                </div>
+                <div style={{ backgroundColor: "red1" }} className="monitor-col" />
+            </div>
+        );
     }
 }
 

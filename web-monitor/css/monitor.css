@@ -7,10 +7,16 @@
     left: 0;
     right: 0;
     margin: auto;
+    display: inline-flex;
+    -webkit-align-items: center;
 }
 
 .monitor-line {
     height: 50%;
+}
+
+.monitor-col {
+    width: 50%;
 }
 
 .monitor-line-cell {

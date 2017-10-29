@@ -1,6 +1,6 @@
 /*
     WEB-монитор стенда
-    Остатки номенклатуры
+    Динамика общих остатков стенда
 */
 
 //---------------------
@@ -19,20 +19,20 @@ import _ from "lodash"; //работа с коллекциями и объект
 Chart.defaults.global.responsive = true;
 
 //основной класс компонента
-class RestsNomen extends React.Component {
+class RestsDynamic extends React.Component {
     //конструктор
     constructor(props) {
         super(props);
         this.state = {
             itemChart: null,
             chartOptions: {
-                type: "bar",
+                type: "line",
                 data: {
                     labels: [],
                     datasets: [
                         {
-                            backgroundColor: "rgba(255, 99, 132, 0.2)",
-                            borderColor: "rgb(255, 99, 132)",
+                            backgroundColor: "rgba(75, 192, 192, 0.2)",
+                            borderColor: "rgb(75, 192, 192)",
                             borderWidth: 1,
                             data: []
                         }
@@ -41,7 +41,7 @@ class RestsNomen extends React.Component {
                 options: {
                     title: {
                         display: true,
-                        text: "Остатки номенклатуры"
+                        text: "Динамика остатков"
                     },
                     legend: {
                         display: false
@@ -73,8 +73,8 @@ class RestsNomen extends React.Component {
                 _.extend(tmp.data.labels, chartData.labels);
                 _.extend(tmp.data.datasets[0].data, chartData.data);
                 tmp.options.scales.yAxes[0].ticks.max = chartData.max;
-                if (chartData.meas) tmp.options.title.text = "Остатки номенклатуры (" + chartData.meas + ")";
-                let ctx = document.getElementById("RestsNomen").getContext("2d");
+                if (chartData.meas) tmp.options.title.text = "Динамика остатков (" + chartData.meas + ")";
+                let ctx = document.getElementById("RestsDynamic").getContext("2d");
                 this.setState({ itemChart: new Chart(ctx, tmp) });
             }
         }
@@ -89,7 +89,7 @@ class RestsNomen extends React.Component {
     }
     //генерация содержимого
     render() {
-        return <canvas id="RestsNomen" />;
+        return <canvas id="RestsDynamic" />;
     }
 }
 
@@ -97,4 +97,4 @@ class RestsNomen extends React.Component {
 //интерфейс модуля
 //----------------
 
-export default RestsNomen;
+export default RestsDynamic;
