@@ -11,6 +11,7 @@ import React from "react"; //классы React
 import InfoDialog from "./info_dialog"; //информационный диалог
 import RestsNomen from "./rests_nomen"; //диаграмма остатков номенклатуры
 import RestsDynamic from "./rests_dynamic"; //диаграмма динамики общих остатков стенда
+import NotifyList from "./notify_list"; //список уведомлений стенда
 import client from "./client"; //клиент для доступа к серверу стенда
 
 //----------------
@@ -26,7 +27,8 @@ class Monitor extends React.Component {
             error: "",
             totalRests: -1,
             restsNomen: {},
-            restsDynamic: {}
+            restsDynamic: {},
+            notifyList: []
         };
         this.refreshStandState = this.refreshStandState.bind(this);
     }
@@ -61,12 +63,19 @@ class Monitor extends React.Component {
                         tmpRestsDynamic.labels.push(i);
                         tmpRestsDynamic.data.push(rest.NREST_PRC);
                     });
+                    //список уведомлений стенда
+                    let tmpNotifyList = [];
+                    r.message.MESSAGES.forEach((m, i) => {
+                        tmpNotifyList.push({ title: m.STS, text: m.SMSG });
+                    });
+                    //теперь всё положим в состояние монитора
                     this.setState(
                         {
                             error: "",
                             restsNomen: tmpRestsNomen,
                             restsDynamic: tmpRestsDynamic,
-                            totalRests: tmpTotalRests
+                            totalRests: tmpTotalRests,
+                            notifyList: tmpNotifyList
                         },
                         () => {
                             setTimeout(this.refreshStandState, 1000);
@@ -75,9 +84,12 @@ class Monitor extends React.Component {
                 }
             },
             e => {
-                this.setState({ error: e.message, restsNomen: {}, restsDynamic: {}, totalRests: -1 }, () => {
-                    setTimeout(this.refreshStandState, 1000);
-                });
+                this.setState(
+                    { error: e.message, restsNomen: {}, restsDynamic: {}, notifyList: [], totalRests: -1 },
+                    () => {
+                        setTimeout(this.refreshStandState, 1000);
+                    }
+                );
             }
         );
     }
@@ -112,6 +124,11 @@ class Monitor extends React.Component {
                 <RestsDynamic chartData={this.state.restsDynamic} />
             </div>
         );
+        let notifyList = (
+            <div>
+                <NotifyList listData={this.state.notifyList} />
+            </div>
+        );
         return (
             <div className="screen-center">
                 {infoDialog}
@@ -123,7 +140,9 @@ class Monitor extends React.Component {
                         {restsDynamic}
                     </div>
                 </div>
-                <div style={{ backgroundColor: "red1" }} className="monitor-col" />
+                <div style={{ backgroundColor: "red1" }} className="monitor-col monitor-messages-list">
+                    {notifyList}
+                </div>
             </div>
         );
     }
