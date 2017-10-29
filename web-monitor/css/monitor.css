@@ -8,7 +8,6 @@
     right: 0;
     margin: auto;
     display: inline-flex;
-    -webkit-align-items: center;
 }
 
 .monitor-line {
@@ -19,11 +18,7 @@
     width: 50%;
 }
 
-.monitor-line-cell {
-    text-align: center;
-}
-
-.chart-item {
-    width: 600px;
-    height: 600px;
+.monitor-messages-list {
+    overflow: hidden;
+    padding-left: 15px;
 }
