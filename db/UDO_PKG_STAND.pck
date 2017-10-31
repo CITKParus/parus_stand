@@ -62,6 +62,11 @@ create or replace package UDO_PKG_STAND as
   SMSG_TYPE_REST_PRC        UDO_T_STAND_MSG.TP%type := 'REST_PRC';                      -- Сообщение типа "Сведения об остатках (% загруженности)"  
   SMSG_TYPE_PRINT           UDO_T_STAND_MSG.TP%type := 'PRINT';                         -- Сообщение типа "Очередь печати"
   
+  /* Константы описания типов оповещения для уведомительных сообщений  */
+  SNOTIFY_TYPE_INFO         PKG_STD.TSTRING := 'INFORMATION';                           -- Информация
+  SNOTIFY_TYPE_WARN         PKG_STD.TSTRING := 'WARNING';                               -- Предупреждение
+  SNOTIFY_TYPE_ERROR        PKG_STD.TSTRING := 'ERROR';                                 -- Ошибка
+  
   /* Константы описания типов сообщений очереди стенда */
   SMSG_STATE_UNDEFINED      UDO_T_STAND_MSG.STS%type := 'UNDEFINED';                    -- Состояние "Неопределно"
   SMSG_STATE_NOT_SENDED     UDO_T_STAND_MSG.STS%type := 'NOT_SENDED';                   -- Состояние "Неотправлено"
@@ -235,7 +240,8 @@ create or replace package UDO_PKG_STAND as
   /* Добавление в очередь сообщения типа "Оповещение" */
   procedure MSG_INSERT_NOTIFY
   (
-    SMSG                    varchar2    -- Текст сообщения
+    SMSG                    varchar2,                     -- Текст сообщения
+    SNOTIFY_TYPE            varchar2 := SNOTIFY_TYPE_INFO -- Тип оповещения (см. константы SNOTIFY_TYPE_*)
   );  
   
   /* Добавление в очередь сообщения типа "Сведения об остатках" */
@@ -259,8 +265,9 @@ create or replace package UDO_PKG_STAND as
   /* Добавление в очередь сообщения */
   procedure MSG_INSERT
   (
-    STP                     varchar2,   -- Тип сообщения
-    SMSG                    varchar2    -- Текст сообщения
+    STP                     varchar2,                     -- Тип сообщения
+    SMSG                    varchar2,                     -- Текст сообщения
+    SNOTIFY_TYPE            varchar2 := SNOTIFY_TYPE_INFO -- Тип оповещения (см. константы SNOTIFY_TYPE_*)
   );
   
   /* Удаление сообщения из очереди */
@@ -591,12 +598,26 @@ create or replace package body UDO_PKG_STAND as
   /* Добавление в очередь сообщения типа "Оповещение" */
   procedure MSG_INSERT_NOTIFY
   (
-    SMSG                    varchar2                 -- Текст сообщения
+    SMSG                    varchar2,                     -- Текст сообщения
+    SNOTIFY_TYPE            varchar2 := SNOTIFY_TYPE_INFO -- Тип оповещения (см. константы SNOTIFY_TYPE_*)    
   ) is
     NRN                     UDO_T_STAND_MSG.RN%type; -- Регистрационный номер добавленного сообщения
+    JM                      JSON;                    -- Объектное представление сообщения
   begin
+    /* Проверим тип оповещения */
+    if (SNOTIFY_TYPE is null) then
+      P_EXCEPTION(0,
+                  'Не указан тип оповещения для уведомительного сообщения!');
+    end if;
+    if (SNOTIFY_TYPE not in (SNOTIFY_TYPE_INFO, SNOTIFY_TYPE_WARN, SNOTIFY_TYPE_ERROR)) then
+      P_EXCEPTION(0, 'Тип оповещения "%s" не поддерживается!', SNOTIFY_TYPE);
+    end if;
+    /* Соберём сообщение */
+    JM := JSON();
+    JM.PUT(PAIR_NAME => 'SMSG', PAIR_VALUE => SMSG);
+    JM.PUT(PAIR_NAME => 'SNOTIFY_TYPE', PAIR_VALUE => SNOTIFY_TYPE);
     /* Выполним базовое добавление в очередь сообщений */
-    MSG_BASE_INSERT(STP => SMSG_TYPE_NOTIFY, SMSG => SMSG, NRN => NRN);
+    MSG_BASE_INSERT(STP => SMSG_TYPE_NOTIFY, SMSG => JM.TO_CHAR(), NRN => NRN);
   end;
   
   /* Добавление в очередь сообщения типа "Сведения об остатках" */
@@ -635,8 +656,9 @@ create or replace package body UDO_PKG_STAND as
   /* Добавление в очередь сообщения */
   procedure MSG_INSERT
   (
-    STP                     varchar2,   -- Тип сообщения
-    SMSG                    varchar2    -- Текст сообщения
+    STP                     varchar2,                     -- Тип сообщения
+    SMSG                    varchar2,                     -- Текст сообщения
+    SNOTIFY_TYPE            varchar2 := SNOTIFY_TYPE_INFO -- Тип оповещения (см. константы SNOTIFY_TYPE_*)    
   ) is
   begin
     /* Проверим параметры */
@@ -650,7 +672,7 @@ create or replace package body UDO_PKG_STAND as
     case STP
       /* Тип сообщения - Оповещение */
       when SMSG_TYPE_NOTIFY then
-        MSG_INSERT_NOTIFY(SMSG => SMSG);
+        MSG_INSERT_NOTIFY(SMSG => SMSG, SNOTIFY_TYPE => SNOTIFY_TYPE);
       /* Тип сообщения - Сведения об остатках */        
       when SMSG_TYPE_RESTS then
         MSG_INSERT_RESTS(SMSG => SMSG);
@@ -1475,22 +1497,26 @@ create or replace package body UDO_PKG_STAND as
     /* Если просили оповестить об остатках в принципе */
     if (BNOTIFY_REST) then
       if (NREST_PRC_TOTAL = 0) then
-        MSG_INSERT_NOTIFY(SMSG => 'На стенде больше нет товара');
+        MSG_INSERT_NOTIFY(SMSG         => 'На стенде больше нет товара',
+                          SNOTIFY_TYPE => SNOTIFY_TYPE_ERROR);
       else
-        MSG_INSERT_NOTIFY(SMSG => 'Стенд загружен на ' || TO_CHAR(NREST_PRC_TOTAL) || '%. Текущий остаток по стенду: ' ||
-                                  SRESTS);
+        MSG_INSERT_NOTIFY(SMSG         => 'Стенд загружен на ' || TO_CHAR(NREST_PRC_TOTAL) ||
+                                          '%. Текущий остаток по стенду: ' || SRESTS,
+                          SNOTIFY_TYPE => SNOTIFY_TYPE_INFO);
       end if;
     end if;
     /* Если просили оповестить о критическом снижении остатка */
     if (BNOTIFY_LIMIT) then
       /* Оповещаем, если они ниже критического лимита или их нет вообще */
       if (NREST_PRC_TOTAL = 0) then
-        MSG_INSERT_NOTIFY(SMSG => 'На стенде больше нет товара! Загрузите стенд!');
+        MSG_INSERT_NOTIFY(SMSG         => 'На стенде больше нет товара! Загрузите стенд!',
+                          SNOTIFY_TYPE => SNOTIFY_TYPE_ERROR);
       else
         if (NREST_PRC_TOTAL < NRESTS_LIMIT_PRC_MIN) then
-          MSG_INSERT_NOTIFY(SMSG => 'Текущая загруженность стенда ' || TO_CHAR(NREST_PRC_TOTAL) ||
-                                    '% ниже критической отметки в ' || TO_CHAR(NRESTS_LIMIT_PRC_MIN) ||
-                                    '%! Приготовьтесь загрузить стенд!');
+          MSG_INSERT_NOTIFY(SMSG         => 'Текущая загруженность стенда ' || TO_CHAR(NREST_PRC_TOTAL) ||
+                                            '% ниже критической отметки в ' || TO_CHAR(NRESTS_LIMIT_PRC_MIN) ||
+                                            '%! Приготовьтесь загрузить стенд!',
+                            SNOTIFY_TYPE => SNOTIFY_TYPE_WARN);
         end if;
       end if;
     end if;
@@ -1784,7 +1810,7 @@ create or replace package body UDO_PKG_STAND as
     P_STRPLRESJRNL_INDEPTS_PROCESS(NCOMPANY => NCOMPANY, NRN => NINCOMEFROMDEPS);
   
     /* Оповестим о загузке стенда */
-    MSG_INSERT_NOTIFY(SMSG => 'Стнед успешно загружен...');
+    MSG_INSERT_NOTIFY(SMSG => 'Стнед успешно загружен...', SNOTIFY_TYPE => SNOTIFY_TYPE_INFO);
   
     /* Запомним остатки по стенду */
     STAND_SAVE_RACK_REST(NCOMPANY => NCOMPANY, BNOTIFY_REST => true, BNOTIFY_LIMIT => false);
@@ -2079,9 +2105,11 @@ create or replace package body UDO_PKG_STAND as
     P_STRPLRESJRNL_GTINV2C_PROCESS(NCOMPANY => NCOMPANY, NRN => NTRANSINVCUST, NRES_TYPE => 1);
   
     /* Сообщим, что произошло списание */
-    MSG_INSERT_NOTIFY(SMSG => 'Произошла отгрузка "' || CELL_CONF.SNOMEN || ' - ' || CELL_CONF.SNOMMODIF ||
-                              '"  посетителю "' || SCUSTOMER || '", документ-подтверждение: ' || STRINVCUST_TYPE || ' №' ||
-                              STRINVCUST_PREF || '-' || SNUMB || ' от ' || TO_CHAR(sysdate, 'dd.mm.yyyy'));
+    MSG_INSERT_NOTIFY(SMSG         => 'Произошла отгрузка "' || CELL_CONF.SNOMEN || ' - ' || CELL_CONF.SNOMMODIF ||
+                                      '"  посетителю "' || SCUSTOMER || '", документ-подтверждение: ' ||
+                                      STRINVCUST_TYPE || ' №' || STRINVCUST_PREF || '-' || SNUMB || ' от ' ||
+                                      TO_CHAR(sysdate, 'dd.mm.yyyy'),
+                      SNOTIFY_TYPE => SNOTIFY_TYPE_INFO);
   
     /* Запомним остатки по стенду */
     STAND_SAVE_RACK_REST(NCOMPANY => NCOMPANY, BNOTIFY_REST => false, BNOTIFY_LIMIT => true);
@@ -2142,7 +2170,8 @@ create or replace package body UDO_PKG_STAND as
     P_TRANSINVCUST_DELETE(NCOMPANY => NCOMPANY, NRN => NTRANSINVCUST);
   
     /* Скажем что откатили отгрузку */
-    MSG_INSERT_NOTIFY(SMSG => 'Отгрузка посетителю "' || SCUSTOMER || '" была отменена...');
+    MSG_INSERT_NOTIFY(SMSG         => 'Отгрузка посетителю "' || SCUSTOMER || '" была отменена...',
+                      SNOTIFY_TYPE => SNOTIFY_TYPE_INFO);
   
     /* Запомним остатки по стенду */
     STAND_SAVE_RACK_REST(NCOMPANY => NCOMPANY, BNOTIFY_REST => true, BNOTIFY_LIMIT => false);
@@ -2215,9 +2244,7 @@ create or replace package body UDO_PKG_STAND as
     /* Генерируем идентификатор отмеченных записей */
     P_SELECTLIST_GENIDENT(NIDENT => NIDENT);
     /* Кладём документ в буфер (автономная транзакция) */
-    PRINT_SET_SELECTLIST(NIDENT    => NIDENT,
-                         NDOCUMENT => NTRANSINVCUST,
-                         SUNITCODE => 'GoodsTransInvoicesToConsumers');  
+    PRINT_SET_SELECTLIST(NIDENT => NIDENT, NDOCUMENT => NTRANSINVCUST, SUNITCODE => 'GoodsTransInvoicesToConsumers');
     /* Передадим отчет серверу печати */
     PKG_RPTPRTQUEUE.RESET_PARAMETER();
     PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'NCOMPANY',
@@ -2305,16 +2332,17 @@ create or replace package body UDO_PKG_STAND as
     /* Зачищаем буфер отмеченных документов (автономная транзакция) */
     PRINT_CLEAR_SELECTLIST(NIDENT => NIDENT);
     /* Оповестим пользователей о том, что отчет поставлен в очередь */
-    MSG_INSERT_NOTIFY(SMSG => 'Накладаня "' || STRANSINVCUST || '" для посетителя "' || SAGENT ||
-                              '" поставлена в очередь печати');
+    MSG_INSERT_NOTIFY(SMSG         => 'Накладаня "' || STRANSINVCUST || '" для посетителя "' || SAGENT ||
+                                      '" поставлена в очередь печати',
+                      SNOTIFY_TYPE => SNOTIFY_TYPE_INFO);
     /* Оповестим службу автоматической печати, о том, что надо следить за отчетом */
     MSG_INSERT_PRINT(SMSG => NPQ);
   exception
-     /* В случае любых ошибок - зачистим всё что сохранили автономной транзакцией в буфере */
-     when others then
-       /* Зачищаем буфер отмеченных документов (автономная транзакция) */
-       PRINT_CLEAR_SELECTLIST(NIDENT => NIDENT);
-       raise;
+    /* В случае любых ошибок - зачистим всё что сохранили автономной транзакцией в буфере */
+    when others then
+      /* Зачищаем буфер отмеченных документов (автономная транзакция) */
+      PRINT_CLEAR_SELECTLIST(NIDENT => NIDENT);
+      raise;
   end;
   
 begin

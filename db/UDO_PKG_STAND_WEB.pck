@@ -336,7 +336,12 @@ create or replace package body UDO_PKG_STAND_WEB as
         JLI.PUT(PAIR_NAME => 'DTS', PAIR_VALUE => TO_CHAR(MSGS(I).DTS, 'yyyy-mm-dd"T"hh24:mi:ss'));
         JLI.PUT(PAIR_NAME => 'STS', PAIR_VALUE => MSGS(I).STS);
         JLI.PUT(PAIR_NAME => 'STP', PAIR_VALUE => MSGS(I).STP);
-        JLI.PUT(PAIR_NAME => 'SMSG', PAIR_VALUE => MSGS(I).SMSG);
+        begin
+          JLI.PUT(PAIR_NAME => 'SMSG', PAIR_VALUE => JSON(MSGS(I).SMSG));
+        exception
+          when others then
+            JLI.PUT(PAIR_NAME => 'SMSG', PAIR_VALUE => MSGS(I).SMSG);
+        end;
         JLI.PUT(PAIR_NAME => 'SSTS', PAIR_VALUE => MSGS(I).SSTS);
         /* Поместим сообщение в ответ */
         JL.APPEND(ELEM => JLI.TO_JSON_VALUE());
@@ -529,6 +534,7 @@ create or replace package body UDO_PKG_STAND_WEB as
     JPRMS                   JSON;            -- Объектное представление параметров запроса
     STP                     PKG_STD.TSTRING; -- Тип сообщения
     SMSG                    PKG_STD.TSTRING; -- Текст сообщения
+    SNOTIFY_TYPE            PKG_STD.TSTRING; -- Тип уведомления (для сообщений типа "Оповещение")
     SERR                    PKG_STD.TSTRING; -- Буфер для ошибок
   begin
     /* Инициализируем выход */
@@ -547,8 +553,14 @@ create or replace package body UDO_PKG_STAND_WEB as
     else
       SMSG := JPRMS.GET('SMSG').VALUE_OF();
     end if;
+    /* Считываем тип уведомления */
+    if ((not JPRMS.EXIST('SNOTIFY_TYPE')) or (JPRMS.GET('SNOTIFY_TYPE').VALUE_OF() is null)) then
+      SNOTIFY_TYPE := UDO_PKG_STAND.SNOTIFY_TYPE_INFO;
+    else
+      SNOTIFY_TYPE := JPRMS.GET('SNOTIFY_TYPE').VALUE_OF();
+    end if;
     /* Добавляем сообщение */
-    UDO_PKG_STAND.MSG_INSERT(STP => STP, SMSG => SMSG);
+    UDO_PKG_STAND.MSG_INSERT(STP => STP, SMSG => SMSG, SNOTIFY_TYPE => SNOTIFY_TYPE);
     /* Отдаём ответ что всё прошло успешно */
     CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
                                       NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_OK,
