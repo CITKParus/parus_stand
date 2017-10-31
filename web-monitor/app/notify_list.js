@@ -9,8 +9,21 @@
 
 import React from "react"; //классы React
 import { List, ListItem } from "material-ui/List"; //классы Material UI для работы со списками
-import Subheader from "material-ui/Subheader"; //класс Material UI для подзаголовка
 import Divider from "material-ui/Divider"; //класс Material UI для разделителя элементов списка
+
+//-------------------------
+//глобальные идентификаторы
+//-------------------------
+
+//типы информационных сообщений
+const NOTIFY_TYPE_INFO = "INFORMATION"; //информация
+const NOTIFY_TYPE_WARN = "WARNING"; //предупреждение
+const NOTIFY_TYPE_ERROR = "ERROR"; //ошибка
+
+//цвета информационных сообщений
+const NOTIFY_TYPE_INFO_COLOR = ""; //информация
+const NOTIFY_TYPE_WARN_COLOR = "rgba(255, 159, 64, 1)"; //предупреждение
+const NOTIFY_TYPE_ERROR_COLOR = "rgba(255, 99, 132, 1)"; //ошибка
 
 //----------------
 //описание классов
@@ -47,7 +60,18 @@ class NotifyList extends React.Component {
             listItems = this.props.listData.map((item, i) => {
                 return (
                     <div key={i}>
-                        <ListItem primaryText={item.text} secondaryText={item.title} />
+                        <ListItem
+                            primaryText={item.text}
+                            secondaryText={item.title}
+                            style={{
+                                color:
+                                    item.type == NOTIFY_TYPE_WARN
+                                        ? NOTIFY_TYPE_WARN_COLOR
+                                        : item.type == NOTIFY_TYPE_ERROR
+                                          ? NOTIFY_TYPE_ERROR_COLOR
+                                          : NOTIFY_TYPE_INFO_COLOR
+                            }}
+                        />
                         {i != this.props.listData.length - 1 && <Divider />}
                     </div>
                 );
@@ -55,12 +79,7 @@ class NotifyList extends React.Component {
         } else {
             listItems = <ListItem primaryText="Список пуст" disabled={true} />;
         }
-        return (
-            <List>
-                <Subheader>Сообщения стенда</Subheader>
-                {listItems}
-            </List>
-        );
+        return <List>{listItems}</List>;
     }
 }
 

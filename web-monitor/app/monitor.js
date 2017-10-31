@@ -66,7 +66,7 @@ class Monitor extends React.Component {
                     //список уведомлений стенда
                     let tmpNotifyList = [];
                     r.message.MESSAGES.forEach((m, i) => {
-                        tmpNotifyList.push({ title: m.STS, text: m.SMSG });
+                        tmpNotifyList.push({ title: m.STS, text: m.SMSG.SMSG, type: m.SMSG.SNOTIFY_TYPE });
                     });
                     //теперь всё положим в состояние монитора
                     this.setState(
