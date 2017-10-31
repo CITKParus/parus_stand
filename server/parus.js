@@ -368,7 +368,8 @@ function msgInsert(prms) {
                     SACTION: PARUS_ACTION_MSG_INSERT,
                     SSESSION: PARUS_SESSION,
                     STP: prms.type,
-                    SMSG: prms.message
+                    SMSG: prms.message,
+                    SNOTIFY_TYPE: prms.notifyType
                 },
                 callBack: resp => {
                     //проверим результат выполнения
