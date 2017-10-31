@@ -262,7 +262,7 @@ create or replace package body UDO_PKG_STAND_WEB as
       loop
         /* Собираем объект остатка номенклатуры */
         JSLRH_ITM := JSON();
-        JSLRH_ITM.PUT(PAIR_NAME => 'DTS', PAIR_VALUE => RH(N).DTS);
+        JSLRH_ITM.PUT(PAIR_NAME => 'DTS', PAIR_VALUE => TO_CHAR(RH(N).DTS, 'yyyy-mm-dd"T"hh24:mi:ss'));
         JSLRH_ITM.PUT(PAIR_NAME => 'STS', PAIR_VALUE => RH(N).STS);
         JSLRH_ITM.PUT(PAIR_NAME => 'NREST_PRC', PAIR_VALUE => RH(N).NREST_PRC);
         /* Объект номенклатуры - в клоллекцию номенклатур */
@@ -333,7 +333,7 @@ create or replace package body UDO_PKG_STAND_WEB as
         JLI := JSON();
         /* Соберем объект сообщения */
         JLI.PUT(PAIR_NAME => 'NRN', PAIR_VALUE => MSGS(I).NRN);
-        JLI.PUT(PAIR_NAME => 'DTS', PAIR_VALUE => MSGS(I).DTS);
+        JLI.PUT(PAIR_NAME => 'DTS', PAIR_VALUE => TO_CHAR(MSGS(I).DTS, 'yyyy-mm-dd"T"hh24:mi:ss'));
         JLI.PUT(PAIR_NAME => 'STS', PAIR_VALUE => MSGS(I).STS);
         JLI.PUT(PAIR_NAME => 'STP', PAIR_VALUE => MSGS(I).STP);
         JLI.PUT(PAIR_NAME => 'SMSG', PAIR_VALUE => MSGS(I).SMSG);
@@ -344,7 +344,7 @@ create or replace package body UDO_PKG_STAND_WEB as
     end if;
     /* Вернем результат */
     return JL;
-  end;  
+  end;
   
   /* Аутентификация посетителя стенда по штрихкоду */
   procedure AUTH_BY_BARCODE
