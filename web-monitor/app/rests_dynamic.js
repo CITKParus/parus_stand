@@ -11,6 +11,47 @@ import React from "react"; //классы React
 import Chart from "chart.js"; //работа с графиками и диаграммами
 import _ from "lodash"; //работа с коллекциями и объектами
 
+//-------
+//функции
+//-------
+
+const getInitialChartState = () => {
+    return {
+        type: "line",
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    backgroundColor: ["rgba(153, 102, 255, 0.4)"],
+                    borderColor: ["rgb(153, 102, 255)"],
+                    borderWidth: 1,
+                    data: []
+                }
+            ]
+        },
+        options: {
+            title: {
+                display: true,
+                text: "Динамика остатков"
+            },
+            legend: {
+                display: false
+            },
+            scales: {
+                yAxes: [
+                    {
+                        display: true,
+                        ticks: {
+                            min: 0,
+                            max: 100
+                        }
+                    }
+                ]
+            }
+        }
+    };
+};
+
 //----------------
 //описание классов
 //----------------
@@ -24,52 +65,17 @@ class RestsDynamic extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            itemChart: null,
-            chartOptions: {
-                type: "line",
-                data: {
-                    labels: [],
-                    datasets: [
-                        {
-                            backgroundColor: "rgba(75, 192, 192, 0.2)",
-                            borderColor: "rgb(75, 192, 192)",
-                            borderWidth: 1,
-                            data: []
-                        }
-                    ]
-                },
-                options: {
-                    title: {
-                        display: true,
-                        text: "Динамика остатков"
-                    },
-                    legend: {
-                        display: false
-                    },
-                    scales: {
-                        yAxes: [
-                            {
-                                display: true,
-                                ticks: {
-                                    min: 0,
-                                    max: 100
-                                }
-                            }
-                        ]
-                    }
-                }
-            }
+            itemChart: null
         };
     }
     //отрисовка графика
     drawChart(chartData) {
-        if (chartData) {
-            if (!_.isEqual(this.state.chartOptions.data.datasets[0].data, chartData.data)) {
+        if (chartData.data) {
+            if (!_.isEqual(this.state.itemChart.data.datasets[0].data, chartData.data)) {
                 if (this.state.itemChart) {
                     this.state.itemChart.destroy();
                 }
-                let tmp = {};
-                _.extend(tmp, this.state.chartOptions);
+                let tmp = getInitialChartState();
                 _.extend(tmp.data.labels, chartData.labels);
                 _.extend(tmp.data.datasets[0].data, chartData.data);
                 tmp.options.scales.yAxes[0].ticks.max = chartData.max;
@@ -77,6 +83,12 @@ class RestsDynamic extends React.Component {
                 let ctx = document.getElementById("RestsDynamic").getContext("2d");
                 this.setState({ itemChart: new Chart(ctx, tmp) });
             }
+        } else {
+            if (this.state.itemChart) {
+                this.state.itemChart.destroy();
+            }
+            let ctx = document.getElementById("RestsDynamic").getContext("2d");
+            this.setState({ itemChart: new Chart(ctx, getInitialChartState()) });
         }
     }
     //после подключения компонента

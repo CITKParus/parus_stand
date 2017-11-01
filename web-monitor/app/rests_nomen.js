@@ -11,6 +11,47 @@ import React from "react"; //классы React
 import Chart from "chart.js"; //работа с графиками и диаграммами
 import _ from "lodash"; //работа с коллекциями и объектами
 
+//-------
+//функции
+//-------
+
+const getInitialChartState = () => {
+    return {
+        type: "bar",
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    backgroundColor: ["rgba(75, 192, 192, 0.4)", "rgba(255, 159, 64, 0.4)", "rgba(255, 99, 132, 0.4)"],
+                    borderColor: ["rgb(75, 192, 192)", "rgb(255, 159, 64)", "rgb(255, 99, 132)"],
+                    borderWidth: 1,
+                    data: []
+                }
+            ]
+        },
+        options: {
+            title: {
+                display: true,
+                text: "Остатки номенклатуры"
+            },
+            legend: {
+                display: false
+            },
+            scales: {
+                yAxes: [
+                    {
+                        display: true,
+                        ticks: {
+                            min: 0,
+                            max: 100
+                        }
+                    }
+                ]
+            }
+        }
+    };
+};
+
 //----------------
 //описание классов
 //----------------
@@ -24,59 +65,30 @@ class RestsNomen extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            itemChart: null,
-            chartOptions: {
-                type: "bar",
-                data: {
-                    labels: [],
-                    datasets: [
-                        {
-                            backgroundColor: "rgba(255, 99, 132, 0.2)",
-                            borderColor: "rgb(255, 99, 132)",
-                            borderWidth: 1,
-                            data: []
-                        }
-                    ]
-                },
-                options: {
-                    title: {
-                        display: true,
-                        text: "Остатки номенклатуры"
-                    },
-                    legend: {
-                        display: false
-                    },
-                    scales: {
-                        yAxes: [
-                            {
-                                display: true,
-                                ticks: {
-                                    min: 0,
-                                    max: 100
-                                }
-                            }
-                        ]
-                    }
-                }
-            }
+            itemChart: null
         };
     }
     //отрисовка графика
     drawChart(chartData) {
-        if (chartData) {
-            if (!_.isEqual(this.state.chartOptions.data.datasets[0].data, chartData.data)) {
+        if (chartData.data) {
+            if (!_.isEqual(this.state.itemChart.data.datasets[0].data, chartData.data)) {
                 if (this.state.itemChart) {
                     this.state.itemChart.destroy();
                 }
-                let tmp = {};
-                _.extend(tmp, this.state.chartOptions);
-                _.extend(tmp.data.labels, chartData.labels);
-                _.extend(tmp.data.datasets[0].data, chartData.data);
+                let tmp = getInitialChartState();
+                _.assign(tmp.data.labels, chartData.labels);
+                _.assign(tmp.data.datasets[0].data, chartData.data);
                 tmp.options.scales.yAxes[0].ticks.max = chartData.max;
                 if (chartData.meas) tmp.options.title.text = "Остатки номенклатуры (" + chartData.meas + ")";
                 let ctx = document.getElementById("RestsNomen").getContext("2d");
                 this.setState({ itemChart: new Chart(ctx, tmp) });
             }
+        } else {
+            if (this.state.itemChart) {
+                this.state.itemChart.destroy();
+            }
+            let ctx = document.getElementById("RestsNomen").getContext("2d");
+            this.setState({ itemChart: new Chart(ctx, getInitialChartState()) });
         }
     }
     //после подключения компонента
