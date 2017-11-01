@@ -20,5 +20,14 @@
 
 .monitor-messages-list {
     overflow: hidden;
-    padding-left: 15px;
+    padding-left: 45px;
+}
+
+.monitor-bar-title {
+    cursor: default;
+}
+
+.monitor-bar-logo {
+    width: 48px;
+    height: 48px;
 }

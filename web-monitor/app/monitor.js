@@ -8,6 +8,7 @@
 //---------------------
 
 import React from "react"; //классы React
+import AppBar from "material-ui/AppBar"; //заголовок приложения
 import InfoDialog from "./info_dialog"; //информационный диалог
 import RestsNomen from "./rests_nomen"; //диаграмма остатков номенклатуры
 import RestsDynamic from "./rests_dynamic"; //диаграмма динамики общих остатков стенда
@@ -130,18 +131,26 @@ class Monitor extends React.Component {
             </div>
         );
         return (
-            <div className="screen-center">
-                {infoDialog}
-                <div style={{ backgroundColor: "green4" }} className="monitor-col">
-                    <div style={{ backgroundColor: "magenta3" }} className="monitor-line">
-                        {restsNomen}
+            <div>
+                <AppBar
+                    zDepth={3}
+                    style={{ backgroundColor: "rgb(8, 86, 135)" }}
+                    title={<span className="monitor-bar-title">Парус - мониторинг</span>}
+                    iconElementLeft={<img className="monitor-bar-logo" src="img/parus_logo.png" />}
+                />
+                <div className="screen-center">
+                    {infoDialog}
+                    <div style={{ backgroundColor: "green4" }} className="monitor-col">
+                        <div style={{ backgroundColor: "magenta3" }} className="monitor-line">
+                            {restsNomen}
+                        </div>
+                        <div style={{ backgroundColor: "yellow2" }} className="monitor-line">
+                            {restsDynamic}
+                        </div>
                     </div>
-                    <div style={{ backgroundColor: "yellow2" }} className="monitor-line">
-                        {restsDynamic}
+                    <div style={{ backgroundColor: "red1" }} className="monitor-col monitor-messages-list">
+                        {notifyList}
                     </div>
-                </div>
-                <div style={{ backgroundColor: "red1" }} className="monitor-col monitor-messages-list">
-                    {notifyList}
                 </div>
             </div>
         );
