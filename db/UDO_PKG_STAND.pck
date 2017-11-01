@@ -19,7 +19,7 @@ create or replace package UDO_PKG_STAND as
   SRACK_CELL_NUMB_TMPL      STPLCELLS.NUMB%type := 'МЕСТО';                             -- Шаблон номера места зранения
   NRACK_LINES               PKG_STD.TNUMBER := 1;                                       -- Количество ярусов стеллажа
   NRACK_LINE_CELLS          PKG_STD.TNUMBER := 3;                                       -- Количество ячеек (мест хранения) в ярусе
-  NRACK_CELL_CAPACITY       PKG_STD.TNUMBER := 2;                                       -- Максимальное количество номенклатуры в ячейке хранения
+  NRACK_CELL_CAPACITY       PKG_STD.TNUMBER := 5;                                       -- Максимальное количество номенклатуры в ячейке хранения
   NRACK_CELL_SHIP_CNT       PKG_STD.TNUMBER := 1;                                       -- Количество номенклатуры, отгружаемое потребителю за одну транзакцию
   NRESTS_LIMIT_PRC_MIN      PKG_STD.TLNUMBER := 40;                                     -- Минимальный критический остаток по складу (в %)  
   NRESTS_LIMIT_PRC_MDL      PKG_STD.TLNUMBER := 60;                                     -- Средний остаток по складу (в %)  
@@ -33,12 +33,12 @@ create or replace package UDO_PKG_STAND as
   SDEF_SHEEP_VIEW           DICSHPVW.CODE%type := 'Самовывоз';                          -- Вид отгрузки по умолчанию
   SDEF_PAY_TYPE             AZSGSMPAYMENTSTYPES.GSMPAYMENTS_MNEMO%type := 'Без оплаты'; -- Вид оплаты по умолчанию
   SDEF_TAX_GROUP            DICTAXGR.CODE%type := 'Без налогов';                        -- Налоговая группа по умолчанию
-  SDEF_NOMEN_1              DICNOMNS.NOMEN_CODE%type := 'Жевательная резинка';          -- Номенклатура по умолчанию (1)
-  SDEF_NOMEN_MODIF_1        NOMMODIF.MODIF_CODE%type := 'Orbit';                        -- Модификация номенклатуры по умолчанию (1)
-  SDEF_NOMEN_2              DICNOMNS.NOMEN_CODE%type := 'Жевательная резинка';          -- Номенклатура по умолчанию (2)
-  SDEF_NOMEN_MODIF_2        NOMMODIF.MODIF_CODE%type := 'Dirol';                        -- Модификация номенклатуры по умолчанию (2)
-  SDEF_NOMEN_3              DICNOMNS.NOMEN_CODE%type := 'Жевательная резинка';          -- Номенклатура по умолчанию (3)
-  SDEF_NOMEN_MODIF_3        NOMMODIF.MODIF_CODE%type := 'Eclipce';                      -- Модификация номенклатуры по умолчанию (3)
+  SDEF_NOMEN_1              DICNOMNS.NOMEN_CODE%type := 'Orbit';                        -- Номенклатура по умолчанию (1)
+  SDEF_NOMEN_MODIF_1        NOMMODIF.MODIF_CODE%type := 'Мятный';                       -- Модификация номенклатуры по умолчанию (1)
+  SDEF_NOMEN_2              DICNOMNS.NOMEN_CODE%type := 'Orbit';                        -- Номенклатура по умолчанию (2)
+  SDEF_NOMEN_MODIF_2        NOMMODIF.MODIF_CODE%type := 'Фруктовый';                    -- Модификация номенклатуры по умолчанию (2)
+  SDEF_NOMEN_3              DICNOMNS.NOMEN_CODE%type := 'Orbit';                        -- Номенклатура по умолчанию (3)
+  SDEF_NOMEN_MODIF_3        NOMMODIF.MODIF_CODE%type := 'Классический';                 -- Модификация номенклатуры по умолчанию (3)
 
   /* Константы описания приходов */
   SINCDEPS_TYPE             DOCTYPES.DOCCODE%type := 'ПНП';                             -- Тип документа "Приход из подразделений"
