@@ -77,7 +77,7 @@ class NotifyList extends React.Component {
                 );
             });
         } else {
-            listItems = <ListItem primaryText="Список пуст" disabled={true} />;
+            listItems = <ListItem primaryText="Уведомлений нет" disabled={true} />;
         }
         return <List>{listItems}</List>;
     }
