@@ -32,13 +32,36 @@ class Monitor extends React.Component {
             notifyList: []
         };
         this.refreshStandState = this.refreshStandState.bind(this);
+        this.showErrorAndRefresh = this.showErrorAndRefresh.bind(this);
+        this.showDataAndRefresh = this.showDataAndRefresh.bind(this);
+    }
+    //отображение ошибки стенда и перезапрос данных
+    showErrorAndRefresh(message) {
+        this.setState({ error: message, restsNomen: {}, restsDynamic: {}, notifyList: [], totalRests: -1 }, () => {
+            setTimeout(this.refreshStandState, 1000);
+        });
+    }
+    //отображение данных стенда и перезапрос
+    showDataAndRefresh(restsNomen, restsDynamic, totalRests, notifyList) {
+        this.setState(
+            {
+                error: "",
+                restsNomen,
+                restsDynamic,
+                totalRests,
+                notifyList
+            },
+            () => {
+                setTimeout(this.refreshStandState, 1000);
+            }
+        );
     }
     //обновление состояния стенда
     refreshStandState() {
         client.standServerAction({ actionData: { action: client.SERVER_ACTION_STAND_GET_STATE } }).then(
             r => {
                 if (r.state == client.SERVER_STATE_ERR) {
-                    this.setState({ error: r.message });
+                    this.showErrorAndRefresh(r.message);
                 } else {
                     //общий остаток по стенду
                     let tmpTotalRests = r.message.NRESTS_PRC_CURR;
@@ -70,27 +93,12 @@ class Monitor extends React.Component {
                         tmpNotifyList.push({ title: m.STS, text: m.SMSG.SMSG, type: m.SMSG.SNOTIFY_TYPE });
                     });
                     //теперь всё положим в состояние монитора
-                    this.setState(
-                        {
-                            error: "",
-                            restsNomen: tmpRestsNomen,
-                            restsDynamic: tmpRestsDynamic,
-                            totalRests: tmpTotalRests,
-                            notifyList: tmpNotifyList
-                        },
-                        () => {
-                            setTimeout(this.refreshStandState, 1000);
-                        }
-                    );
+                    this.showDataAndRefresh(tmpRestsNomen, tmpRestsDynamic, tmpTotalRests, tmpNotifyList);
                 }
             },
             e => {
-                this.setState(
-                    { error: e.message, restsNomen: {}, restsDynamic: {}, notifyList: [], totalRests: -1 },
-                    () => {
-                        setTimeout(this.refreshStandState, 1000);
-                    }
-                );
+                //покажем ошибку
+                this.showErrorAndRefresh(e.message);
             }
         );
     }
