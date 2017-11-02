@@ -428,7 +428,7 @@ function msgSetState(prms) {
                     SACTION: PARUS_ACTION_MSG_SET_STATE,
                     SSESSION: PARUS_SESSION,
                     NRN: prms.rn,
-                    SSTS: prms.status
+                    SSTS: prms.state
                 },
                 callBack: resp => {
                     //проверим результат выполнения
