@@ -12,7 +12,7 @@ const conf = require("./config"); //настройки
 const inc = require("./incoming"); //очередь входящих сообщений
 const out = require("./outgoing"); //очередь исходящих сообщений
 const prc = require("./message_processor"); //обработчик сообщений
-//const NotifyQueue = require("./notify_queue"); //очередь оповещений для рассылки
+const nq = require("./notify_queue"); //очередь полученных от стенда уведомлений
 
 //-----------
 //точка входа
@@ -22,26 +22,26 @@ const prc = require("./message_processor"); //обработчик сообще�
 function run() {
     //API бота
     let bot = new TelegramBot(conf.BOT_TOKEN, { polling: true });
+    //обработчик входящих сообщений	- ядро бота
+    let proc = new prc.MessageProcessor();
     //очередь входящих сообщений
     let inQ = new inc.Incoming({ bot: bot });
     //очередь исходящих сообщений
-    let outQ = new out.Outgoing({ bot: bot, sendDelay: conf.OUT_SEND_DELAY });
+    let outQ = new out.Outgoing({ bot: bot, proc: proc, sendDelay: conf.OUT_SEND_DELAY });
     //очередь оповещений для рассылки
-    //let nQ = new NotifyQueue();
-    //обработчик входящих сообщений	- ядро бота
-    let proc = new prc.MessageProcessor();
-    //запуск бота - обрабатываем входящие, даём ответы на запросы, проверяем очередь заказанных отчетов на их готовность
+    let nQ = new nq.NotifyQueue();
+    //запуск бота - обрабатываем входящие, даём ответы на запросы, проверяем очередь уведомлений стенда для рассылки
     inQ.startListen();
     outQ.startSending();
-    //Q.startProcessing();
+    nQ.startProcessing();
     inQ.on(inc.EVT_NEW_IN_MESSAGE, inMsg => {
         process.nextTick(() => {
             proc.processMessage(inMsg);
         });
     });
-    //nQ.on(conf.EVT_NEW_RESPOND, outMsg => {
-    //    outQ.addMessage(outMsg);
-    //});
+    nQ.on(nq.EVT_NEW_OUT_MESSAGE, outMsg => {
+        outQ.addMessage(outMsg);
+    });
     proc.on(prc.EVT_NEW_RESPOND, outMsg => {
         outQ.addMessage(outMsg);
     });

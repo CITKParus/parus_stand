@@ -11,35 +11,9 @@ const _ = require("lodash"); //работа с массивами и колле�
 const EOL = require("os").EOL; //сдвиг каретки
 const conf = require("./config"); //константы и настройки
 
-//-------------------------
-//глобальные идентификаторы
-//-------------------------
-
-//типовые состояния ответов сервера
-const STATE_ERR = "ERR"; //состояние сервера - ошибка
-const STATE_OK = "OK"; //состояние сервера - всё нормально
-
 //-------
 //функции
 //-------
-
-//сборка стандартного ответа
-function buildResp(state, message) {
-    return {
-        state: state,
-        message: message
-    };
-}
-
-//сборка стандартного отрицательного ответа
-function buildErrResp(message) {
-    return buildResp(STATE_ERR, message);
-}
-
-//сборка стандартного положительного ответа
-function buildOkResp(message) {
-    return buildResp(STATE_OK, message);
-}
 
 //протоколирование работы
 function log(data) {
@@ -105,11 +79,6 @@ function parseMessage(m) {
 //----------------
 
 exports.EOL = EOL;
-exports.STATE_ERR = STATE_ERR;
-exports.STATE_OK = STATE_OK;
-exports.buildResp = buildResp;
-exports.buildErrResp = buildErrResp;
-exports.buildOkResp = buildOkResp;
 exports.log = log;
 exports.isCommand = isCommand;
 exports.getCommand = getCommand;

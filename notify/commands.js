@@ -34,6 +34,9 @@ const CMDS_MSG_NOT_A_COMMAND =
     COMMANDS.CMD_HELP +
     ' для получения справки, помните - команда начинается с "/"'; //передана не команда
 
+//флаг броадкаст-сообщения
+const BROADCAST_CHAT_ID = -1; //специальный идентификатор, обозначающий необходимость отправки сообщения всем активным чатам
+
 //---------------------------
 //функции отработки сообщений
 //---------------------------
@@ -114,5 +117,6 @@ exports.CMDS_MSG_UNDER_CONSTRUCTION = CMDS_MSG_UNDER_CONSTRUCTION;
 exports.CMDS_MSG_COMMON_ERROR_TITLE = CMDS_MSG_COMMON_ERROR_TITLE;
 exports.CMDS_MSG_BUSY = CMDS_MSG_BUSY;
 exports.CMDS_MSG_NOT_A_COMMAND = CMDS_MSG_NOT_A_COMMAND;
+exports.BROADCAST_CHAT_ID = BROADCAST_CHAT_ID;
 exports.SCENARIO = SCENARIO;
 exports.createResp = createResp;

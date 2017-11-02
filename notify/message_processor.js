@@ -63,6 +63,11 @@ class MessageProcessor extends EventEmitter {
         }
     }
 
+    //получение состояния бота
+    getBotState() {
+        return this.botState;
+    }
+
     //установка состояния чата - начало обработки команды
     setChatStateCommandBegin(chatState, command) {
         chatState.state = CHAT_STATE_PROCESSING_COMMAND;

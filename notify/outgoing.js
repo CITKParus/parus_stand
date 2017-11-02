@@ -9,6 +9,8 @@
 
 const _ = require("lodash"); //работа с массивами и коллекциями
 const utils = require("./utils"); //вспомогательные функции
+const conf = require("./config"); //константы и настройки
+const commands = require("./commands"); //настройки сценариев отработки команд
 
 //-------------------------
 //глобальные идентификаторы
@@ -39,26 +41,41 @@ class Outgoing {
         if (options) {
             //ссылка на API бота
             this.bot = options.bot;
+            //ссылка на обработчик сообщений
+            this.proc = options.proc;
             //время ожидания перед отправкой очередного сообщения
             this.sendDelay = options.sendDelay;
         } else {
             //параметры по умолчанию
             this.bot = null;
-            this.sendDelay = 1;
+            this.proc = null;
+            this.sendDelay = conf.OUT_SEND_DELAY;
         }
     }
 
     //добавление нового исходящего сообщения в очередь
     addMessage(msg) {
-        //создадим новый элемент очереди
-        let tmp = {
-            state: MSG_STATE_ADDED, //состояние сообщения (отправлено успешно, ошибка отправки, добавлено)
-            sendErr: "", //ошибка отправки
-            msg: {} //отправляемое сообщение
-        };
-        _.extend(tmp.msg, msg);
-        //добавим его в очередь
-        this.outMessages.push(tmp);
+        //переопределим себя
+        let self = this;
+        //если есть обработчик сообщений
+        if (this.proc) {
+            //пройдём по всем активным чатам
+            this.proc.getBotState().forEach(chat => {
+                //добавим сообщение для чата (если такой есть) или для всех чатов (если это широковещательное)
+                if (msg.chatID == commands.BROADCAST_CHAT_ID || chat.chatID == msg.chatID) {
+                    //создадим новый элемент очереди
+                    let tmp = {
+                        state: MSG_STATE_ADDED, //состояние сообщения (отправлено успешно, ошибка отправки, добавлено)
+                        sendErr: "", //ошибка отправки
+                        msg: {} //отправляемое сообщение
+                    };
+                    msg.chatID = chat.chatID;
+                    _.extend(tmp.msg, msg);
+                    //добавим его в очередь
+                    self.outMessages.push(tmp);
+                }
+            });
+        }
     }
 
     //обработка элемента очереди
