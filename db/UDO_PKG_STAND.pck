@@ -755,9 +755,8 @@ create or replace package body UDO_PKG_STAND as
                                where ((STP is null) or (STP is not null) and (T.TP = STP))
                                  and ((SSTS is null) or (SSTS is not null) and (T.STS = SSTS))
                                  and ((DFROM is null) or (DFROM is not null) and (T.TS >= DFROM))
-                               order by T.RN desc) D
-                       where ((NLIMIT is null) or (NLIMIT is not null) and (ROWNUM <= NLIMIT))) F
-               order by F.RN * NORDER)
+                               order by T.RN * NORDER) D
+                       where ((NLIMIT is null) or (NLIMIT is not null) and (ROWNUM <= NLIMIT))) F)
     loop
       /* Добавляем сообщение в ответ */
       RES.EXTEND();
