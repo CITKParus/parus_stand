@@ -1,25 +1,38 @@
 import React from "react";
-import { StatusBar, Text, View, StyleSheet, Button, AsyncStorage, Alert, TouchableOpacity } from "react-native";
+import {
+    StatusBar,
+    Text,
+    View,
+    StyleSheet,
+    Button,
+    AsyncStorage,
+    Alert,
+    TouchableOpacity,
+    ActivityIndicator
+} from "react-native";
 import { IconButton } from "./IconButton";
+import { SHIPMENT } from "./api";
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#fff",
-        alignItems: "center"
+        backgroundColor: "#fff"
     },
     backButton: {
         top: 30,
         right: 0,
         left: 10
     },
+    mainContainer: {
+        alignItems: "center",
+        marginTop: 200
+    },
     welcomeContainer: {
-        marginTop: 200,
         marginBottom: 100,
         alignItems: "center"
     },
     welcome: {
         lineHeight: 32,
-        fontSize: 26,
+        fontSize: 30,
         marginBottom: 10
     },
     restContainer: {},
@@ -41,124 +54,83 @@ const styles = StyleSheet.create({
     }
 });
 
-export default class SettingsPage extends React.Component {
+export default class ShipmentPage extends React.Component {
     static navigationOptions = {
         header: null
     };
     navigation = this.props.navigation;
+    state = {
+        loading: false,
+        result: false,
+        resultText: "Ошибка",
+        onGoBack: this.navigation.state.params.onGoBack
+    };
     _navBack = () => {
+        this.setState({
+            loading: false
+        });
+        this.state.onGoBack();
         this.navigation.goBack();
     };
     ship = async item => {
-        console.log(item);
+        this.setState({
+            loading: true
+        });
+        const response = await SHIPMENT(item);
+
+        if (response.state == "ERR") {
+            Alert.alert(
+                "Произошла ошибка :(",
+                response.message,
+                [
+                    {
+                        text: "ОК",
+                        onPress: () => {
+                            this.setState({
+                                loading: false,
+                                result: false,
+                                resultText: null
+                            });
+                        }
+                    }
+                ],
+                { cancelable: false }
+            );
+        } else {
+            this.setState({
+                loading: false,
+                result: true,
+                resultText: response.message || "Спасибо, не забудьте Вашу накладную"
+            });
+        }
     };
-    renderCELLS = cells => {
+    renderCELLS = (cells, user) => {
         return cells.map(cell => (
             <TouchableOpacity
                 onPress={async () => {
-                    await this.ship(cell.NRACK_CELL);
+                    await this.ship({
+                        customer: user,
+                        rack_line: cell.NRACK_LINE,
+                        rack_line_cell: cell.NRACK_LINE_CELL
+                    });
                 }}
-                style={styles.cellButton}
+                style={[styles.cellButton, { backgroundColor: cell.BEMPTY ? "gray" : "black" }]}
                 key={cell.NRACK_CELL}
+                disabled={cell.BEMPTY}
             >
                 <Text style={styles.cellText}>{cell.NOMEN_RESTS[0].SNOMMODIF}</Text>
             </TouchableOpacity>
         ));
     };
-    renderREST = rests => {
+    renderREST = (rests, user) => {
         return rests.map(line => (
             <View style={styles.line} key={line.NRACK_LINE}>
-                {this.renderCELLS(line.RACK_LINE_CELL_RESTS)}
+                {this.renderCELLS(line.RACK_LINE_CELL_RESTS, user)}
             </View>
         ));
     };
     render() {
-        //const { response } = this.props.navigation.state.params;
-        const response = {
-            state: "OK",
-            message: {
-                USER: { NAGENT: 452546, SAGENT: "Сидоров С. С.", SAGENT_NAME: "Сидоров Сидор Сидорович" },
-                RESTS: {
-                    NRACK: 452223,
-                    NSTORE: 452222,
-                    SSTORE: "СГП",
-                    SRACK_PREF: "АВТОМАТ",
-                    SRACK_NUMB: "1",
-                    SRACK_NAME: "АВТОМАТ-1",
-                    NRACK_LINES_CNT: 1,
-                    BEMPTY: false,
-                    RACK_LINE_RESTS: [
-                        {
-                            NRACK_LINE: 1,
-                            NRACK_LINE_CELLS_CNT: 3,
-                            BEMPTY: false,
-                            RACK_LINE_CELL_RESTS: [
-                                {
-                                    NRACK_CELL: 452224,
-                                    SRACK_CELL_PREF: "ЯРУС1",
-                                    SRACK_CELL_NUMB: "МЕСТО1",
-                                    SRACK_CELL_NAME: "ЯРУС1-МЕСТО1",
-                                    NRACK_LINE: 1,
-                                    NRACK_LINE_CELL: 1,
-                                    BEMPTY: false,
-                                    NOMEN_RESTS: [
-                                        {
-                                            NNOMEN: 452232,
-                                            SNOMEN: "Жевательная резинка",
-                                            NNOMMODIF: 452233,
-                                            SNOMMODIF: "Orbit",
-                                            NREST: 2,
-                                            NMEAS: 435021,
-                                            SMEAS: "шт"
-                                        }
-                                    ]
-                                },
-                                {
-                                    NRACK_CELL: 452225,
-                                    SRACK_CELL_PREF: "ЯРУС1",
-                                    SRACK_CELL_NUMB: "МЕСТО2",
-                                    SRACK_CELL_NAME: "ЯРУС1-МЕСТО2",
-                                    NRACK_LINE: 1,
-                                    NRACK_LINE_CELL: 2,
-                                    BEMPTY: false,
-                                    NOMEN_RESTS: [
-                                        {
-                                            NNOMEN: 452232,
-                                            SNOMEN: "Жевательная резинка",
-                                            NNOMMODIF: 457611,
-                                            SNOMMODIF: "Dirol",
-                                            NREST: 2,
-                                            NMEAS: 435021,
-                                            SMEAS: "шт"
-                                        }
-                                    ]
-                                },
-                                {
-                                    NRACK_CELL: 452226,
-                                    SRACK_CELL_PREF: "ЯРУС1",
-                                    SRACK_CELL_NUMB: "МЕСТО3",
-                                    SRACK_CELL_NAME: "ЯРУС1-МЕСТО3",
-                                    NRACK_LINE: 1,
-                                    NRACK_LINE_CELL: 3,
-                                    BEMPTY: false,
-                                    NOMEN_RESTS: [
-                                        {
-                                            NNOMEN: 452232,
-                                            SNOMEN: "Жевательная резинка",
-                                            NNOMMODIF: 457612,
-                                            SNOMMODIF: "Eclipce",
-                                            NREST: 2,
-                                            NMEAS: 435021,
-                                            SMEAS: "шт"
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                }
-            }
-        };
+        const { response } = this.props.navigation.state.params;
         return (
             <View style={styles.container}>
                 <StatusBar barStyle="default" />
@@ -169,12 +141,59 @@ export default class SettingsPage extends React.Component {
                     style={styles.backButton}
                     text="Назад"
                 />
-                <View style={styles.welcomeContainer}>
-                    <Text style={styles.welcome}>{"Здравствуйте,"}</Text>
-                    <Text style={styles.welcome}>{response.message.USER.SAGENT_NAME},</Text>
-                    <Text style={styles.welcome}>{"укажите желаемый товар"}</Text>
-                </View>
-                <View style={styles.restContainer}>{this.renderREST(response.message.RESTS.RACK_LINE_RESTS)}</View>
+                {this.state.loading && (
+                    <View style={styles.mainContainer}>
+                        <ActivityIndicator
+                            animating={true}
+                            color="black"
+                            size="large"
+                            style={{
+                                paddingBottom: 100
+                            }}
+                        />
+                        <Text
+                            style={{
+                                fontSize: 34,
+                                fontWeight: "bold",
+                                backgroundColor: "transparent",
+                                color: "black"
+                            }}
+                        >
+                            Отгружаем...
+                        </Text>
+                    </View>
+                )}
+                {!this.state.loading &&
+                    !this.state.result && (
+                        <View style={styles.mainContainer}>
+                            <View style={styles.welcomeContainer}>
+                                <Text style={styles.welcome}>{"Здравствуйте,"}</Text>
+                                <Text style={styles.welcome}>{response.USER.SAGENT_NAME},</Text>
+                                <Text style={styles.welcome}>{"укажите желаемый товар"}</Text>
+                            </View>
+                            <View style={styles.restContainer}>
+                                {this.renderREST(response.RESTS.RACK_LINE_RESTS, response.USER.SAGENT)}
+                            </View>
+                        </View>
+                    )}
+                {this.state.result && (
+                    <View style={styles.mainContainer}>
+                        <Text
+                            style={{
+                                fontSize: 34,
+                                fontWeight: "bold",
+                                backgroundColor: "transparent",
+                                color: "black"
+                            }}
+                        >
+                            {this.state.resultText}
+                        </Text>
+
+                        <TouchableOpacity onPress={this._navBack} style={[styles.cellButton, { paddingTop: 300 }]}>
+                            <Text style={styles.cellText}>ОК</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </View>
         );
     }

@@ -11,7 +11,7 @@ const FlowNivigator = StackNavigator(
     },
     {
         headerMode: "none",
-        initialRouteName: "Second",
+        initialRouteName: "First",
         mode: "modal"
     }
 );

@@ -1,23 +1,4 @@
 {
-    "expo": {
-        "name": "parusinventory",
-        "description": "Parus Inventory",
-        "slug": "parusinventory",
-        "privacy": "public",
-        "sdkVersion": "22.0.0",
-        "version": "1.0.0",
-        "orientation": "portrait",
-        "primaryColor": "#cccccc",
-        "icon": "./src/assets/icons/app-icon.png",
-        "loading": {
-            "icon": "./src/assets/icons/loading-icon.png",
-            "hideExponentText": false
-        },
-        "packagerOpts": {
-            "assetExts": ["ttf", "mp4"]
-        },
-        "ios": {
-            "supportsTablet": true
-        }
-    }
+  "name": "mobileNativeInteractions",
+  "displayName": "mobileNativeInteractions"
 }

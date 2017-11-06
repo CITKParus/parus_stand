@@ -11,9 +11,12 @@ import {
     TouchableOpacity,
     TextInput
 } from "react-native";
-import { Constants, BarCodeScanner, Permissions } from "expo";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import Camera from "react-native-camera";
+import Permissions from "react-native-permissions";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { IconButton } from "./IconButton";
+import { AUTH_BY_BARCODE } from "./api";
+import renderIf from "./renderIf";
 let { height, width } = Dimensions.get("window");
 const styles = StyleSheet.create({
     pageContainer: {
@@ -28,12 +31,14 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "flex-start"
     },
-    logo: {
+    logoContainer: {
         position: "absolute",
-        height: 100,
-        width: 100,
         top: 30,
         left: 10
+    },
+    logo: {
+        height: 100,
+        width: 100
     },
     centerContainer: {
         width: 650,
@@ -55,14 +60,25 @@ export default class ScanerPage extends React.Component {
         loading: false
     };
     navigation = this.props.navigation;
+
+    refresh = () => {
+        console.log("refresh");
+        this.setState({
+            scannable: true,
+            data: null,
+            manual: false,
+            loading: false
+        });
+    };
     componentDidMount() {
         this._requestCameraPermission();
     }
 
     _requestCameraPermission = async () => {
-        const { status } = await Permissions.askAsync(Permissions.CAMERA);
+        const status = await Permissions.request("camera");
+
         this.setState({
-            hasCameraPermission: status === "granted"
+            hasCameraPermission: status === "authorized"
         });
     };
 
@@ -96,129 +112,55 @@ export default class ScanerPage extends React.Component {
     };
 
     _auth = async () => {
-        setTimeout(() => {
-            /* TODO: HTTP CALL */
-            let response = {
-                state: "OK",
-                message: {
-                    USER: { NAGENT: 452546, SAGENT: "Сидоров С. С.", SAGENT_NAME: "Сидоров Сидор Сидорович" },
-                    RESTS: {
-                        NRACK: 452223,
-                        NSTORE: 452222,
-                        SSTORE: "СГП",
-                        SRACK_PREF: "АВТОМАТ",
-                        SRACK_NUMB: "1",
-                        SRACK_NAME: "АВТОМАТ-1",
-                        NRACK_LINES_CNT: 1,
-                        BEMPTY: false,
-                        RACK_LINE_RESTS: [
-                            {
-                                NRACK_LINE: 1,
-                                NRACK_LINE_CELLS_CNT: 3,
-                                BEMPTY: false,
-                                RACK_LINE_CELL_RESTS: [
-                                    {
-                                        NRACK_CELL: 452224,
-                                        SRACK_CELL_PREF: "ЯРУС1",
-                                        SRACK_CELL_NUMB: "МЕСТО1",
-                                        SRACK_CELL_NAME: "ЯРУС1-МЕСТО1",
-                                        NRACK_LINE: 1,
-                                        NRACK_LINE_CELL: 1,
-                                        BEMPTY: false,
-                                        NOMEN_RESTS: [
-                                            {
-                                                NNOMEN: 452232,
-                                                SNOMEN: "Жевательная резинка",
-                                                NNOMMODIF: 452233,
-                                                SNOMMODIF: "Orbit",
-                                                NREST: 2,
-                                                NMEAS: 435021,
-                                                SMEAS: "шт"
-                                            }
-                                        ]
-                                    },
-                                    {
-                                        NRACK_CELL: 452225,
-                                        SRACK_CELL_PREF: "ЯРУС1",
-                                        SRACK_CELL_NUMB: "МЕСТО2",
-                                        SRACK_CELL_NAME: "ЯРУС1-МЕСТО2",
-                                        NRACK_LINE: 1,
-                                        NRACK_LINE_CELL: 2,
-                                        BEMPTY: false,
-                                        NOMEN_RESTS: [
-                                            {
-                                                NNOMEN: 452232,
-                                                SNOMEN: "Жевательная резинка",
-                                                NNOMMODIF: 457611,
-                                                SNOMMODIF: "Dirol",
-                                                NREST: 2,
-                                                NMEAS: 435021,
-                                                SMEAS: "шт"
-                                            }
-                                        ]
-                                    },
-                                    {
-                                        NRACK_CELL: 452226,
-                                        SRACK_CELL_PREF: "ЯРУС1",
-                                        SRACK_CELL_NUMB: "МЕСТО3",
-                                        SRACK_CELL_NAME: "ЯРУС1-МЕСТО3",
-                                        NRACK_LINE: 1,
-                                        NRACK_LINE_CELL: 3,
-                                        BEMPTY: false,
-                                        NOMEN_RESTS: [
-                                            {
-                                                NNOMEN: 452232,
-                                                SNOMEN: "Жевательная резинка",
-                                                NNOMMODIF: 457612,
-                                                SNOMMODIF: "Eclipce",
-                                                NREST: 2,
-                                                NMEAS: 435021,
-                                                SMEAS: "шт"
-                                            }
-                                        ]
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                }
-            };
-            this.navigation.navigate("Second", { response: response });
-            let error = null;
-            if (error !== null) {
-                Alert.alert(
-                    "Произошла ошибка :(",
-                    error,
-                    [
-                        {
-                            text: "Отменить",
-                            onPress: () => {
-                                this.setState({
-                                    loading: false,
-                                    scannable: true
-                                });
-                            }
+        const response = await AUTH_BY_BARCODE(this.state.data);
+        this.setState({
+            loading: false
+        });
+
+        if (response.state == "ERR") {
+            Alert.alert(
+                "Произошла ошибка :(",
+                response.message,
+                [
+                    {
+                        text: "Отменить",
+                        onPress: () => {
+                            this.setState({
+                                loading: false,
+                                scannable: true
+                            });
                         }
-                    ],
-                    { cancelable: false }
-                );
-            }
-        }, 1000);
+                    }
+                ],
+                { cancelable: false }
+            );
+        }
+
+        this.navigation.navigate("Second", { response: response.message, onGoBack: this.refresh });
     };
     render() {
+        console.log(this.state);
+        const { hasCameraPermission, loading, manual } = this.state;
         return (
             <View style={styles.pageContainer}>
                 <StatusBar barStyle="light-content" />
-                {this.state.hasCameraPermission === null ? (
+                {hasCameraPermission === null ? (
                     <Text>Requesting for camera permission</Text>
-                ) : this.state.hasCameraPermission === false ? (
+                ) : hasCameraPermission === false ? (
                     <Text>Camera permission is not granted</Text>
                 ) : (
-                    <BarCodeScanner onBarCodeRead={this._handleBarCodeRead} type={"front"} style={styles.container}>
-                        <Image source={require("./assets/icons/parus_logo.png")} style={styles.logo} />
+                    <Camera onBarCodeRead={this._handleBarCodeRead} type={"front"} style={styles.container}>
+                        <TouchableOpacity
+                            style={styles.logoContainer}
+                            onPress={() => {
+                                this.refresh();
+                            }}
+                        >
+                            <Image source={require("./assets/icons/parus_logo.png")} style={styles.logo} />
+                        </TouchableOpacity>
 
                         <IconButton onPress={this._navToSettings} icon="ios-construct-outline" />
-                        {this.state.loading && (
+                        {renderIf(loading)(
                             <View style={{ alignItems: "center" }}>
                                 <View style={styles.centerContainer}>
                                     <ActivityIndicator
@@ -242,10 +184,10 @@ export default class ScanerPage extends React.Component {
                                 </View>
                             </View>
                         )}
-                        {!this.state.loading && (
+                        {renderIf(!loading)(
                             <View style={{ alignItems: "center" }}>
                                 <View style={styles.centerContainer}>
-                                    {!this.state.manual && (
+                                    {renderIf(!manual)(
                                         <MaterialCommunityIcons
                                             name="qrcode-scan"
                                             size={200}
@@ -257,7 +199,7 @@ export default class ScanerPage extends React.Component {
                                         />
                                     )}
 
-                                    {this.state.manual && (
+                                    {renderIf(manual)(
                                         <View style={{ justifyContent: "flex-end", alignItems: "center" }}>
                                             <TextInput
                                                 style={{
@@ -270,7 +212,7 @@ export default class ScanerPage extends React.Component {
                                                 }}
                                                 placeholder="Код с бейджа"
                                                 placeholderTextColor="#f0f0f0"
-                                                onChangeText={data => this.setState({ data })}
+                                                onChangeText={data => this.setState({ data: data })}
                                                 onSubmitEditing={this._handleOkButton}
                                                 returnKeyType="next"
                                                 keyboardType="numeric"
@@ -307,9 +249,7 @@ export default class ScanerPage extends React.Component {
                                             color: "#FFF"
                                         }}
                                     >
-                                        {!this.state.manual
-                                            ? "Поднесите ваш бейдж к камере"
-                                            : "Введите номер вашего бейджа"}
+                                        {!manual ? "Поднесите ваш бейдж к камере" : "Введите номер вашего бейджа"}
                                     </Text>
                                 </View>
 
@@ -332,12 +272,12 @@ export default class ScanerPage extends React.Component {
                                             color: "#FFF"
                                         }}
                                     >
-                                        {!this.state.manual ? "Ввести вручную" : "Отсканировать"}
+                                        {!manual ? "Ввести вручную" : "Отсканировать"}
                                     </Text>
                                 </TouchableOpacity>
                             </View>
                         )}
-                    </BarCodeScanner>
+                    </Camera>
                 )}
             </View>
         );
