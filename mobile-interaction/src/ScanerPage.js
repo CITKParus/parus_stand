@@ -61,9 +61,15 @@ export default class ScanerPage extends React.Component {
     };
     navigation = this.props.navigation;
 
-    refresh = () => {
+    setStateAsync(state) {
+        return new Promise(resolve => {
+            this.setState(state, resolve);
+        });
+    }
+    refresh = async () => {
         console.log("refresh");
-        this.setState({
+
+        await this.setStateAsync({
             scannable: true,
             data: null,
             manual: false,
@@ -84,7 +90,7 @@ export default class ScanerPage extends React.Component {
 
     _handleBarCodeRead = async data => {
         if (this.state.scannable) {
-            this.setState({
+            await this.setStateAsync({
                 loading: true,
                 scannable: false,
                 data: data.data
@@ -93,17 +99,14 @@ export default class ScanerPage extends React.Component {
         }
     };
 
-    _handleManualButton = () => {
-        this.setState({
+    _handleManualButton = async () => {
+        await this.setStateAsync({
             manual: !this.state.manual,
             scannable: !this.state.scannable
         });
     };
 
     _handleOkButton = async () => {
-        this.setState({
-            loading: true
-        });
         await this._auth();
     };
 
@@ -112,10 +115,10 @@ export default class ScanerPage extends React.Component {
     };
 
     _auth = async () => {
-        const response = await AUTH_BY_BARCODE(this.state.data);
-        this.setState({
-            loading: false
+        await this.setStateAsync({
+            loading: true
         });
+        const response = await AUTH_BY_BARCODE(this.state.data);
 
         if (response.state == "ERR") {
             Alert.alert(
@@ -136,8 +139,12 @@ export default class ScanerPage extends React.Component {
             );
         }
 
+        await this.setStateAsync({
+            loading: false
+        });
         this.navigation.navigate("Second", { response: response.message, onGoBack: this.refresh });
     };
+
     render() {
         console.log(this.state);
         const { hasCameraPermission, loading, manual } = this.state;

@@ -19,10 +19,10 @@ export const AUTH_BY_BARCODE = async barcode => {
         body: JSON.stringify(body)
     };
     try {
-        //    const response = await fetch(BASEURL, parameters);
-        //    const result = await response.json();
-
-        const result = {
+        const response = await fetch(BASEURL, parameters);
+        const result = await response.json();
+        // EXAMPLE RESPONSE
+        /*    const result = {
             state: "OK",
             message: {
                 USER: { NAGENT: 452546, SAGENT: "Сидоров С. С.", SAGENT_NAME: "Сидоров Сидор Сидорович" },
@@ -107,7 +107,7 @@ export const AUTH_BY_BARCODE = async barcode => {
                 }
             }
         };
-
+*/
         console.log(result);
         return result;
     } catch (err) {
