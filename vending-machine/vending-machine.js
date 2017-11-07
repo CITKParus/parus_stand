@@ -2,10 +2,14 @@
 // Настраиваем константы конфигурации
 //-----------------------------------
 
-var WIFI_SSID = "MartyMim"; // имя WiFi-сети
-var WIFI_PSWD = "var2008eniK"; // ключ WiFi-сети
 var WIFI_PORT = PrimarySerial; //порт (URAT) подключения WiFi-модуля
 var SERVER_PORT = 8080; //порт WEB-сервера
+//дом
+//var WIFI_SSID = "MartyMim"; // имя WiFi-сети
+//var WIFI_PSWD = "var2008eniK"; // ключ WiFi-сети
+//офис
+var WIFI_SSID = "ASUS"; // имя WiFi-сети
+var WIFI_PSWD = "ParUs2013"; // ключ WiFi-сети
 
 //------------------------------
 // Подключаем внешние библиотеки
