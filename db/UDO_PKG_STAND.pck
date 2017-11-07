@@ -1410,7 +1410,7 @@ create or replace package body UDO_PKG_STAND as
     RESTS_HIST_TMP                  := MSG_GET_LIST(DFROM  => null,
                                                     STP    => SMSG_TYPE_REST_PRC,                                                    
                                                     NLIMIT => 10,
-                                                    NORDER => NMSG_ORDER_ASC);
+                                                    NORDER => NMSG_ORDER_DESC);
     for I in 1 .. 10
     loop
       STAND_STATE.RACK_REST_PRC_HISTS.EXTEND();
