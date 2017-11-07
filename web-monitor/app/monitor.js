@@ -117,7 +117,7 @@ class Monitor extends React.Component {
         if (this.state.totalRests == 0) {
             infoDialog = (
                 <InfoDialog
-                    title={"Нехватка товара на сетнеде"}
+                    title={"Нехватка товара на стенде"}
                     text={"Вендинговый автомат пуст, произведите загрузку!"}
                     open={this.state.totalRests == 0}
                 />
