@@ -183,13 +183,14 @@ export default class ShipmentPage extends React.Component {
                                 fontSize: 34,
                                 fontWeight: "bold",
                                 backgroundColor: "transparent",
-                                color: "black"
+                                color: "black",
+                                marginHorizontal: 20
                             }}
                         >
                             {this.state.resultText}
                         </Text>
 
-                        <TouchableOpacity onPress={this._navBack} style={[styles.cellButton, { paddingTop: 300 }]}>
+                        <TouchableOpacity onPress={this._navBack} style={[styles.cellButton, { marginTop: 300 }]}>
                             <Text style={styles.cellText}>ОК</Text>
                         </TouchableOpacity>
                     </View>

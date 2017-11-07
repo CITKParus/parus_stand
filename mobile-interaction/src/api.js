@@ -4,6 +4,7 @@ import { config } from "./config";
 const TOKEN = "44988367-dca2-4664-b2a5-f17c0b018842";
 
 export const AUTH_BY_BARCODE = async barcode => {
+    console.log("AUTH_BY_BARCODE");
     console.log(barcode);
     const BASEURL = await AsyncStorage.getItem("url");
     const body = {
@@ -120,6 +121,7 @@ export const AUTH_BY_BARCODE = async barcode => {
 };
 
 export const SHIPMENT = async data => {
+    console.log("SHIPMENT");
     const BASEURL = await AsyncStorage.getItem("url");
     const body = {
         token: TOKEN,

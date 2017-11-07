@@ -66,10 +66,10 @@ export default class ScanerPage extends React.Component {
             this.setState(state, resolve);
         });
     }
-    refresh = async () => {
+    refresh = () => {
         console.log("refresh");
 
-        await this.setStateAsync({
+        this.setState({
             scannable: true,
             data: null,
             manual: false,
@@ -90,7 +90,7 @@ export default class ScanerPage extends React.Component {
 
     _handleBarCodeRead = async data => {
         if (this.state.scannable) {
-            await this.setStateAsync({
+            this.setState({
                 loading: true,
                 scannable: false,
                 data: data.data
@@ -100,13 +100,16 @@ export default class ScanerPage extends React.Component {
     };
 
     _handleManualButton = async () => {
-        await this.setStateAsync({
+        this.setState({
             manual: !this.state.manual,
             scannable: !this.state.scannable
         });
     };
 
     _handleOkButton = async () => {
+        this.setState({
+            loading: true
+        });
         await this._auth();
     };
 
@@ -115,9 +118,6 @@ export default class ScanerPage extends React.Component {
     };
 
     _auth = async () => {
-        await this.setStateAsync({
-            loading: true
-        });
         const response = await AUTH_BY_BARCODE(this.state.data);
 
         if (response.state == "ERR") {
@@ -139,9 +139,9 @@ export default class ScanerPage extends React.Component {
             );
         }
 
-        await this.setStateAsync({
+        /*await this.setStateAsync({
             loading: false
-        });
+        });*/
         this.navigation.navigate("Second", { response: response.message, onGoBack: this.refresh });
     };
 
@@ -167,7 +167,8 @@ export default class ScanerPage extends React.Component {
                         </TouchableOpacity>
 
                         <IconButton onPress={this._navToSettings} icon="ios-construct-outline" />
-                        {renderIf(loading)(
+
+                        {loading ? (
                             <View style={{ alignItems: "center" }}>
                                 <View style={styles.centerContainer}>
                                     <ActivityIndicator
@@ -186,27 +187,14 @@ export default class ScanerPage extends React.Component {
                                             color: "#FFF"
                                         }}
                                     >
-                                        Хм, посмотрим... ;-)
+                                        {"Хм, посмотрим... ;-)"}
                                     </Text>
                                 </View>
                             </View>
-                        )}
-                        {renderIf(!loading)(
+                        ) : (
                             <View style={{ alignItems: "center" }}>
                                 <View style={styles.centerContainer}>
-                                    {renderIf(!manual)(
-                                        <MaterialCommunityIcons
-                                            name="qrcode-scan"
-                                            size={200}
-                                            color="white"
-                                            style={{
-                                                backgroundColor: "transparent",
-                                                marginBottom: 50
-                                            }}
-                                        />
-                                    )}
-
-                                    {renderIf(manual)(
+                                    {manual ? (
                                         <View style={{ justifyContent: "flex-end", alignItems: "center" }}>
                                             <TextInput
                                                 style={{
@@ -247,6 +235,16 @@ export default class ScanerPage extends React.Component {
                                                 </Text>
                                             </TouchableOpacity>
                                         </View>
+                                    ) : (
+                                        <MaterialCommunityIcons
+                                            name="qrcode-scan"
+                                            size={200}
+                                            color="white"
+                                            style={{
+                                                backgroundColor: "transparent",
+                                                marginBottom: 50
+                                            }}
+                                        />
                                     )}
                                     <Text
                                         style={{
