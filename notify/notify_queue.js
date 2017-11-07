@@ -83,9 +83,9 @@ class NotifyQueue extends EventEmitter {
                                 utils.log("Have new message (NRN: " + r.message[0].NRN + "). Sending to out queue...");
                                 let messageText = r.message[0].SMSG.SMSG;
                                 if (r.message[0].SMSG.SNOTIFY_TYPE == NOTIFY_TYPE_WARN)
-                                    messageText = "<b>Предупреждение: </b>" + messageText;
+                                    messageText = "<i>Предупреждение: " + messageText + "</i>";
                                 if (r.message[0].SMSG.SNOTIFY_TYPE == NOTIFY_TYPE_ERROR)
-                                    messageText = "<b>Критическое сообщение: </b>" + messageText;
+                                    messageText = "<b>Критическое сообщение: " + messageText + "</b>";
                                 self.sendRespond(
                                     commands.createResp(
                                         commands.PRC_STATE_OK,
