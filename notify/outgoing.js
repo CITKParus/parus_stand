@@ -69,8 +69,8 @@ class Outgoing {
                         sendErr: "", //ошибка отправки
                         msg: {} //отправляемое сообщение
                     };
-                    msg.chatID = chat.chatID;
                     _.extend(tmp.msg, msg);
+                    tmp.msg.chatID = chat.chatID;
                     //добавим его в очередь
                     self.outMessages.push(tmp);
                 }
