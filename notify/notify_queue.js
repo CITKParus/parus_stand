@@ -22,11 +22,6 @@ const commands = require("./commands"); //настройки сценариев 
 //типовые события
 const EVT_NEW_OUT_MESSAGE = "new_out_message"; //новое сообщение для отправки
 
-//типы уведомлений очереди стенда
-const NOTIFY_TYPE_INFO = "INFORMATION"; //информация
-const NOTIFY_TYPE_WARN = "WARNING"; //предупреждение
-const NOTIFY_TYPE_ERROR = "ERROR"; //ошибка
-
 //--------------------------------
 //класс очереди уведомлений стенда
 //--------------------------------
@@ -82,9 +77,9 @@ class NotifyQueue extends EventEmitter {
                             try {
                                 utils.log("Have new message (NRN: " + r.message[0].NRN + "). Sending to out queue...");
                                 let messageText = r.message[0].SMSG.SMSG;
-                                if (r.message[0].SMSG.SNOTIFY_TYPE == NOTIFY_TYPE_WARN)
+                                if (r.message[0].SMSG.SNOTIFY_TYPE == client.SERVER_MSG_NOTIFY_WARN)
                                     messageText = "<i>Предупреждение: " + messageText + "</i>";
-                                if (r.message[0].SMSG.SNOTIFY_TYPE == NOTIFY_TYPE_ERROR)
+                                if (r.message[0].SMSG.SNOTIFY_TYPE == client.SERVER_MSG_NOTIFY_ERROR)
                                     messageText = "<b>Критическое сообщение: " + messageText + "</b>";
                                 self.sendRespond(
                                     commands.createResp(
