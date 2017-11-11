@@ -69,7 +69,7 @@ class NotifyQueue extends EventEmitter {
                     //сервер вернул ответ на запрос нового уведомления - разбираем
                     if (r.state == client.SERVER_STATE_ERR) {
                         //сервер вернул ошибку
-                        utils.log("Server returned error while readind new message: " + r.message);
+                        utils.log("Server returned error while reading new message: " + r.message);
                         self.restartProcessingLoop();
                     } else {
                         //сервер вернул данные уведомления - поставим его в очередь на отправку
@@ -91,9 +91,7 @@ class NotifyQueue extends EventEmitter {
                                         }
                                     )
                                 );
-                                utils.log(
-                                    "Done. Setting server status to " + client.SERVER_ACTION_MSG_SET_STATE + "..."
-                                );
+                                utils.log("Done. Setting server status to " + client.SERVER_MSG_STATE_SENDED + "...");
                                 //отметим на стенде, что уведомление отослано
                                 client
                                     .standServerAction({
