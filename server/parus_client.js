@@ -83,4 +83,5 @@ function parusServerAction(data) {
 //интерфейс модуля
 //----------------
 
+exports.PARUS_REQ_QUERY_PRMS = PARUS_REQ_QUERY_PRMS;
 exports.parusServerAction = parusServerAction;

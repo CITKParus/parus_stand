@@ -22,7 +22,7 @@ const PARUS_MAX_CONN_ATTEMPT = 3; //максимальное количеств�
 
 //команды HTTP-сервера ПП Парус 8
 const PARUS_ACTION_VERIFY = "VERIFY"; //верификация сессии ПП Парус 8
-const PARUS_ACTION_DOWNLOAD = "DOWNLOAD"; //выгрузка файла с сервера ПП Парус 8
+const PARUS_ACTION_DOWNLOAD_GET_URL = "DOWNLOAD_GET_URL"; //подготовка URL для выгрузки файла с сервера ПП Парус 8
 const PARUS_ACTION_LOGIN = "LOGIN"; //создание сессии ПП Парус 8
 const PARUS_ACTION_LOGOUT = "LOGOUT"; //завершение сессии ПП Парус 8
 const PARUS_ACTION_AUTH_BY_BARCODE = "AUTH_BY_BARCODE"; //аутентификация посетителя стенда по штрихкоду
@@ -33,6 +33,7 @@ const PARUS_ACTION_MSG_INSERT = "MSG_INSERT"; //добавление сообщ�
 const PARUS_ACTION_MSG_DELETE = "MSG_DELETE"; //удаление сообщения из очедери уведомлений стенда
 const PARUS_ACTION_MSG_SET_STATE = "MSG_SET_STATE"; //установка состояния сообщения в очедери уведомлений стенда
 const PARUS_ACTION_MSG_GET_LIST = "MSG_GET_LIST"; //получение списка сообщений очереди уведомлений стенда
+const PARUS_ACTION_MSG_GET_PRINT_STATE = "MSG_GET_PRINT_STATE"; //получение состояния отчета по сообщению очереди уведомлений стенда
 const PARUS_ACTION_STAND_GET_STATE = "STAND_GET_STATE"; //получение состояния стенда
 
 //-------
@@ -447,6 +448,68 @@ function msgSetState(prms) {
     });
 }
 
+//проверка состояния отчета по сообщению очереди уведомлений стенда
+function msgGetPrintState(prms) {
+    return new Promise(function(resolve, reject) {
+        //проверим наличие параметров
+        if (prms && prms.rn) {
+            //исполняем действие на сервере ПП Парус 8
+            pc.parusServerAction({
+                prms: {
+                    SACTION: PARUS_ACTION_MSG_GET_PRINT_STATE,
+                    SSESSION: PARUS_SESSION,
+                    NRN: prms.rn
+                },
+                callBack: resp => {
+                    //проверим результат выполнения
+                    if (resp.state == utils.SERVER_STATE_ERR) {
+                        //завершение не удалось
+                        reject(resp);
+                    } else {
+                        //завершение удалась - ресолвим с успехом
+                        resolve(resp);
+                    }
+                }
+            });
+        } else {
+            reject(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
+        }
+    });
+}
+
+//выгрузка файла
+function downloadGetUrl(prms) {
+    return new Promise(function(resolve, reject) {
+        //проверим наличие параметров
+        if (prms && prms.fileType && prms.fileRn) {
+            //исполняем действие на сервере ПП Парус 8
+            pc.parusServerAction({
+                prms: {
+                    SACTION: PARUS_ACTION_DOWNLOAD_GET_URL,
+                    SSESSION: PARUS_SESSION,
+                    SFILE_TYPE: prms.fileType,
+                    NFILE_RN: prms.fileRn
+                },
+                callBack: resp => {
+                    //проверим результат выполнения
+                    if (resp.state == utils.SERVER_STATE_ERR) {
+                        //завершение не удалось
+                        reject(resp);
+                    } else {
+                        //завершение удалась - ресолвим с успехом, но доработаем URL
+                        let tmpURL = JSON.parse(resp.message);
+                        resp.message =
+                            conf.PARUS_HTTP_ADDRESS + "?" + pc.PARUS_REQ_QUERY_PRMS + "=" + JSON.stringify(tmpURL);
+                        resolve(resp);
+                    }
+                }
+            });
+        } else {
+            reject(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
+        }
+    });
+}
+
 //выполнение действия ПП Парус 8
 function makeAction(prms) {
     return new Promise(function(resolve, reject) {
@@ -457,6 +520,11 @@ function makeAction(prms) {
             //завершение сеанса
             case PARUS_ACTION_LOGOUT: {
                 actionFunction = logOut;
+                break;
+            }
+            //подготовка URL для выгрузки файла с сервера ПП парус 8
+            case PARUS_ACTION_DOWNLOAD_GET_URL: {
+                actionFunction = downloadGetUrl;
                 break;
             }
             //получение состояния стенда
@@ -492,6 +560,11 @@ function makeAction(prms) {
             //установка состояния сообщения в очереди уведомлений стенда
             case PARUS_ACTION_MSG_SET_STATE: {
                 actionFunction = msgSetState;
+                break;
+            }
+            //проверка состояния отчета по позиции очереди уведомлений стенда
+            case PARUS_ACTION_MSG_GET_PRINT_STATE: {
+                actionFunction = msgGetPrintState;
                 break;
             }
             //какая-то неизвестная нам функция
@@ -555,7 +628,7 @@ function makeAction(prms) {
 //----------------
 
 exports.PARUS_ACTION_VERIFY = PARUS_ACTION_VERIFY;
-exports.PARUS_ACTION_DOWNLOAD = PARUS_ACTION_DOWNLOAD;
+exports.PARUS_ACTION_DOWNLOAD_GET_URL = PARUS_ACTION_DOWNLOAD_GET_URL;
 exports.PARUS_ACTION_LOGIN = PARUS_ACTION_LOGIN;
 exports.PARUS_ACTION_LOGOUT = PARUS_ACTION_LOGOUT;
 exports.PARUS_ACTION_AUTH_BY_BARCODE = PARUS_ACTION_AUTH_BY_BARCODE;
