@@ -111,6 +111,14 @@ create or replace package UDO_PKG_WEB_API
     SFILE_NAME              varchar2         -- Имя файла
   ) return varchar2;  
   
+  /* Формирование URL для выгрузки файла */
+  function UTL_BUILD_DOWNLOAD_URL
+  (
+    SSESSION                varchar2,        -- Идентификатор сессии
+    SFILE_TYPE              varchar2,        -- Тип файла (см. константы SFILE_TYPE_*)
+    NFILE_RN                number           -- Регистрационный номер файла
+  ) return varchar2;
+  
   /* Транслитерация русской строки в английскую */
   function RESP_TRANSLATE_MSG
   (
@@ -398,6 +406,45 @@ create or replace package body UDO_PKG_WEB_API as
                           'UTF8');
   end;
   
+  /* Формирование URL для выгрузки файла */
+  function UTL_BUILD_DOWNLOAD_URL
+  (
+    SSESSION                varchar2,        -- Идентификатор сессии
+    SFILE_TYPE              varchar2,        -- Тип файла (см. константы SFILE_TYPE_*)
+    NFILE_RN                number           -- Регистрационный номер файла
+  ) return varchar2 is
+    SRES                    PKG_STD.TSTRING; -- Результат работы
+  begin
+    /* Проверим параметры */
+    if (SSESSION is null) then
+      P_EXCEPTION(0,
+                  'Не указан идентификатор сессии для формирования URL выгрузки файла!');
+    end if;
+    if (SFILE_TYPE is null) then
+      P_EXCEPTION(0,
+                  'Не указан тип файла для формирования URL выгрузки файла!');
+    end if;
+    if (NFILE_RN is null) then
+      P_EXCEPTION(0,
+                  'Не указан идентификатор файла для формирования URL выгрузки файла!');
+    end if;
+    /* Работаем от типа файла */
+    case (SFILE_TYPE)
+      /* Файл готового отчета */
+      when (SFILE_TYPE_REPORT) then
+        begin
+          SRES := '';
+        end;
+      /* Неизвестный тип файла */
+      else
+        P_EXCEPTION(0,
+                    'Для файла типа "%s" выгрузка не поддерживается!',
+                    SFILE_TYPE);
+    end case;
+    /* Вернем говый URL */
+    return SRES;
+  end;
+  
   /* Транслитерация русской строки в английскую */
   function RESP_TRANSLATE_MSG
   (
@@ -415,8 +462,7 @@ create or replace package body UDO_PKG_WEB_API as
     SRES := replace(SRES, 'Ш', 'SH');
     SRES := replace(SRES, 'Щ', 'SH');
     SRES := replace(SRES, 'Ю', 'YU');
-    SRES := replace(SRES, 'Я', 'YA');
-    
+    SRES := replace(SRES, 'Я', 'YA');    
     /* Вернем ответ */
     return SRES;
   end;
@@ -905,7 +951,7 @@ create or replace package body UDO_PKG_WEB_API as
               /* Неизвестный тип файла */
               else
                 P_EXCEPTION(0,
-                            'Для Файла типа "%s" выгрузка не поддерживается!',
+                            'Для файла типа "%s" выгрузка не поддерживается!',
                             SFILE_TYPE);
             end case;
             /* Данные успешно подготовлены, все проверки пройдены - можно выгружать */

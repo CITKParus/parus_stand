@@ -78,6 +78,12 @@ create or replace package UDO_PKG_STAND as
   NMSG_ORDER_ASC            PKG_STD.TNUMBER := 1;                                       -- Сначала старые
   NMSG_ORDER_DESC           PKG_STD.TNUMBER := -1;                                      -- Cначала новые
   
+  /* Константы описания состояния отчета в очереди печати */
+  NRPT_QUEUE_STATE_INS      PKG_STD.TNUMBER := 0;                                       -- Поставлено в очередь
+  NRPT_QUEUE_STATE_RUN      PKG_STD.TNUMBER := 1;                                       -- Обрабатывается
+  NRPT_QUEUE_STATE_OK       PKG_STD.TNUMBER := 2;                                       -- Завершено успешно
+  NRPT_QUEUE_STATE_ERR      PKG_STD.TNUMBER := 3;                                       -- Завершено с ошибкой
+  
   /* Типы данных - конфигурация ячейки стенда */
   type TRACK_LINE_CELL_CONF is record
   (
@@ -216,6 +222,15 @@ create or replace package UDO_PKG_STAND as
     MESSAGES                TMESSAGES                                                   -- Сообщения стенда
   );
   
+  /* Типы данных - состояние позиции очереди печати отчетов */
+  type TRPT_QUEUE_STATE is record
+  (
+    NRN                     RPTPRTQUEUE.RN%type,                                        -- Регистрационный номер позиции очереди
+    NSTATE                  RPTPRTQUEUE.STATUS%type,                                    -- Состояние (см. константы NRPT_QUEUE_STATE_*)
+    SERR                    RPTPRTQUEUE.ERROR_TEXT%type,                                -- Сообщение об ошибке (если была)
+    SFILE_TYPE              PKG_STD.TSTRING                                             -- Тип файла для выгрузки готового отчета
+  );
+  
   /* Базовое добавление сообщения в очередь */
   procedure MSG_BASE_INSERT
   (
@@ -288,7 +303,7 @@ create or replace package UDO_PKG_STAND as
   (
     NRN                     number,     -- Регистрационный номер сообщения
     NSMART                  number := 0 -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
-  )return UDO_T_STAND_MSG%rowtype;
+  ) return UDO_T_STAND_MSG%rowtype;
   
   /* Считывание новых сообщений из очереди */
   function MSG_GET_LIST
@@ -298,7 +313,6 @@ create or replace package UDO_PKG_STAND as
     SSTS                    varchar2 := null,        -- Состояние сообщений (null - любое, см. константы SMSG_STATE_*)
     NLIMIT                  number := null,          -- Максимальное количество (null - все)
     NORDER                  number := NMSG_ORDER_ASC -- Порядок сортировки (см. констнаты SMSG_ORDER_*)
-
   ) return TMESSAGES;  
   
   /* Формирование наименования стеллажа (префикс-номер) */
@@ -461,6 +475,13 @@ create or replace package UDO_PKG_STAND as
   (
     NCOMPANY                number,     -- Регистрационный номер организации
     NTRANSINVCUST           number      -- Регистрационный номер отгрузочной РНОП
+  );
+  
+  /* Считывание состояния записи очереди печати */
+  procedure PRINT_GET_STATE
+  (
+    NRPTPRTQUEUE            number,              -- Регистрационный номер записи очереди печати
+    RPT_QUEUE_STATE         out TRPT_QUEUE_STATE -- Состояние позиции очереди печати
   );
   
   /* Заполнение списка отмеченных для печати документов (автономная транзакция) */
@@ -2174,6 +2195,31 @@ create or replace package body UDO_PKG_STAND as
   
     /* Запомним остатки по стенду */
     STAND_SAVE_RACK_REST(NCOMPANY => NCOMPANY, BNOTIFY_REST => true, BNOTIFY_LIMIT => false);
+  end;
+  
+  /* Считывание состояния записи очереди печати */
+  procedure PRINT_GET_STATE
+  (
+    NRPTPRTQUEUE            number,              -- Регистрационный номер записи очереди печати
+    RPT_QUEUE_STATE         out TRPT_QUEUE_STATE -- Состояние позиции очереди печати    
+  ) is    
+  begin
+    /* Считаем запись очереди и инициализируем выходную коллекцию */
+    begin
+      select T.RN,
+             T.STATUS,
+             T.ERROR_TEXT,
+             UDO_PKG_WEB_API.SFILE_TYPE_REPORT
+        into RPT_QUEUE_STATE.NRN,
+             RPT_QUEUE_STATE.NSTATE,
+             RPT_QUEUE_STATE.SERR,
+             RPT_QUEUE_STATE.SFILE_TYPE
+        from RPTPRTQUEUE T
+       where T.RN = NRPTPRTQUEUE;
+    exception
+      when NO_DATA_FOUND then
+        PKG_MSG.RECORD_NOT_FOUND(NFLAG_SMART => 0, NDOCUMENT => NRPTPRTQUEUE, SUNIT_TABLE => 'RPTPRTQUEUE');
+    end;
   end;
   
   /* Заполнение списка отмеченных для печати документов (автономная транзакция) */
