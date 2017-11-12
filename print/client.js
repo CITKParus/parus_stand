@@ -53,6 +53,12 @@ const SERVER_MSG_NOTIFY_ERROR = "ERROR"; //ошибка
 const SERVER_MSG_ORDER_OLD_FIRST = 1; //сначала старые
 const SERVER_MSG_ORDER_NEW_FIRST = -1; //сначала новые
 
+//состосние отчета в очереди
+const SERVER_RPT_QUEUE_STATE_INS = 0; //поставлено в очередь
+const SERVER_RPT_QUEUE_STATE_RUN = 1; //обрабатывается
+const SERVER_RPT_QUEUE_STATE_OK = 2; //завершено успешно
+const SERVER_RPT_QUEUE_STATE_ERR = 3; //завершено с ошибкой
+
 //типовые состояния ответов сервера
 const SERVER_STATE_ERR = "ERR"; //состояние сервера - ошибка
 const SERVER_STATE_OK = "OK"; //состояние сервера - всё нормально
@@ -165,6 +171,10 @@ exports.SERVER_MSG_NOTIFY_WARN = SERVER_MSG_NOTIFY_WARN;
 exports.SERVER_MSG_NOTIFY_ERROR = SERVER_MSG_NOTIFY_ERROR;
 exports.SERVER_MSG_ORDER_OLD_FIRST = SERVER_MSG_ORDER_OLD_FIRST;
 exports.SERVER_MSG_ORDER_NEW_FIRST = SERVER_MSG_ORDER_NEW_FIRST;
+exports.SERVER_RPT_QUEUE_STATE_INS = SERVER_RPT_QUEUE_STATE_INS;
+exports.SERVER_RPT_QUEUE_STATE_RUN = SERVER_RPT_QUEUE_STATE_RUN;
+exports.SERVER_RPT_QUEUE_STATE_OK = SERVER_RPT_QUEUE_STATE_OK;
+exports.SERVER_RPT_QUEUE_STATE_ERR = SERVER_RPT_QUEUE_STATE_ERR;
 exports.SERVER_STATE_ERR = SERVER_STATE_ERR;
 exports.SERVER_STATE_OK = SERVER_STATE_OK;
 exports.standServerAction = standServerAction;
