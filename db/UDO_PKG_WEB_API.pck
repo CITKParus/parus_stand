@@ -27,10 +27,11 @@ create or replace package UDO_PKG_WEB_API
   SREQ_FILE_RN_KEY          constant varchar2(20) := 'NFILE_RN';      -- Наименование ключа для рег. номера выгружаемого файла
   
   /* Константы - коды специальных действий сервера */
-  SACTION_LOGIN             constant varchar2(20) := 'LOGIN';         -- Аутентификация
-  SACTION_LOGOUT            constant varchar2(20) := 'LOGOUT';        -- Завершение сессии
-  SACTION_VERIFY            constant varchar2(20) := 'VERIFY';        -- Проверка валидности сессии
-  SACTION_DOWNLOAD          constant varchar2(20) := 'DOWNLOAD';      -- Выгрузка файла
+  SACTION_LOGIN             constant varchar2(20) := 'LOGIN';            -- Аутентификация
+  SACTION_LOGOUT            constant varchar2(20) := 'LOGOUT';           -- Завершение сессии
+  SACTION_VERIFY            constant varchar2(20) := 'VERIFY';           -- Проверка валидности сессии
+  SACTION_DOWNLOAD          constant varchar2(20) := 'DOWNLOAD';         -- Выгрузка файла
+  SACTION_DOWNLOAD_GET_URL  constant varchar2(20) := 'DOWNLOAD_GET_URL'; -- Формирование URL для выгрузки файла
   
   /* Константы - типы выгружаемых файлов */
   SFILE_TYPE_REPORT         constant varchar2(20) := 'REPORT';        -- Готовый отчет
@@ -413,7 +414,8 @@ create or replace package body UDO_PKG_WEB_API as
     SFILE_TYPE              varchar2,        -- Тип файла (см. константы SFILE_TYPE_*)
     NFILE_RN                number           -- Регистрационный номер файла
   ) return varchar2 is
-    SRES                    PKG_STD.TSTRING; -- Результат работы
+    JRES                    JSON;            -- Результат работы (объектное представление)
+    SRES                    PKG_STD.TSTRING; -- Результат работы (строковое представление)
   begin
     /* Проверим параметры */
     if (SSESSION is null) then
@@ -433,7 +435,12 @@ create or replace package body UDO_PKG_WEB_API as
       /* Файл готового отчета */
       when (SFILE_TYPE_REPORT) then
         begin
-          SRES := '';
+          JRES := JSON();
+          JRES.PUT(PAIR_NAME => SREQ_SESSION_KEY, PAIR_VALUE => SSESSION);
+          JRES.PUT(PAIR_NAME => SREQ_ACTION_KEY, PAIR_VALUE => SACTION_DOWNLOAD);
+          JRES.PUT(PAIR_NAME => SREQ_FILE_TYPE_KEY, PAIR_VALUE => SFILE_TYPE_REPORT);          
+          JRES.PUT(PAIR_NAME => SREQ_FILE_RN_KEY, PAIR_VALUE => NFILE_RN);          
+          SRES := JRES.TO_CHAR();
         end;
       /* Неизвестный тип файла */
       else
@@ -956,7 +963,34 @@ create or replace package body UDO_PKG_WEB_API as
             end case;
             /* Данные успешно подготовлены, все проверки пройдены - можно выгружать */
             BDOWNLOAD := true;
-          end;        
+          end;
+        /* Спецдействие - Подготовка URL для выгрузки файла (обрабатывается непосредственно здесь, в ядре) */
+        when SACTION_DOWNLOAD_GET_URL then
+          declare
+            SFILE_TYPE PKG_STD.TSTRING;     -- Тип выгружаемого файла
+            NFILE_RN   PKG_STD.TREF;        -- Рег. номер выгружаемого файла   
+          begin
+            /* Считаем тип файла */
+            if ((not JPRMS.EXIST(SREQ_FILE_TYPE_KEY)) or (JPRMS.GET(SREQ_FILE_TYPE_KEY).VALUE_OF() is null)) then
+              P_EXCEPTION(0,
+                          'В запросе к серверу не указан тип выгружаемого файла!');
+            else
+              SFILE_TYPE := JPRMS.GET(SREQ_FILE_TYPE_KEY).VALUE_OF();
+            end if;
+            /* Считаем идентификатор файла */
+            if ((not JPRMS.EXIST(SREQ_FILE_RN_KEY)) or (JPRMS.GET(SREQ_FILE_RN_KEY).VALUE_OF() is null)) then
+              P_EXCEPTION(0,
+                          'В запросе к серверу не указан регистрационный номер выгружаемого файла!');
+            else
+              NFILE_RN := UTL_CONVERT_TO_NUMBER(SSTR => JPRMS.GET(SREQ_FILE_RN_KEY).VALUE_OF(), NSMART => 0);
+            end if;
+            /* Скажем что всё прошло хорошо */
+            CRES := RESP_MAKE(NRESP_FORMAT => NRESP_FORMAT_JSON,
+                              NRESP_STATE  => NRESP_STATE_OK,
+                              SRESP_MSG    => UTL_BUILD_DOWNLOAD_URL(SSESSION   => JPRMS.GET(SREQ_SESSION_KEY).VALUE_OF(),
+                                                                     SFILE_TYPE => SFILE_TYPE,
+                                                                     NFILE_RN   => NFILE_RN));
+          end;
         /* Прочие действия - обрабатываются вызовами соответствующих обработчиков */
         else
           begin
