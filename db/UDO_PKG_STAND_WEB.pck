@@ -73,6 +73,13 @@ create or replace package UDO_PKG_STAND_WEB as
     CRES                    out clob    -- Результат работы
   );
   
+    /* Проверка состояния отчета в очереди печати */
+  procedure PRINT_GET_STATE
+  (
+    CPRMS                   clob,       -- Входные параметры
+    CRES                    out clob    -- Результат работы
+  );
+  
   /* Помещение сообщения в очередь уведомлений */
   procedure MSG_INSERT
   (
@@ -96,13 +103,6 @@ create or replace package UDO_PKG_STAND_WEB as
 
   /* Выдача списка сообщений */
   procedure MSG_GET_LIST
-  (
-    CPRMS                   clob,       -- Входные параметры
-    CRES                    out clob    -- Результат работы
-  );
-  
-  /* Проверка состояния отчета в очереди печати по сообщению очереди уведомлений стенда */
-  procedure MSG_GET_PRINT_STATE
   (
     CPRMS                   clob,       -- Входные параметры
     CRES                    out clob    -- Результат работы
@@ -532,6 +532,56 @@ create or replace package body UDO_PKG_STAND_WEB as
       rollback;
   end;
   
+  /* Проверка состояния отчета в очереди печати */
+  procedure PRINT_GET_STATE
+  (
+    CPRMS                   clob,                           -- Входные параметры
+    CRES                    out clob                        -- Результат работы
+  ) is
+    JPRMS                   JSON;                           -- Объектное представление параметров запроса  
+    JRES                    JSON;                           -- Объектное представление ответа    
+    NRPTPRTQUEUE            RPTPRTQUEUE.RN%type;            -- Идентификатор позиции очереди печати
+    RPT_QUEUE_STATE         UDO_PKG_STAND.TRPT_QUEUE_STATE; -- Состояние отчета в очереди печати
+    SERR                    PKG_STD.TSTRING;                -- Буфер для ошибок    
+  begin
+    /* Инициализируем выход */
+    DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
+    /* Конвертируем параметры в объектное представление */
+    JPRMS := JSON(CPRMS);
+    /* Проверим наличие сессии в параметрах */
+    if ((not JPRMS.EXIST(UDO_PKG_WEB_API.SREQ_SESSION_KEY)) or
+       (JPRMS.GET(UDO_PKG_WEB_API.SREQ_SESSION_KEY).VALUE_OF() is null)) then
+      P_EXCEPTION(0, 'В запросе к серверу не указана сессия!');
+    end if;
+    /* Считываем идентификатор позиции очереди печати */
+    if ((not JPRMS.EXIST('NRPTPRTQUEUE')) or (JPRMS.GET('NRPTPRTQUEUE').VALUE_OF() is null)) then
+      P_EXCEPTION(0,
+                  'В запросе к серверу не указан идентификатор позиции очереди печати!');
+    else
+      NRPTPRTQUEUE := UDO_PKG_WEB_API.UTL_CONVERT_TO_NUMBER(SSTR => JPRMS.GET('NRPTPRTQUEUE').VALUE_OF(), NSMART => 0);
+    end if;
+    /* Проверим состояние отчета в очереди */
+    UDO_PKG_STAND.PRINT_GET_STATE(SSESSION        => JPRMS.GET(UDO_PKG_WEB_API.SREQ_SESSION_KEY).VALUE_OF(),
+                                  NRPTPRTQUEUE    => NRPTPRTQUEUE,
+                                  RPT_QUEUE_STATE => RPT_QUEUE_STATE);
+    /* Инициализируем ответ */
+    JRES := JSON();
+    /* Соберем ответ для выдачи */
+    JRES.PUT(PAIR_NAME => 'NRN', PAIR_VALUE => RPT_QUEUE_STATE.NRN);
+    JRES.PUT(PAIR_NAME => 'SSTATE', PAIR_VALUE => RPT_QUEUE_STATE.SSTATE);
+    JRES.PUT(PAIR_NAME => 'SERR', PAIR_VALUE => RPT_QUEUE_STATE.SERR);
+    JRES.PUT(PAIR_NAME => 'SURL', PAIR_VALUE => RPT_QUEUE_STATE.SURL);
+    /* Отдаём ответ */
+    JRES.TO_CLOB(BUF => CRES);
+  exception
+    when others then
+      SERR := sqlerrm;
+      CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                        NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_ERR,
+                                        SRESP_MSG    => SERR);
+      rollback;
+  end;
+  
   /* Помещение сообщения в очередь уведомлений */
   procedure MSG_INSERT
   (
@@ -716,70 +766,6 @@ create or replace package body UDO_PKG_STAND_WEB as
     JRES := MESSAGES_TO_JSON(MSGS => MSGS);
     /* Отдаём ответ */
     JRES.TO_CLOB(BUF => CRES);  
-  exception
-    when others then
-      SERR := sqlerrm;
-      CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
-                                        NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_ERR,
-                                        SRESP_MSG    => SERR);
-      rollback;
-  end;
-  
-  /* Проверка состояния отчета в очереди печати по сообщению очереди уведомлений стенда */
-  procedure MSG_GET_PRINT_STATE
-  (
-    CPRMS                   clob,                           -- Входные параметры
-    CRES                    out clob                        -- Результат работы
-  ) is
-    JPRMS                   JSON;                           -- Объектное представление параметров запроса  
-    JRES                    JSON;                           -- Объектное представление ответа    
-    MSG                     UDO_T_STAND_MSG%rowtype;        -- Запись сообщения очереди уведомлений стенда
-    RPT_QUEUE_STATE         UDO_PKG_STAND.TRPT_QUEUE_STATE; -- Состояние отчета в очереди печати
-    SERR                    PKG_STD.TSTRING;                -- Буфер для ошибок    
-  begin
-    /* Инициализируем выход */
-    DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
-    /* Конвертируем параметры в объектное представление */
-    JPRMS := JSON(CPRMS);
-    /* Считываем идентификатор сообщения, в котором содержится ссылка на отчет */
-    if ((not JPRMS.EXIST('NRN')) or (JPRMS.GET('NRN').VALUE_OF() is null)) then
-      P_EXCEPTION(0,
-                  'В запросе к серверу не указан идентификатор сообщения очереди уведомлений стенда!');
-    else
-      MSG.RN := UDO_PKG_WEB_API.UTL_CONVERT_TO_NUMBER(SSTR => JPRMS.GET('NRN').VALUE_OF(), NSMART => 0);
-    end if;
-    /* Считаем запись сообщения очереди уведомлений */
-    MSG := UDO_PKG_STAND.MSG_GET(NRN => MSG.RN, NSMART => 0);
-    /* Убедимся, что это сообщение о постановке отчета в очередь */
-    if (MSG.TP = UDO_PKG_STAND.SMSG_TYPE_PRINT) then
-      /* В тексте сообщения - рег. номер проверяемой позиции очереди */
-      begin
-        UDO_PKG_STAND.PRINT_GET_STATE(NRPTPRTQUEUE => TO_CHAR(MSG.MSG), RPT_QUEUE_STATE => RPT_QUEUE_STATE);
-      exception
-        when INVALID_NUMBER then
-          P_EXCEPTION(0,
-                      'Некорректный формат проверяемого сообщения (RN: %s) очереди уведомлений стенда!',
-                      TO_CHAR(MSG.RN));
-      end;
-      /* Если отчет подготовлен (с ошибкой или нет - не важно) надо выставить в очереди стенда сведения об этом */
-      if (RPT_QUEUE_STATE.NSTATE in (UDO_PKG_STAND.NRPT_QUEUE_STATE_OK, UDO_PKG_STAND.NRPT_QUEUE_STATE_ERR)) then
-        UDO_PKG_STAND.MSG_SET_STATE(NRN => MSG.RN, SSTS => UDO_PKG_STAND.SMSG_STATE_PRINTED);
-      end if;
-      /* Инициализируем ответ */
-      JRES := JSON();
-      /* Соберем ответ для выдачи */
-      JRES.PUT(PAIR_NAME => 'NRN', PAIR_VALUE => RPT_QUEUE_STATE.NRN);
-      JRES.PUT(PAIR_NAME => 'NSTATE', PAIR_VALUE => RPT_QUEUE_STATE.NSTATE);
-      JRES.PUT(PAIR_NAME => 'SERR', PAIR_VALUE => RPT_QUEUE_STATE.SERR);
-      JRES.PUT(PAIR_NAME => 'SFILE_TYPE', PAIR_VALUE => RPT_QUEUE_STATE.SFILE_TYPE);
-      /* Отдаём ответ */
-      JRES.TO_CLOB(BUF => CRES);
-    else
-      P_EXCEPTION(0,
-                  'Проверяемое сообщение (RN: %s) имеет тип отличный от "%s"!',
-                  TO_CHAR(MSG.RN),
-                  UDO_PKG_STAND.SMSG_TYPE_PRINT);
-    end if;
   exception
     when others then
       SERR := sqlerrm;

@@ -1,5 +1,5 @@
 prompt PL/SQL Developer import file
-prompt Created on 12 Ноябрь 2017 г. by root
+prompt Created on 19 Ноябрь 2017 г. by root
 set feedback off
 set define off
 prompt Loading UDO_T_WEB_API_ACTIONS...
@@ -14,7 +14,7 @@ values (2, 'DOWNLOAD', 'UDO_PKG_WEB_API.PROCESS', 0);
 insert into UDO_T_WEB_API_ACTIONS (rn, action, processor, unauth)
 values (3, 'LOGIN', 'UDO_PKG_WEB_API.PROCESS', 1);
 insert into UDO_T_WEB_API_ACTIONS (rn, action, processor, unauth)
-values (14, 'MSG_GET_PRINT_STATE', 'UDO_PKG_STAND_WEB.MSG_GET_PRINT_STATE', 0);
+values (14, 'PRINT_GET_STATE', 'UDO_PKG_STAND_WEB.PRINT_GET_STATE', 0);
 insert into UDO_T_WEB_API_ACTIONS (rn, action, processor, unauth)
 values (15, 'DOWNLOAD_GET_URL', 'UDO_PKG_WEB_API.PROCESS', 0);
 insert into UDO_T_WEB_API_ACTIONS (rn, action, processor, unauth)

@@ -84,6 +84,12 @@ create or replace package UDO_PKG_STAND as
   NRPT_QUEUE_STATE_OK       PKG_STD.TNUMBER := 2;                                       -- Завершено успешно
   NRPT_QUEUE_STATE_ERR      PKG_STD.TNUMBER := 3;                                       -- Завершено с ошибкой
   
+  /* Константы описания состояния отчета в очереди печати */
+  SRPT_QUEUE_STATE_INS      PKG_STD.TSTRING := 'QUEUE_STATE_INS';                       -- Поставлено в очередь
+  SRPT_QUEUE_STATE_RUN      PKG_STD.TSTRING := 'QUEUE_STATE_RUN';                       -- Обрабатывается
+  SRPT_QUEUE_STATE_OK       PKG_STD.TSTRING := 'QUEUE_STATE_OK';                        -- Завершено успешно
+  SRPT_QUEUE_STATE_ERR      PKG_STD.TSTRING := 'QUEUE_STATE_ERR';                       -- Завершено с ошибкой
+
   /* Типы данных - конфигурация ячейки стенда */
   type TRACK_LINE_CELL_CONF is record
   (
@@ -226,9 +232,9 @@ create or replace package UDO_PKG_STAND as
   type TRPT_QUEUE_STATE is record
   (
     NRN                     RPTPRTQUEUE.RN%type,                                        -- Регистрационный номер позиции очереди
-    NSTATE                  RPTPRTQUEUE.STATUS%type,                                    -- Состояние (см. константы NRPT_QUEUE_STATE_*)
+    SSTATE                  PKG_STD.TSTRING,                                            -- Состояние (см. константы SRPT_QUEUE_STATE_*)
     SERR                    RPTPRTQUEUE.ERROR_TEXT%type,                                -- Сообщение об ошибке (если была)
-    SFILE_TYPE              PKG_STD.TSTRING                                             -- Тип файла для выгрузки готового отчета
+    SURL                    PKG_STD.TSTRING                                             -- URL для выгрузки готового отчета
   );
   
   /* Базовое добавление сообщения в очередь */
@@ -480,6 +486,7 @@ create or replace package UDO_PKG_STAND as
   /* Считывание состояния записи очереди печати */
   procedure PRINT_GET_STATE
   (
+    SSESSION                varchar2,            -- Идентификатор сессии    
     NRPTPRTQUEUE            number,              -- Регистрационный номер записи очереди печати
     RPT_QUEUE_STATE         out TRPT_QUEUE_STATE -- Состояние позиции очереди печати
   );
@@ -2200,26 +2207,84 @@ create or replace package body UDO_PKG_STAND as
   /* Считывание состояния записи очереди печати */
   procedure PRINT_GET_STATE
   (
-    NRPTPRTQUEUE            number,              -- Регистрационный номер записи очереди печати
-    RPT_QUEUE_STATE         out TRPT_QUEUE_STATE -- Состояние позиции очереди печати    
+    SSESSION                varchar2,                       -- Идентификатор сессии
+    NRPTPRTQUEUE            number,                         -- Регистрационный номер записи очереди печати
+    RPT_QUEUE_STATE         out TRPT_QUEUE_STATE            -- Состояние позиции очереди печати    
   ) is    
+    SMSG                    UDO_T_STAND_MSG.MSG%type;       -- Текст формируемого уведомления
+    SNOTIFY_TYPE            PKG_STD.TSTRING;                -- Тип формируемого уведомления
+    SRECEIVER               RPTPRTQUEUE_PRM.STR_VALUE%type; -- Значение параметра отчета "Контрагент-получатель"
   begin
     /* Считаем запись очереди и инициализируем выходную коллекцию */
     begin
       select T.RN,
-             T.STATUS,
+             DECODE(T.STATUS,
+                    NRPT_QUEUE_STATE_INS,
+                    SRPT_QUEUE_STATE_INS,
+                    NRPT_QUEUE_STATE_RUN,
+                    SRPT_QUEUE_STATE_RUN,
+                    NRPT_QUEUE_STATE_OK,
+                    SRPT_QUEUE_STATE_OK,
+                    NRPT_QUEUE_STATE_ERR,
+                    SRPT_QUEUE_STATE_ERR),
              T.ERROR_TEXT,
-             UDO_PKG_WEB_API.SFILE_TYPE_REPORT
+             DECODE(T.STATUS,
+                    NRPT_QUEUE_STATE_OK,
+                    UDO_PKG_WEB_API.UTL_BUILD_DOWNLOAD_URL(SSESSION   => SSESSION,
+                                                           SFILE_TYPE => UDO_PKG_WEB_API.SFILE_TYPE_REPORT,
+                                                           NFILE_RN   => T.RN),
+                    null)
         into RPT_QUEUE_STATE.NRN,
-             RPT_QUEUE_STATE.NSTATE,
+             RPT_QUEUE_STATE.SSTATE,
              RPT_QUEUE_STATE.SERR,
-             RPT_QUEUE_STATE.SFILE_TYPE
+             RPT_QUEUE_STATE.SURL
         from RPTPRTQUEUE T
        where T.RN = NRPTPRTQUEUE;
     exception
       when NO_DATA_FOUND then
         PKG_MSG.RECORD_NOT_FOUND(NFLAG_SMART => 0, NDOCUMENT => NRPTPRTQUEUE, SUNIT_TABLE => 'RPTPRTQUEUE');
     end;
+    /* Если отчет подготовлен (с ошибкой или нет - не важно) */
+    if (RPT_QUEUE_STATE.SSTATE in (SRPT_QUEUE_STATE_OK, SRPT_QUEUE_STATE_ERR)) then
+      /* Надо выставить в очереди стенда сведения об этом */
+      for MSG in (select RN
+                    from UDO_T_STAND_MSG T
+                   where T.TP = SMSG_TYPE_PRINT
+                     and T.STS = SMSG_STATE_NOT_PRINTED
+                     and T.MSG = TO_CHAR(RPT_QUEUE_STATE.NRN))
+      loop
+        MSG_SET_STATE(NRN => MSG.RN, SSTS => SMSG_STATE_PRINTED);
+      end loop;
+      /* Считаем информацию о накладной */
+      begin
+        select P.STR_VALUE
+          into SRECEIVER
+          from RPTPRTQUEUE_PRM P
+         where P.PRN = RPT_QUEUE_STATE.NRN
+           and P.NAME = 'SRECEIVER';
+      exception
+        when NO_DATA_FOUND then
+          SRECEIVER := null;
+      end;
+      /* Сформируем сообщение */
+      if (RPT_QUEUE_STATE.SSTATE = SRPT_QUEUE_STATE_OK) then
+        if (SRECEIVER is null) then
+          SMSG := 'Сервер отложенной печати успешно подготовил очередную накладную.';
+        else
+          SMSG := 'Накладная для ' || SRECEIVER || ' успешно подготовлена сервером отложенной печати.';
+        end if;
+        SNOTIFY_TYPE := SNOTIFY_TYPE_INFO;
+      else
+        if (SRECEIVER is null) then
+          SMSG := 'Ошибка подготовки накладной сервером отложенной печати: ' || RPT_QUEUE_STATE.SERR;
+        else
+          SMSG := 'Ошибка подготовки накладной для ' || SRECEIVER || ': ' || RPT_QUEUE_STATE.SERR;
+        end if;
+        SNOTIFY_TYPE := SNOTIFY_TYPE_ERROR;
+      end if;
+      /* Добавим сообщение в очередь */
+      MSG_INSERT_NOTIFY(SMSG => SMSG, SNOTIFY_TYPE => SNOTIFY_TYPE);
+    end if;
   end;
   
   /* Заполнение списка отмеченных для печати документов (автономная транзакция) */
@@ -2266,7 +2331,7 @@ create or replace package body UDO_PKG_STAND as
     NIDENT                  PKG_STD.TREF;    -- Идентификатор отмеченных записей для документа отгрузки    
     NTRINVCUST_REPORT       PKG_STD.TREF;    -- Рег. номер формируемого отчета
     STRANSINVCUST           PKG_STD.TSTRING; -- Описание документа отгрузки
-    SAGENT                  PKG_STD.TSTRING; -- Контрагент документа отгразки
+    SAGENT                  PKG_STD.TSTRING; -- Контрагент документа отгрузки
     NPQ                     PKG_STD.TREF;    -- Рег. номер позиции очереди отчета
   begin
     /* Считаем данные документа отгрузки */
