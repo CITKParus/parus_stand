@@ -21,7 +21,7 @@ function run() {
     //запуск - обрабатываем очередь печати
     pQ.startProcessing();
     pQ.on(pq.EVT_NEW_REPORT_READY, report => {
-        console.log(report);
+        console.log("NEW REPORT FOR DOWNLOAD: " + report.SURL);
     });
 }
 

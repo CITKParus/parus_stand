@@ -27,9 +27,9 @@ const RPT_STATE_CHECKING = "checking"; //проводится проверка �
 const RPT_STATE_DONE = "done"; //проверен
 const RPT_STATE_ERROR = "error"; //ошибка проверки состояния отчета
 
-//--------------------------------
-//класс очереди уведомлений стенда
-//--------------------------------
+//---------------------------
+//класс очереди печати стенда
+//---------------------------
 
 class PrintQueue extends EventEmitter {
     //конструктор класса
@@ -125,11 +125,92 @@ class PrintQueue extends EventEmitter {
             );
     }
 
+    //перезапуск проверки готовности заказанных отчетов
+    restartProcessingLoop() {
+        if (this.isWorking)
+            setTimeout(() => {
+                this.printProcessingLoop();
+            }, conf.PRINT_CHECK_DELAY);
+    }
+
+    //проверка готовности заказанных отчетов
+    printProcessingLoop() {
+        //переопределим себя
+        let self = this;
+        //найдем очередной отчет для обработки
+        let reportItem = _.find(self.reports, { state: RPT_STATE_ADDED });
+        //если что-то нашли для обработки
+        if (reportItem) {
+            //скажем, что отчет в обработке
+            reportItem.state = RPT_STATE_CHECKING;
+            //обработаем отчет
+            utils.log("Checking report (NRN: " + reportItem.rpt.reportID + ") state...");
+            client
+                .standServerAction({
+                    actionData: {
+                        action: client.SERVER_ACTION_PRINT_GET_STATE,
+                        rn: reportItem.rpt.reportID
+                    }
+                })
+                .then(
+                    r => {
+                        utils.log(r);
+                        //сервер вернул ответ на запрос о статусе отчета - разбираем
+                        if (r.state == client.SERVER_STATE_ERR) {
+                            //сервер вернул ошибку - выдадим её
+                            utils.log(
+                                "Server returned error while checking report state (NRN: " +
+                                    reportItem.rpt.reportID +
+                                    ") print status: " +
+                                    r.message
+                            );
+                            //отчет проверим повторно
+                            reportItem.state = RPT_STATE_ADDED;
+                            reportItem.err = "";
+                        } else {
+                            //если отчет готов успешно
+                            if (r.message.SSTATE == client.SERVER_RPT_QUEUE_STATE_OK) {
+                                //отметим это в очереди - больше его проверять не надо
+                                reportItem.state = RPT_STATE_DONE;
+                                reportItem.err = "";
+                                //расскажем об этом подписчикам сервиса
+                                self.notifyNewReportReady(r.message);
+                            } else {
+                                //если отчет отработан сервером, но при этом возникли ошибки
+                                if (r.message.SSTATE == client.SERVER_RPT_QUEUE_STATE_ERR) {
+                                    //отметим в очереди что его больше не надо отслеживать
+                                    reportItem.state = RPT_STATE_ERROR;
+                                    reportItem.err = r.message.SERR;
+                                } else {
+                                    //отчет проверим повторно - он ещё не исполнен до конца
+                                    reportItem.state = RPT_STATE_ADDED;
+                                    reportItem.err = "";
+                                }
+                            }
+                        }
+                        //перезапускаем очередь отслеживания готовности отчетов
+                        self.restartProcessingLoop();
+                    },
+                    e => {
+                        //при получении состояния отчета на сервере
+                        utils.log("Server error while checking report state: " + e.message);
+                        reportItem.state = RPT_STATE_ERROR;
+                        reportItem.err = e.message;
+                        self.restartProcessingLoop();
+                    }
+                );
+        } else {
+            //нет отчетов для обработки - просто перезапустим проверку очереди
+            self.restartProcessingLoop();
+        }
+    }
+
     //запуск обработки очереди уведомлений
     startProcessing() {
         utils.log("Starting print queue detector...");
         this.isWorking = true;
         this.printDetectingLoop();
+        this.printProcessingLoop();
         utils.log("Done.");
     }
 

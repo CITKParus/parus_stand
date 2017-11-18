@@ -30,6 +30,7 @@ const SERVER_ACTION_MSG_GET_LIST = "MSG_GET_LIST"; //получение спис
 const SERVER_ACTION_MSG_SET_STATE = "MSG_SET_STATE"; //установка состояния уведомления
 const SERVER_ACTION_MSG_INSERT = "MSG_INSERT"; //добавление сообщения
 const SERVER_ACTION_MSG_DELETE = "MSG_DELETE"; //удаление сообщения
+const SERVER_ACTION_PRINT_GET_STATE = "PRINT_GET_STATE"; //проверка состояния отчета в очереди печати
 
 //типы сообщений в очереди уведомлений стенда
 const SERVER_MSG_TYPE_NOTIFY = "NOTIFY"; //уведомления
@@ -54,10 +55,10 @@ const SERVER_MSG_ORDER_OLD_FIRST = 1; //сначала старые
 const SERVER_MSG_ORDER_NEW_FIRST = -1; //сначала новые
 
 //состосние отчета в очереди
-const SERVER_RPT_QUEUE_STATE_INS = 0; //поставлено в очередь
-const SERVER_RPT_QUEUE_STATE_RUN = 1; //обрабатывается
-const SERVER_RPT_QUEUE_STATE_OK = 2; //завершено успешно
-const SERVER_RPT_QUEUE_STATE_ERR = 3; //завершено с ошибкой
+const SERVER_RPT_QUEUE_STATE_INS = "QUEUE_STATE_INS"; //поставлено в очередь
+const SERVER_RPT_QUEUE_STATE_RUN = "QUEUE_STATE_RUN"; //обрабатывается
+const SERVER_RPT_QUEUE_STATE_OK = "QUEUE_STATE_OK"; //завершено успешно
+const SERVER_RPT_QUEUE_STATE_ERR = "QUEUE_STATE_ERR"; //завершено с ошибкой
 
 //типовые состояния ответов сервера
 const SERVER_STATE_ERR = "ERR"; //состояние сервера - ошибка
@@ -157,6 +158,7 @@ exports.SERVER_ACTION_MSG_GET_LIST = SERVER_ACTION_MSG_GET_LIST;
 exports.SERVER_ACTION_MSG_SET_STATE = SERVER_ACTION_MSG_SET_STATE;
 exports.SERVER_ACTION_MSG_INSERT = SERVER_ACTION_MSG_INSERT;
 exports.SERVER_ACTION_MSG_DELETE = SERVER_ACTION_MSG_DELETE;
+exports.SERVER_ACTION_PRINT_GET_STATE = SERVER_ACTION_PRINT_GET_STATE;
 exports.SERVER_MSG_TYPE_NOTIFY = SERVER_MSG_TYPE_NOTIFY;
 exports.SERVER_MSG_TYPE_RESTS = SERVER_MSG_TYPE_RESTS;
 exports.SERVER_MSG_TYPE_REST_PRC = SERVER_MSG_TYPE_REST_PRC;
