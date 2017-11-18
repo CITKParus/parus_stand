@@ -29,11 +29,11 @@ const PARUS_ACTION_AUTH_BY_BARCODE = "AUTH_BY_BARCODE"; //аутентифика
 const PARUS_ACTION_SHIPMENT = "SHIPMENT"; //отгрузка товара посетителю
 const PARUS_ACTION_SHIPMENT_ROLLBACK = "SHIPMENT_ROLLBACK"; //откат отгрузки товара посетителю
 const PARUS_ACTION_PRINT = "PRINT"; //постановка отгрузочного документа в очередь печати
+const PARUS_ACTION_PRINT_GET_STATE = "PRINT_GET_STATE"; //получение состояния отчета в очереди печати
 const PARUS_ACTION_MSG_INSERT = "MSG_INSERT"; //добавление сообщения в очедерь уведомлений стенда
 const PARUS_ACTION_MSG_DELETE = "MSG_DELETE"; //удаление сообщения из очедери уведомлений стенда
 const PARUS_ACTION_MSG_SET_STATE = "MSG_SET_STATE"; //установка состояния сообщения в очедери уведомлений стенда
 const PARUS_ACTION_MSG_GET_LIST = "MSG_GET_LIST"; //получение списка сообщений очереди уведомлений стенда
-const PARUS_ACTION_MSG_GET_PRINT_STATE = "MSG_GET_PRINT_STATE"; //получение состояния отчета по сообщению очереди уведомлений стенда
 const PARUS_ACTION_STAND_GET_STATE = "STAND_GET_STATE"; //получение состояния стенда
 
 //-------
@@ -449,16 +449,16 @@ function msgSetState(prms) {
 }
 
 //проверка состояния отчета по сообщению очереди уведомлений стенда
-function msgGetPrintState(prms) {
+function printGetState(prms) {
     return new Promise(function(resolve, reject) {
         //проверим наличие параметров
         if (prms && prms.rn) {
             //исполняем действие на сервере ПП Парус 8
             pc.parusServerAction({
                 prms: {
-                    SACTION: PARUS_ACTION_MSG_GET_PRINT_STATE,
+                    SACTION: PARUS_ACTION_PRINT_GET_STATE,
                     SSESSION: PARUS_SESSION,
-                    NRN: prms.rn
+                    NRPTPRTQUEUE: prms.rn
                 },
                 callBack: resp => {
                     //проверим результат выполнения
@@ -466,7 +466,8 @@ function msgGetPrintState(prms) {
                         //завершение не удалось
                         reject(resp);
                     } else {
-                        //завершение удалась - ресолвим с успехом
+                        //завершение удалась - ресолвим с успехом, но доработаем URL
+                        resp.message.SURL = pc.buildDownloadURL(resp.message.SURL);
                         resolve(resp);
                     }
                 }
@@ -497,9 +498,7 @@ function downloadGetUrl(prms) {
                         reject(resp);
                     } else {
                         //завершение удалась - ресолвим с успехом, но доработаем URL
-                        let tmpURL = JSON.parse(resp.message);
-                        resp.message =
-                            conf.PARUS_HTTP_ADDRESS + "?" + pc.PARUS_REQ_QUERY_PRMS + "=" + JSON.stringify(tmpURL);
+                        resp.message = pc.buildDownloadURL(resp.message);
                         resolve(resp);
                     }
                 }
@@ -563,8 +562,8 @@ function makeAction(prms) {
                 break;
             }
             //проверка состояния отчета по позиции очереди уведомлений стенда
-            case PARUS_ACTION_MSG_GET_PRINT_STATE: {
-                actionFunction = msgGetPrintState;
+            case PARUS_ACTION_PRINT_GET_STATE: {
+                actionFunction = printGetState;
                 break;
             }
             //какая-то неизвестная нам функция
@@ -633,7 +632,12 @@ exports.PARUS_ACTION_LOGIN = PARUS_ACTION_LOGIN;
 exports.PARUS_ACTION_LOGOUT = PARUS_ACTION_LOGOUT;
 exports.PARUS_ACTION_AUTH_BY_BARCODE = PARUS_ACTION_AUTH_BY_BARCODE;
 exports.PARUS_ACTION_SHIPMENT = PARUS_ACTION_SHIPMENT;
+exports.PARUS_ACTION_SHIPMENT_ROLLBACK = PARUS_ACTION_SHIPMENT_ROLLBACK;
+exports.PARUS_ACTION_PRINT = PARUS_ACTION_PRINT;
+exports.PARUS_ACTION_PRINT_GET_STATE = PARUS_ACTION_PRINT_GET_STATE;
 exports.PARUS_ACTION_MSG_INSERT = PARUS_ACTION_MSG_INSERT;
+exports.PARUS_ACTION_MSG_DELETE = PARUS_ACTION_MSG_DELETE;
+exports.PARUS_ACTION_MSG_SET_STATE = PARUS_ACTION_MSG_SET_STATE;
 exports.PARUS_ACTION_MSG_GET_LIST = PARUS_ACTION_MSG_GET_LIST;
 exports.PARUS_ACTION_STAND_GET_STATE = PARUS_ACTION_STAND_GET_STATE;
 exports.makeAction = makeAction;

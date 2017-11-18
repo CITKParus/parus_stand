@@ -79,9 +79,20 @@ function parusServerAction(data) {
     });
 }
 
+//формирование URL для выгрузки файла с сервера
+function buildDownloadURL(objectAddress) {
+    try {
+        let tmpURL = JSON.parse(objectAddress);
+        return conf.PARUS_HTTP_ADDRESS + "?" + PARUS_REQ_QUERY_PRMS + "=" + JSON.stringify(tmpURL);
+    } catch (e) {
+        return null;
+    }
+}
+
 //----------------
 //интерфейс модуля
 //----------------
 
 exports.PARUS_REQ_QUERY_PRMS = PARUS_REQ_QUERY_PRMS;
 exports.parusServerAction = parusServerAction;
+exports.buildDownloadURL = buildDownloadURL;
