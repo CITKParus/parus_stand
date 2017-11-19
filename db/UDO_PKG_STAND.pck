@@ -2442,7 +2442,7 @@ create or replace package body UDO_PKG_STAND as
     /* Зачищаем буфер отмеченных документов (автономная транзакция) */
     PRINT_CLEAR_SELECTLIST(NIDENT => NIDENT);
     /* Оповестим пользователей о том, что отчет поставлен в очередь */
-    MSG_INSERT_NOTIFY(SMSG         => 'Накладаня "' || STRANSINVCUST || '" для посетителя "' || SAGENT ||
+    MSG_INSERT_NOTIFY(SMSG         => 'Накладная "' || STRANSINVCUST || '" для посетителя "' || SAGENT ||
                                       '" поставлена в очередь печати',
                       SNOTIFY_TYPE => SNOTIFY_TYPE_INFO);
     /* Оповестим службу автоматической печати, о том, что надо следить за отчетом */
