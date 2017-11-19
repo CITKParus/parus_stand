@@ -17,6 +17,8 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { IconButton } from "./IconButton";
 import { AUTH_BY_BARCODE } from "./api";
 import renderIf from "./renderIf";
+import { ManualInput, LogoButton, ScanerLoading } from "./components";
+import { connected } from "./utils";
 let { height, width } = Dimensions.get("window");
 const styles = StyleSheet.create({
     pageContainer: {
@@ -30,15 +32,6 @@ const styles = StyleSheet.create({
         width: width,
         alignItems: "center",
         justifyContent: "flex-start"
-    },
-    logoContainer: {
-        position: "absolute",
-        top: 30,
-        left: 10
-    },
-    logo: {
-        height: 100,
-        width: 100
     },
     centerContainer: {
         width: 650,
@@ -118,11 +111,34 @@ export default class ScanerPage extends React.Component {
     };
 
     _auth = async () => {
-        const response = await AUTH_BY_BARCODE(this.state.data);
+        const isConnected = connected();
+        if (isConnected) {
+            console.log(this.state.data);
+            const response = await AUTH_BY_BARCODE(this.state.data);
 
-        if (response.state == "ERR") {
+            if (response.state == "ERR") {
+                Alert.alert(
+                    "Произошла ошибка :(",
+                    response.message,
+                    [
+                        {
+                            text: "Отменить",
+                            onPress: () => {
+                                this.setState({
+                                    loading: false,
+                                    scannable: true
+                                });
+                            }
+                        }
+                    ],
+                    { cancelable: false }
+                );
+            } else {
+                this.navigation.navigate("Second", { response: response.message, onGoBack: this.refresh });
+            }
+        } else {
             Alert.alert(
-                "Произошла ошибка :(",
+                "Нет подключения к сети :(",
                 response.message,
                 [
                     {
@@ -138,11 +154,6 @@ export default class ScanerPage extends React.Component {
                 { cancelable: false }
             );
         }
-
-        /*await this.setStateAsync({
-            loading: false
-        });*/
-        this.navigation.navigate("Second", { response: response.message, onGoBack: this.refresh });
     };
 
     render() {
@@ -157,84 +168,24 @@ export default class ScanerPage extends React.Component {
                     <Text>Camera permission is not granted</Text>
                 ) : (
                     <Camera onBarCodeRead={this._handleBarCodeRead} type={"front"} style={styles.container}>
-                        <TouchableOpacity
-                            style={styles.logoContainer}
+                        <LogoButton
                             onPress={() => {
                                 this.refresh();
                             }}
-                        >
-                            <Image source={require("./assets/icons/parus_logo.png")} style={styles.logo} />
-                        </TouchableOpacity>
+                        />
 
                         <IconButton onPress={this._navToSettings} icon="ios-construct-outline" />
 
                         {loading ? (
-                            <View style={{ alignItems: "center" }}>
-                                <View style={styles.centerContainer}>
-                                    <ActivityIndicator
-                                        animating={true}
-                                        color="white"
-                                        size="large"
-                                        style={{
-                                            paddingBottom: 100
-                                        }}
-                                    />
-                                    <Text
-                                        style={{
-                                            fontSize: 34,
-                                            fontWeight: "bold",
-                                            backgroundColor: "transparent",
-                                            color: "#FFF"
-                                        }}
-                                    >
-                                        {"Хм, посмотрим... ;-)"}
-                                    </Text>
-                                </View>
-                            </View>
+                            <ScanerLoading />
                         ) : (
                             <View style={{ alignItems: "center" }}>
                                 <View style={styles.centerContainer}>
                                     {manual ? (
-                                        <View style={{ justifyContent: "flex-end", alignItems: "center" }}>
-                                            <TextInput
-                                                style={{
-                                                    color: "#FFF",
-                                                    fontSize: 30,
-                                                    borderWidth: 0.5,
-                                                    borderColor: "#FFF",
-                                                    width: 400,
-                                                    padding: 15
-                                                }}
-                                                placeholder="Код с бейджа"
-                                                placeholderTextColor="#f0f0f0"
-                                                onChangeText={data => this.setState({ data: data })}
-                                                onSubmitEditing={this._handleOkButton}
-                                                returnKeyType="next"
-                                                keyboardType="numeric"
-                                            />
-                                            <TouchableOpacity
-                                                style={{
-                                                    width: 150,
-                                                    height: 70,
-                                                    marginTop: 30,
-                                                    marginBottom: 60,
-                                                    justifyContent: "center",
-                                                    backgroundColor: "white"
-                                                }}
-                                                onPress={this._handleOkButton}
-                                            >
-                                                <Text
-                                                    style={{
-                                                        fontSize: 22,
-                                                        alignSelf: "center",
-                                                        backgroundColor: "transparent",
-                                                        color: "black"
-                                                    }}
-                                                >
-                                                    ОК
-                                                </Text>
-                                            </TouchableOpacity>
-                                        </View>
+                                        <ManualInput
+                                            onChangeText={data => this.setState({ data: data })}
+                                            onSubmitEditing={this._handleOkButton}
+                                        />
                                     ) : (
                                         <MaterialCommunityIcons
                                             name="qrcode-scan"
