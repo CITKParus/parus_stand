@@ -85,36 +85,43 @@ function logIn(attempt) {
                 }
             });
         } else {
-            //верифицируем, если она есть
-            utils.log({ msg: "Session exists (ID: " + PARUS_SESSION + "). Cheking..." });
-            pc.parusServerAction({
-                prms: { SACTION: PARUS_ACTION_VERIFY, SSESSION: PARUS_SESSION },
-                callBack: resp => {
-                    //проверим результат верификации
-                    if (resp.state == utils.SERVER_STATE_ERR) {
-                        //верификация не удалась - скажем об этом...
-                        utils.log({
-                            type: utils.LOG_TYPE_ERR,
-                            msg: "Can't validate session (ID: " + PARUS_SESSION + "). Relogging in... "
-                        });
-                        //...забудем кривую сессию
-                        PARUS_SESSION = "";
-                        //и попробуем сделать новую
-                        logIn(1).then(
-                            r => {
-                                resolve(r);
-                            },
-                            e => {
-                                reject(e);
-                            }
-                        );
-                    } else {
-                        //верификация удалась - ресолвим с успехом
-                        utils.log({ msg: "Session (ID: " + PARUS_SESSION + ") validated " });
-                        resolve(resp);
+            //если включен режим верификации сесии
+            if (conf.SERVER_VERIFY_PARUS_SESSION) {
+                //верифицируем специальным запросом на сервер
+                utils.log({ msg: "Session exists (ID: " + PARUS_SESSION + "). Cheking..." });
+                pc.parusServerAction({
+                    prms: { SACTION: PARUS_ACTION_VERIFY, SSESSION: PARUS_SESSION },
+                    callBack: resp => {
+                        //проверим результат верификации
+                        if (resp.state == utils.SERVER_STATE_ERR) {
+                            //верификация не удалась - скажем об этом...
+                            utils.log({
+                                type: utils.LOG_TYPE_ERR,
+                                msg: "Can't validate session (ID: " + PARUS_SESSION + "). Relogging in... "
+                            });
+                            //...забудем кривую сессию
+                            PARUS_SESSION = "";
+                            //и попробуем сделать новую
+                            logIn(1).then(
+                                r => {
+                                    resolve(r);
+                                },
+                                e => {
+                                    reject(e);
+                                }
+                            );
+                        } else {
+                            //верификация удалась - ресолвим с успехом
+                            utils.log({ msg: "Session (ID: " + PARUS_SESSION + ") validated " });
+                            resolve(resp);
+                        }
                     }
-                }
-            });
+                });
+            } else {
+                //просто говорим, что сессия есть и не будем ничего верифицировать
+                utils.log({ msg: "Session exists (ID: " + PARUS_SESSION + ")." });
+                resolve(utils.buildOkResp(PARUS_SESSION));
+            }
         }
     });
 }
