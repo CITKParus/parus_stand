@@ -9,7 +9,7 @@
 
 //общесистемные
 exports.DEBUG = true; //режим отладки
-exports.PRINT_CHECK_DELAY = 2000; //интервал опроса очереди печати стенда (мс)
+exports.PRINT_CHECK_DELAY = 1000; //интервал опроса очереди печати стенда (мс)
 
 //подключение к серверу стенда
 exports.SERVER_URL = "http://localhost:3030"; //адрес сервера

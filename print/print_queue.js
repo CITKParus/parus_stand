@@ -154,7 +154,6 @@ class PrintQueue extends EventEmitter {
                 })
                 .then(
                     r => {
-                        utils.log(r);
                         //сервер вернул ответ на запрос о статусе отчета - разбираем
                         if (r.state == client.SERVER_STATE_ERR) {
                             //сервер вернул ошибку - выдадим её
