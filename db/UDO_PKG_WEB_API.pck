@@ -5,8 +5,14 @@ create or replace package UDO_PKG_WEB_API
  as
 
   /* Константы - режим отладки */
-  BDEBUG                    constant boolean := true;
+  BDEBUG                    constant boolean := true; -- Режим отладки
 
+  /* Константы - исключение "Сессия истекла" */
+  NSESSION_EXPIRED_CODE       constant number(17) := -20500;              -- Код исключения "Сессия истекла"
+  SSESSION_EXPIRED_MSG        constant varchar2(20) := 'SESSION_EXPIRED'; -- Сообщение исключения "Сессия истекла"
+  ESESSION_EXPIRED            exception;                                  -- Исключение "Сессия истекла"
+  pragma exception_init(ESESSION_EXPIRED, -20500);                        -- Инициализация исключения "Сессия истекла"
+  
   /* Константы - типы ответов сервиса */
   NRESP_FORMAT_JSON         constant number(1) := 0;                  -- Ответ в JSON
   NRESP_FORMAT_XML          constant number(1) := 1;                  -- Ответ в XML
@@ -18,13 +24,13 @@ create or replace package UDO_PKG_WEB_API
   NRESP_STATE_OK            constant number(1) := 1;                  -- Успешное выполнение
   
   /* Константы - ключи запросов (общие, частные в соответствующих обработчиках) */
-  SREQ_ACTION_KEY           constant varchar2(20) := 'SACTION';       -- Наименование ключа для действия с сервером
-  SREQ_SESSION_KEY          constant varchar2(20) := 'SSESSION';      -- Наименование ключа для идентификатора сессии
-  SREQ_USER_KEY             constant varchar2(20) := 'SUSER';         -- Наименование ключа для имени пользователя
-  SREQ_PASSWORD_KEY         constant varchar2(20) := 'SPASSWORD';     -- Наименование ключа для имени пользователя
-  SREQ_COMPANY_KEY          constant varchar2(20) := 'SCOMPANY';      -- Наименование ключа для названия организации  
-  SREQ_FILE_TYPE_KEY        constant varchar2(20) := 'SFILE_TYPE';    -- Наименование ключа для типа выгружаемого файла
-  SREQ_FILE_RN_KEY          constant varchar2(20) := 'NFILE_RN';      -- Наименование ключа для рег. номера выгружаемого файла
+  SREQ_ACTION_KEY           constant varchar2(20) := 'SACTION';    -- Наименование ключа для действия с сервером
+  SREQ_SESSION_KEY          constant varchar2(20) := 'SSESSION';   -- Наименование ключа для идентификатора сессии
+  SREQ_USER_KEY             constant varchar2(20) := 'SUSER';      -- Наименование ключа для имени пользователя
+  SREQ_PASSWORD_KEY         constant varchar2(20) := 'SPASSWORD';  -- Наименование ключа для имени пользователя
+  SREQ_COMPANY_KEY          constant varchar2(20) := 'SCOMPANY';   -- Наименование ключа для названия организации  
+  SREQ_FILE_TYPE_KEY        constant varchar2(20) := 'SFILE_TYPE'; -- Наименование ключа для типа выгружаемого файла
+  SREQ_FILE_RN_KEY          constant varchar2(20) := 'NFILE_RN';   -- Наименование ключа для рег. номера выгружаемого файла
   
   /* Константы - коды специальных действий сервера */
   SACTION_LOGIN             constant varchar2(20) := 'LOGIN';            -- Аутентификация
@@ -37,24 +43,24 @@ create or replace package UDO_PKG_WEB_API
   SFILE_TYPE_REPORT         constant varchar2(20) := 'REPORT';        -- Готовый отчет
   
   /* Константы - возможность исполнения действия без авторизации */
-  NUNAUTH_YES               constant number(1) := 1;                  -- Возможно исполнение без авторизации
-  NUNAUTH_NO                constant number(1) := 0;                  -- Невозможно исполнение без авторизации
+  NUNAUTH_YES               constant number(1) := 1; -- Возможно исполнение без авторизации
+  NUNAUTH_NO                constant number(1) := 0; -- Невозможно исполнение без авторизации
   
   /* Константы - состояние исполнения обработчика */
-  NEXEC_OK                  constant number(1) := 1;                  -- Успешное исполнение
+  NEXEC_OK                  constant number(1) := 1; -- Успешное исполнение
   
   /* Констнаты - состояние отчета в очереди печати */  
-  NRPTQ_STATUS_QUEUE        constant number(1) := 0;                  -- Поставлено в очередь
-  NRPTQ_STATUS_PROCESS      constant number(1) := 1;                  -- Выполнение начато
-  NRPTQ_STATUS_OK           constant number(1) := 2;                  -- Выполнение завершено (успешно)
-  NRPTQ_STATUS_ERR          constant number(1) := 3;                  -- Выполнение завершено (с ошибками) 
+  NRPTQ_STATUS_QUEUE        constant number(1) := 0; -- Поставлено в очередь
+  NRPTQ_STATUS_PROCESS      constant number(1) := 1; -- Выполнение начато
+  NRPTQ_STATUS_OK           constant number(1) := 2; -- Выполнение завершено (успешно)
+  NRPTQ_STATUS_ERR          constant number(1) := 3; -- Выполнение завершено (с ошибками) 
   
   /* Константы - типы отчетов */
-  NRPT_TYPE_CRYSTAL         constant number(1) := 0;                  -- Crystal Reports
-  NRPT_TYPE_EXCEL           constant number(1) := 1;                  -- MS Excel
-  NRPT_TYPE_DRILL           constant number(1) := 2;                  -- DrillDown
-  NRPT_TYPE_OOCALC          constant number(1) := 3;                  -- Open Office Calc
-  NRPT_TYPE_BINARY          constant number(1) := 4;                  -- Двоичные данные
+  NRPT_TYPE_CRYSTAL         constant number(1) := 0; -- Crystal Reports
+  NRPT_TYPE_EXCEL           constant number(1) := 1; -- MS Excel
+  NRPT_TYPE_DRILL           constant number(1) := 2; -- DrillDown
+  NRPT_TYPE_OOCALC          constant number(1) := 3; -- Open Office Calc
+  NRPT_TYPE_BINARY          constant number(1) := 4; -- Двоичные данные
   
   /* Авторизация для обработки запросос WEB-сервиса */
   function AUTHORIZE
@@ -669,7 +675,7 @@ create or replace package body UDO_PKG_WEB_API as
     PKG_SESSION.VALIDATE_WEB(SCONNECT => SSESSION);
   exception
     when others then
-      P_EXCEPTION(0, 'Сессия истекла!');
+      RAISE_APPLICATION_ERROR(NSESSION_EXPIRED_CODE, SSESSION_EXPIRED_MSG);
   end;
 
   /* Считывание записи обработчика */
@@ -1016,6 +1022,10 @@ create or replace package body UDO_PKG_WEB_API as
                           NRESP_STATE  => NRESP_STATE_ERR,
                           SRESP_MSG    => 'Ошибка обработки запроса - убедитесь что зыпрос является валидным JSON-выражением!');
         rollback;                          
+      when ESESSION_EXPIRED then
+        CRES := RESP_MAKE(NRESP_FORMAT => NRESP_FORMAT_JSON,
+                          NRESP_STATE  => NRESP_STATE_ERR,
+                          SRESP_MSG    => SSESSION_EXPIRED_MSG);
       when others then
         SERR := sqlerrm;
         CRES := RESP_MAKE(NRESP_FORMAT => NRESP_FORMAT_JSON, NRESP_STATE => NRESP_STATE_ERR, SRESP_MSG => SERR);
