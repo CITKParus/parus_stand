@@ -1,23 +1,9 @@
 import React from "react";
-import {
-    ActivityIndicator,
-    StatusBar,
-    Text,
-    View,
-    StyleSheet,
-    Alert,
-    Dimensions,
-    Image,
-    TouchableOpacity,
-    TextInput
-} from "react-native";
 import Camera from "react-native-camera";
 import Permissions from "react-native-permissions";
-import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { IconButton } from "./IconButton";
+import { StatusBar, Text, View, StyleSheet, Alert, Dimensions } from "react-native";
+import { LogoButton, ScanerLoading, ScanerInput, IconButton } from "./components";
 import { AUTH_BY_BARCODE } from "./api";
-import renderIf from "./renderIf";
-import { ManualInput, LogoButton, ScanerLoading } from "./components";
 import { connected } from "./utils";
 let { height, width } = Dimensions.get("window");
 const styles = StyleSheet.create({
@@ -33,12 +19,8 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "flex-start"
     },
-    centerContainer: {
-        width: 650,
-        height: 350,
-        marginTop: 250,
-        justifyContent: "flex-end",
-        alignItems: "center"
+    loading: {
+        backgroundColor: "black"
     }
 });
 export default class ScanerPage extends React.Component {
@@ -54,14 +36,7 @@ export default class ScanerPage extends React.Component {
     };
     navigation = this.props.navigation;
 
-    setStateAsync(state) {
-        return new Promise(resolve => {
-            this.setState(state, resolve);
-        });
-    }
     refresh = () => {
-        console.log("refresh");
-
         this.setState({
             scannable: true,
             data: null,
@@ -69,6 +44,7 @@ export default class ScanerPage extends React.Component {
             loading: false
         });
     };
+
     componentDidMount() {
         this._requestCameraPermission();
     }
@@ -101,7 +77,8 @@ export default class ScanerPage extends React.Component {
 
     _handleOkButton = async () => {
         this.setState({
-            loading: true
+            loading: true,
+            scannable: false
         });
         await this._auth();
     };
@@ -115,26 +92,27 @@ export default class ScanerPage extends React.Component {
         if (isConnected) {
             console.log(this.state.data);
             const response = await AUTH_BY_BARCODE(this.state.data);
-
-            if (response.state == "ERR") {
-                Alert.alert(
-                    "Произошла ошибка :(",
-                    response.message,
-                    [
-                        {
-                            text: "Отменить",
-                            onPress: () => {
-                                this.setState({
-                                    loading: false,
-                                    scannable: true
-                                });
+            if (!this.state.scannable) {
+                if (response.state == "ERR") {
+                    Alert.alert(
+                        "Произошла ошибка :(",
+                        response.message,
+                        [
+                            {
+                                text: "Отменить",
+                                onPress: () => {
+                                    this.setState({
+                                        loading: false,
+                                        scannable: true
+                                    });
+                                }
                             }
-                        }
-                    ],
-                    { cancelable: false }
-                );
-            } else {
-                this.navigation.navigate("Second", { response: response.message, onGoBack: this.refresh });
+                        ],
+                        { cancelable: false }
+                    );
+                } else {
+                    this.navigation.navigate("Second", { response: response.message, onGoBack: this.refresh });
+                }
             }
         } else {
             Alert.alert(
@@ -157,84 +135,40 @@ export default class ScanerPage extends React.Component {
     };
 
     render() {
-        console.log(this.state);
         const { hasCameraPermission, loading, manual } = this.state;
         return (
             <View style={styles.pageContainer}>
                 <StatusBar barStyle="light-content" />
-                {hasCameraPermission === null ? (
-                    <Text>Requesting for camera permission</Text>
-                ) : hasCameraPermission === false ? (
-                    <Text>Camera permission is not granted</Text>
-                ) : (
-                    <Camera onBarCodeRead={this._handleBarCodeRead} type={"front"} style={styles.container}>
+                {hasCameraPermission === null && <Text>Запрашиваю разрешение камеры</Text>}
+                {hasCameraPermission === false && <Text>Разрешение камеры не предоставлено</Text>}
+                {loading && (
+                    <View style={[styles.container, styles.loading]}>
                         <LogoButton
                             onPress={() => {
                                 this.refresh();
                             }}
                         />
-
-                        <IconButton onPress={this._navToSettings} icon="ios-construct-outline" />
-
-                        {loading ? (
-                            <ScanerLoading />
-                        ) : (
-                            <View style={{ alignItems: "center" }}>
-                                <View style={styles.centerContainer}>
-                                    {manual ? (
-                                        <ManualInput
-                                            onChangeText={data => this.setState({ data: data })}
-                                            onSubmitEditing={this._handleOkButton}
-                                        />
-                                    ) : (
-                                        <MaterialCommunityIcons
-                                            name="qrcode-scan"
-                                            size={200}
-                                            color="white"
-                                            style={{
-                                                backgroundColor: "transparent",
-                                                marginBottom: 50
-                                            }}
-                                        />
-                                    )}
-                                    <Text
-                                        style={{
-                                            fontSize: 34,
-                                            fontWeight: "bold",
-                                            backgroundColor: "transparent",
-                                            color: "#FFF"
-                                        }}
-                                    >
-                                        {!manual ? "Поднесите ваш бейдж к камере" : "Введите номер вашего бейджа"}
-                                    </Text>
-                                </View>
-
-                                <TouchableOpacity
-                                    style={{
-                                        width: 400,
-                                        height: 70,
-                                        borderWidth: 0.5,
-                                        borderColor: "#FFF",
-                                        marginTop: 150,
-                                        justifyContent: "center"
-                                    }}
-                                    onPress={this._handleManualButton}
-                                >
-                                    <Text
-                                        style={{
-                                            fontSize: 22,
-                                            alignSelf: "center",
-                                            backgroundColor: "transparent",
-                                            color: "#FFF"
-                                        }}
-                                    >
-                                        {!manual ? "Ввести вручную" : "Отсканировать"}
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
-                        )}
-                    </Camera>
+                        <ScanerLoading visible={loading} />
+                    </View>
                 )}
+                {!loading &&
+                    hasCameraPermission && (
+                        <Camera onBarCodeRead={this._handleBarCodeRead} type={"front"} style={styles.container}>
+                            <LogoButton
+                                onPress={() => {
+                                    this.refresh();
+                                }}
+                            />
+                            <IconButton onPress={this._navToSettings} icon="ios-construct-outline" />
+                            <ScanerInput
+                                visible={!loading}
+                                manual={manual}
+                                onManualChangeText={data => this.setState({ data: data })}
+                                onManualSubmit={this._handleOkButton}
+                                onSwitch={this._handleManualButton}
+                            />
+                        </Camera>
+                    )}
             </View>
         );
     }

@@ -10,7 +10,7 @@ import {
     TouchableOpacity,
     ActivityIndicator
 } from "react-native";
-import { IconButton } from "./IconButton";
+import { IconButton } from "./components";
 import { SHIPMENT } from "./api";
 const styles = StyleSheet.create({
     container: {

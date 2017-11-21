@@ -31,7 +31,8 @@ const styles = StyleSheet.create({
 });
 
 export const ManualInput = props => {
-    const { onChangeText, onSubmitEditing } = props;
+    const { onChangeText, onSubmitEditing, visible } = props;
+    if (!visible) return null;
     return (
         <View style={styles.container}>
             <TextInput

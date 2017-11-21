@@ -10,6 +10,8 @@ const styles = StyleSheet.create({
     }
 });
 export const ScanerLoading = props => {
+    const { visible } = props;
+    if (!visible) return null;
     return (
         <View style={{ alignItems: "center" }}>
             <View style={styles.centerContainer}>
