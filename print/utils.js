@@ -7,6 +7,7 @@
 //подключение внешних библиотек
 //-----------------------------
 
+const fs = require("fs"); //работа с файловой системой
 const conf = require("./config"); //константы и настройки
 
 //-------
@@ -14,7 +15,7 @@ const conf = require("./config"); //константы и настройки
 //-------
 
 //протоколирование работы
-function log(data) {
+const log = data => {
     if (conf.DEBUG) {
         if (data) {
             if (Array.isArray(data)) {
@@ -28,10 +29,18 @@ function log(data) {
             console.log(data);
         }
     }
-}
+};
+
+//удаление файла
+const removeFile = fullFileName => {
+    fs.unlink(fullFileName, err => {
+        if (err) log(['Ошибка удаления файла "' + fullFileName + '":', err.message]);
+    });
+};
 
 //----------------
 //интерфейс модуля
 //----------------
 
 exports.log = log;
+exports.removeFile = removeFile;

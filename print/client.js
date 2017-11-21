@@ -8,8 +8,11 @@
 //-----------------------------
 
 const _ = require("lodash"); //работа с массивами и коллекциями
+const http = require("http"); //работа с HTTP протоколом
 const request = require("request"); //работа с HTTP-сервером
+const fs = require("fs"); //работа с файловой системой
 const config = require("./config"); //настройки приложения
+const utils = require("./utils"); //вспомогательные функции
 
 //-------------------------
 //глобальные идентификаторы
@@ -102,7 +105,7 @@ const objectToReqestBodyParams = obj => {
 
 //выполнение действия на сервере стенда
 const standServerAction = prms => {
-    return new Promise(function(resolve, reject) {
+    return new Promise((resolve, reject) => {
         let headers = {}; //заголовок запроса
         let body = null; //тело запроса
         let method = prms.method || REQUEST_METHOD_POST; //метод (POST, GET, PUT и т.п.)
@@ -150,6 +153,32 @@ const standServerAction = prms => {
     });
 };
 
+//скачивание файла по указанному URL
+const downloadFile = (fileName, fileURL) => {
+    return new Promise((resolve, reject) => {
+        let fullFileName = config.TEMP_FOLDER + "\\" + fileName;
+        let file = fs.createWriteStream(fullFileName);
+        file.on("error", err => {
+            reject(buildErrResp(err.message));
+        });
+        file.on("open", () => {
+            let request = http
+                .get(fileURL, response => {
+                    response.pipe(file);
+                    file.on("finish", () => {
+                        file.close(() => {
+                            resolve(buildOkResp(fullFileName));
+                        });
+                    });
+                })
+                .on("error", err => {
+                    utils.removeFile(fullFileName);
+                    reject(buildErrResp(err.message));
+                });
+        });
+    });
+};
+
 //----------------
 //интерфейс модуля
 //----------------
@@ -180,3 +209,4 @@ exports.SERVER_RPT_QUEUE_STATE_ERR = SERVER_RPT_QUEUE_STATE_ERR;
 exports.SERVER_STATE_ERR = SERVER_STATE_ERR;
 exports.SERVER_STATE_OK = SERVER_STATE_OK;
 exports.standServerAction = standServerAction;
+exports.downloadFile = downloadFile;

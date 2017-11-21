@@ -10,6 +10,7 @@
 //общесистемные
 exports.DEBUG = true; //режим отладки
 exports.PRINT_CHECK_DELAY = 1000; //интервал опроса очереди печати стенда (мс)
+exports.TEMP_FOLDER = "c:/repos/temp"; //каталог размещения временных файлов
 
 //подключение к серверу стенда
 exports.SERVER_URL = "http://localhost:3030"; //адрес сервера

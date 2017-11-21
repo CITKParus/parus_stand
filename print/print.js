@@ -8,7 +8,8 @@
 //-----------------------------
 
 const conf = require("./config"); //настройки
-const pq = require("./print_queue"); //очередь печати
+const pq = require("./print_queue"); //очередь печати сервера
+const dpq = require("./device_print_queue"); //очередь печати принтера
 
 //-----------
 //точка входа
@@ -16,12 +17,16 @@ const pq = require("./print_queue"); //очередь печати
 
 //запуск процесса
 function run() {
-    //очередь оповещений для рассылки
+    //создам экземпляр очереди печати сервера
     let pQ = new pq.PrintQueue();
-    //запуск - обрабатываем очередь печати
+    //создадим экземпляр очереди печати принтера
+    let dPQ = new dpq.DevicePrintQueue();
+    //запускаем обработку очереди печати принтера
+    dPQ.startProcessing();
+    //запускаем обрабатку очереди печати сервера
     pQ.startProcessing();
     pQ.on(pq.EVT_NEW_REPORT_READY, report => {
-        console.log("NEW REPORT FOR DOWNLOAD: " + report.SURL);
+        dPQ.addReport(report);
     });
 }
 

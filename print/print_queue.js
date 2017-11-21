@@ -204,7 +204,7 @@ class PrintQueue extends EventEmitter {
         }
     }
 
-    //запуск обработки очереди уведомлений
+    //запуск обработки очереди печати
     startProcessing() {
         utils.log("Starting print queue detector...");
         this.isWorking = true;
@@ -213,7 +213,7 @@ class PrintQueue extends EventEmitter {
         utils.log("Done.");
     }
 
-    //остановка обработки очереди уведомлений
+    //остановка обработки очереди печати
     stopProcessing() {
         utils.log("Stopping print queue detector...");
         this.isWorking = false;
