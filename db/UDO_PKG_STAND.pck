@@ -234,6 +234,7 @@ create or replace package UDO_PKG_STAND as
     NRN                     RPTPRTQUEUE.RN%type,                                        -- Регистрационный номер позиции очереди
     SSTATE                  PKG_STD.TSTRING,                                            -- Состояние (см. константы SRPT_QUEUE_STATE_*)
     SERR                    RPTPRTQUEUE.ERROR_TEXT%type,                                -- Сообщение об ошибке (если была)
+    SFILE_NAME              PKG_STD.TSTRING,                                            -- Имя файла отчета
     SURL                    PKG_STD.TSTRING                                             -- URL для выгрузки готового отчета
   );
   
@@ -2228,15 +2229,17 @@ create or replace package body UDO_PKG_STAND as
                     NRPT_QUEUE_STATE_ERR,
                     SRPT_QUEUE_STATE_ERR),
              T.ERROR_TEXT,
+             DECODE(T.STATUS, NRPT_QUEUE_STATE_OK, UDO_PKG_WEB_API.UTL_RPTQ_BUILD_FILE_NAME(NREPORTQ => T.RN), ''),
              DECODE(T.STATUS,
                     NRPT_QUEUE_STATE_OK,
                     UDO_PKG_WEB_API.UTL_BUILD_DOWNLOAD_URL(SSESSION   => SSESSION,
                                                            SFILE_TYPE => UDO_PKG_WEB_API.SFILE_TYPE_REPORT,
                                                            NFILE_RN   => T.RN),
-                    null)
+                    '')
         into RPT_QUEUE_STATE.NRN,
              RPT_QUEUE_STATE.SSTATE,
              RPT_QUEUE_STATE.SERR,
+             RPT_QUEUE_STATE.SFILE_NAME,
              RPT_QUEUE_STATE.SURL
         from RPTPRTQUEUE T
        where T.RN = NRPTPRTQUEUE;
