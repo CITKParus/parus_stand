@@ -10,7 +10,9 @@
 //общесистемные
 exports.DEBUG = true; //режим отладки
 exports.PRINT_CHECK_DELAY = 1000; //интервал опроса очереди печати стенда (мс)
-exports.TEMP_FOLDER = "c:/repos/temp"; //каталог размещения временных файлов
+exports.TEMP_FOLDER = "c:\\repos\\temp"; //каталог размещения временных файлов
+exports.POWER_SHELL = "powershell.exe"; //исполняемый файл Power Shell
+exports.PRINTER_SCRIPT = "print.ps1"; //командный файл Power Shell для постановки файла в очередь принтера
 
 //подключение к серверу стенда
 exports.SERVER_URL = "http://localhost:3030"; //адрес сервера

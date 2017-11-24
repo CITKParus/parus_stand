@@ -7,6 +7,7 @@
 //подключение внешних библиотек
 //-----------------------------
 
+const child_process = require("child_process"); //запуск дочерних процессов в ОС
 const _ = require("lodash"); //работа с массивами и коллекциями
 const conf = require("./config"); //константы и настройки
 const client = require("./client"); //клиент для взаимодействия с сервером стенда
@@ -56,6 +57,27 @@ class DevicePrintQueue {
             }, conf.PRINT_CHECK_DELAY);
     }
 
+    //отправка файла на принтер
+    sendFileToPrinter(fileName) {
+        return new Promise(function(resolve, reject) {
+            if (fileName && fileName != "") {
+                const sp = child_process.spawn(conf.POWER_SHELL, ["-File", conf.PRINTER_SCRIPT, fileName]);
+                sp.on("error", err => {
+                    reject(client.buildErrResp(err.message));
+                });
+                sp.on("close", code => {
+                    if (code == 1) {
+                        reject(client.buildErrResp("Finished with error code: " + code));
+                    } else {
+                        resolve(client.buildOkResp(code));
+                    }
+                });
+            } else {
+                reject(client.buildErrResp("No file specified!"));
+            }
+        });
+    }
+
     //отработка очереди отправляемых на устройство печати отчетов
     printerLoop() {
         //переопределим себя
@@ -68,23 +90,29 @@ class DevicePrintQueue {
             reportItem.state = FILE_STATE_PRINTING;
             //скачиваем готовый файл
             utils.log("Downloading report (RN: " + reportItem.rpt.NRN + ")...");
-            client.downloadFile(reportItem.rpt.SFILE_NAME, reportItem.rpt.SURL).then(
-                r => {
+            client
+                .downloadFile(reportItem.rpt.SFILE_NAME, reportItem.rpt.SURL)
+                .then(r => {
                     //файл успешно выгружен
-                    utils.log("Downloaded in " + r.message);
+                    utils.log("Downloaded in " + r.message + " Sending to printer...");
+                    //отправляем его на принтер
+                    return self.sendFileToPrinter(r.message);
+                })
+                .then(r => {
                     //скажем, что отчет распечатан
                     reportItem.state = FILE_STATE_DONE;
+                    utils.log("Successfully send to printer!");
                     //перезапустим проверку очереди
                     self.restartPrinterLoop();
-                },
-                e => {
+                })
+                .catch(e => {
                     //скажем, что есть ошибка при обработке отчета
                     reportItem.state = FILE_STATE_ERROR;
                     reportItem.err = e.message;
+                    utils.log("Error: " + e.message);
                     //перезапустим проверку очереди
                     self.restartPrinterLoop();
-                }
-            );
+                });
         } else {
             //нет отчетов для обработки - просто перезапустим проверку очереди
             self.restartPrinterLoop();

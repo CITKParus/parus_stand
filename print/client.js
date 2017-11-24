@@ -208,5 +208,7 @@ exports.SERVER_RPT_QUEUE_STATE_OK = SERVER_RPT_QUEUE_STATE_OK;
 exports.SERVER_RPT_QUEUE_STATE_ERR = SERVER_RPT_QUEUE_STATE_ERR;
 exports.SERVER_STATE_ERR = SERVER_STATE_ERR;
 exports.SERVER_STATE_OK = SERVER_STATE_OK;
+exports.buildErrResp = buildErrResp;
+exports.buildOkResp = buildOkResp;
 exports.standServerAction = standServerAction;
 exports.downloadFile = downloadFile;
