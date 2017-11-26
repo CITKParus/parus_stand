@@ -42,7 +42,7 @@ let STAND_RESP_HEADER = {
 //-------
 
 //запуск сервера
-function run() {
+const run = () => {
     //скажем, что стартуем
     utils.log({ msg: "Starting server at port " + conf.SERVER_PORT + "..." });
     //опишем WEB-сервер
@@ -101,10 +101,10 @@ function run() {
         utils.log({ type: utils.LOG_TYPE_ERR, msg: "Error while starting server: " + e.message });
         process.exit(1);
     });
-}
+};
 
 //останов сервера
-function stop() {
+const stop = () => {
     //сначала прекратим приём сообщений
     utils.log({ msg: "Stoping server..." });
     srv.state = SERVER_STATE_STOPPING;
@@ -123,7 +123,7 @@ function stop() {
             }
         );
     });
-}
+};
 
 //обработка события "выход" жизненного цикла процесса
 process.on("exit", code => {

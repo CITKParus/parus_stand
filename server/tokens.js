@@ -26,7 +26,7 @@ const CLIENT_TOKENS = [
 //-------
 
 //проверка токана доступа клиента
-function checkToken(token) {
+const checkToken = token => {
     //если проверка включена
     if (conf.SERVER_CHECK_TOKENS) {
         //если переданный токен есть в списке
@@ -40,7 +40,7 @@ function checkToken(token) {
         //проверка отключена - всегда всё можно
         return true;
     }
-}
+};
 
 //----------------
 //интерфейс модуля

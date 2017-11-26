@@ -7,6 +7,7 @@
 //подключение библиотек
 //---------------------
 
+const _ = require("lodash"); //работа с массивами и коллекциями
 const conf = require("./config"); //настройки сервера
 const pc = require("./parus_client"); //низкоуровневый клиент ПП Парус 8
 const vm = require("./vending_machine_client"); //низкоуровневый клиент вендингового аппарата
@@ -20,6 +21,18 @@ const utils = require("./utils"); //вспомогательные функци�
 let PARUS_SESSION = ""; //идентификатор сессии ПП Парус 8
 const PARUS_MAX_CONN_ATTEMPT = 3; //максимальное количество попыток создания подключения к ПП Парус 8
 const PARUS_SESSION_EXPIRED_MESSAGE = "SESSION_EXPIRED"; //код сообщения об истечении сессии ПП Парус 8
+
+//состояния сервиса стенда
+const SERVICE_STATE_FREE = "FREE"; //свободен - ожидаем следующего посетителя
+const SERVICE_STATE_WAIT_FOR_NOMEN = "WAIT_FOR_NOMEN"; //работаем с посетителем - ожидаем выбора номенклатуры
+const SERVICE_STATE_SHIPING = "SHIPING"; //работаетм с посетителем - отгружаем
+
+//описание текущего состояния сервиса стенда
+let SERVICE_STATE = {
+    SSTATE: SERVICE_STATE_FREE, //текущее состоянияе
+    NAGENT: 0, //идентификатор текущего пользователя
+    SAGENT_NAME: "" //наименование текущего пользователя
+};
 
 //команды HTTP-сервера ПП Парус 8
 const PARUS_ACTION_VERIFY = "VERIFY"; //верификация сессии ПП Парус 8
@@ -37,12 +50,34 @@ const PARUS_ACTION_MSG_SET_STATE = "MSG_SET_STATE"; //установка сос�
 const PARUS_ACTION_MSG_GET_LIST = "MSG_GET_LIST"; //получение списка сообщений очереди уведомлений стенда
 const PARUS_ACTION_STAND_GET_STATE = "STAND_GET_STATE"; //получение состояния стенда
 
+//команды сервера приложений
+const SERVICE_ACTION_CANCEL_AUTH = "CANCEL_AUTH"; //отмена аутентификации посетителя стенда
+
 //-------
 //функции
 //-------
 
+//управление состоянием сервиса - переход к состоянию "Свободен"
+const srvStateSetFree = () => {
+    SERVICE_STATE.SSTATE = SERVICE_STATE_FREE;
+    SERVICE_STATE.NAGENT = 0;
+    SERVICE_STATE.SAGENT_NAME = "";
+};
+
+//управление состоянием сервиса - переход к состоянию "Ожидаем номенклатуру от посетителя"
+const srvStateSetWaitForNomen = (customerID, customerName) => {
+    SERVICE_STATE.SSTATE = SERVICE_STATE_WAIT_FOR_NOMEN;
+    if (customerID) SERVICE_STATE.NAGENT = customerID;
+    if (customerName) SERVICE_STATE.SAGENT_NAME = customerName;
+};
+
+//управление состоянием сервиса - переход к состоянию "Отгружаем номенклатуру посетителю"
+const srvStateSetShiping = () => {
+    SERVICE_STATE.SSTATE = SERVICE_STATE_SHIPING;
+};
+
 //начало сеанса
-function logIn(attempt) {
+const logIn = attempt => {
     return new Promise((resolve, reject) => {
         //проверим наличие сессии
         if (!PARUS_SESSION) {
@@ -125,10 +160,10 @@ function logIn(attempt) {
             }
         }
     });
-}
+};
 
 //окончание сеанса
-function logOut() {
+const logOut = () => {
     return new Promise((resolve, reject) => {
         //проверим наличие сессии
         if (!PARUS_SESSION) {
@@ -160,11 +195,11 @@ function logOut() {
             });
         }
     });
-}
+};
 
 //получение состояния стенда
-function getStandState(prms) {
-    return new Promise(function(resolve, reject) {
+const getStandState = prms => {
+    return new Promise((resolve, reject) => {
         //исполняем действие на сервере ПП Парус 8
         pc.parusServerAction({
             prms: { SACTION: PARUS_ACTION_STAND_GET_STATE, SSESSION: PARUS_SESSION },
@@ -174,17 +209,21 @@ function getStandState(prms) {
                     //завершение не удалось
                     reject(resp);
                 } else {
-                    //завершение удалась - ресолвим с успехом
-                    resolve(resp);
+                    //завершение удалась - ресолвим с успехом, но подмешиваем к состоянию ПП Парус 8 состояние сервиса
+                    let tmp = {};
+                    _.extend(tmp, resp);
+                    tmp.message.SERVICE_STATE = {};
+                    _.extend(tmp.message.SERVICE_STATE, SERVICE_STATE);
+                    resolve(tmp);
                 }
             }
         });
     });
-}
+};
 
 //аутентификация пользователя по штрих-коду
-function authUserByBarcode(prms) {
-    return new Promise(function(resolve, reject) {
+const authUserByBarcode = prms => {
+    return new Promise((resolve, reject) => {
         //проверим наличие параметров
         if (prms.barcode) {
             //исполняем действие на сервере ПП Парус 8
@@ -196,7 +235,9 @@ function authUserByBarcode(prms) {
                         //завершение не удалось
                         reject(resp);
                     } else {
-                        //завершение удалась - ресолвим с успехом
+                        //завершение удалась - выставляем состояние сервиса
+                        this.srvStateSetWaitForNomen(resp.message.USER.NAGENT, resp.message.USER.SAGENT_NAME);
+                        //ресолвим с успехом
                         resolve(resp);
                     }
                 }
@@ -205,15 +246,38 @@ function authUserByBarcode(prms) {
             reject(utils.buildErrResp("Не указан штрих-код!"));
         }
     });
-}
+};
+
+//отмена аутентификации пользователя стенда
+const cancelAuth = prms => {
+    return new Promise((resolve, reject) => {
+        //проверим наличие параметров
+        if (prms.customerID) {
+            //если указанный идентификатор пользователья стенда соответствует текущему
+            if (prms.customerID == SERVICE_STATE.NAGENT) {
+                //сбрасываем и
+                this.srvStateSetFree();
+                //...ресолвим с успехом
+                resolve(utils.buildOkResp("Состояние сервиса сброшено"));
+            } else {
+                //идентификатор посетителя указан неверно, при вызове данной функции
+                reject(utils.buildErrResp("Указан некорректный идентификатор посетителя стенда!"));
+            }
+        } else {
+            reject(utils.buildErrResp("Не указан идентификатор посетителя стенда!"));
+        }
+    });
+};
 
 //отгрузка товара посетителю
-function shipment(prms) {
-    return new Promise(function(resolve, reject) {
+const shipment = prms => {
+    return new Promise((resolve, reject) => {
         //проверим наличие параметров
         if (prms.customer) {
             if (prms.rack_line) {
                 if (prms.rack_line_cell) {
+                    //говорим, что отгружаем
+                    this.srvStateSetShiping();
                     //сначала исполняем формирование отгрузочного документа на сервере ПП Парус 8
                     pc.parusServerAction({
                         prms: {
@@ -231,6 +295,7 @@ function shipment(prms) {
                                     type: utils.LOG_TYPE_ERR,
                                     msg: "Error creating shipment document: " + resp.message
                                 });
+                                this.srvStateSetWaitForNomen();
                                 reject(resp);
                             } else {
                                 utils.log({
@@ -264,6 +329,7 @@ function shipment(prms) {
                                                                     resp.message
                                                             });
                                                             //даже если документ в очередь не встал - скажем что всё ок (вендинг уже не откатишь), но выдадим специальное сообщение (без упоминания печати накладных)
+                                                            this.srvStateSetFree();
                                                             resolve(
                                                                 utils.buildOkResp(utils.SERVER_RE_MSG_SHIPED_NO_PRINT)
                                                             );
@@ -273,6 +339,7 @@ function shipment(prms) {
                                                                 msg: "Document sended to print queue successfully"
                                                             });
                                                             //сделалось всё - и документ, и автомат и печать в очередь
+                                                            this.srvStateSetFree();
                                                             resolve(utils.buildOkResp(utils.SERVER_RE_MSG_SHIPED));
                                                         }
                                                     }
@@ -282,6 +349,7 @@ function shipment(prms) {
                                                 utils.log({
                                                     msg: "Document printing disabled"
                                                 });
+                                                this.srvStateSetFree();
                                                 resolve(utils.buildOkResp(utils.SERVER_RE_MSG_SHIPED_NO_PRINT));
                                             }
                                         } else {
@@ -311,7 +379,8 @@ function shipment(prms) {
                                                             msg: "Document rolled back successfully"
                                                         });
                                                     }
-                                                    //отдаём ошибку вендингового аппарата
+                                                    //отдаём ошибку вендингового аппарата и возвращаемся к ожиданию номенклатуры
+                                                    this.srvStateSetWaitForNomen();
                                                     reject(r);
                                                 }
                                             });
@@ -331,11 +400,11 @@ function shipment(prms) {
             reject(utils.buildErrResp("Не указан посетитель стенда!"));
         }
     });
-}
+};
 
 //получение сообщений из очереди уведомлений стенда
-function msgGetList(prms) {
-    return new Promise(function(resolve, reject) {
+const msgGetList = prms => {
+    return new Promise((resolve, reject) => {
         //проверим наличие параметров
         if (prms) {
             //исполняем действие на сервере ПП Парус 8
@@ -364,11 +433,11 @@ function msgGetList(prms) {
             reject(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
         }
     });
-}
+};
 
 //добавление сообщения в очередь стенда
-function msgInsert(prms) {
-    return new Promise(function(resolve, reject) {
+const msgInsert = prms => {
+    return new Promise((resolve, reject) => {
         //проверим наличие параметров
         if (prms) {
             //исполняем действие на сервере ПП Парус 8
@@ -395,11 +464,11 @@ function msgInsert(prms) {
             reject(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
         }
     });
-}
+};
 
 //удаление сообщения из очереди стенда
-function msgDelete(prms) {
-    return new Promise(function(resolve, reject) {
+const msgDelete = prms => {
+    return new Promise((resolve, reject) => {
         //проверим наличие параметров
         if (prms) {
             //исполняем действие на сервере ПП Парус 8
@@ -424,11 +493,11 @@ function msgDelete(prms) {
             reject(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
         }
     });
-}
+};
 
 //установка статуса сообщения в очереди стенда
-function msgSetState(prms) {
-    return new Promise(function(resolve, reject) {
+const msgSetState = prms => {
+    return new Promise((resolve, reject) => {
         //проверим наличие параметров
         if (prms) {
             //исполняем действие на сервере ПП Парус 8
@@ -454,11 +523,11 @@ function msgSetState(prms) {
             reject(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
         }
     });
-}
+};
 
 //проверка состояния отчета по сообщению очереди уведомлений стенда
-function printGetState(prms) {
-    return new Promise(function(resolve, reject) {
+const printGetState = prms => {
+    return new Promise((resolve, reject) => {
         //проверим наличие параметров
         if (prms && prms.rn) {
             //исполняем действие на сервере ПП Парус 8
@@ -484,11 +553,11 @@ function printGetState(prms) {
             reject(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
         }
     });
-}
+};
 
 //выгрузка файла
-function downloadGetUrl(prms) {
-    return new Promise(function(resolve, reject) {
+const downloadGetUrl = prms => {
+    return new Promise((resolve, reject) => {
         //проверим наличие параметров
         if (prms && prms.fileType && prms.fileRn) {
             //исполняем действие на сервере ПП Парус 8
@@ -515,14 +584,14 @@ function downloadGetUrl(prms) {
             reject(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
         }
     });
-}
+};
 
 //выполнение действия ПП Парус 8
-function makeAction(prms) {
+const makeAction = prms => {
     //переопределим себя
     self = this;
     //работаем
-    return new Promise(function(resolve, reject) {
+    return new Promise((resolve, reject) => {
         //здесь будем хранить функцию исполняющую действие на сервере (должна возвращать Promise)
         let actionFunction;
         //определим функцию исполнения действия
@@ -545,6 +614,11 @@ function makeAction(prms) {
             //аутентификация посетителя стенда по штрихкоду
             case PARUS_ACTION_AUTH_BY_BARCODE: {
                 actionFunction = authUserByBarcode;
+                break;
+            }
+            //отмена аутентификации посетителя стенда
+            case SERVICE_ACTION_CANCEL_AUTH: {
+                actionFunction = cancelAuth;
                 break;
             }
             //отгрузка товара посетителю
@@ -632,7 +706,7 @@ function makeAction(prms) {
             }
         }
     });
-}
+};
 
 //----------------
 //интерфейс модуля
@@ -653,4 +727,5 @@ exports.PARUS_ACTION_MSG_DELETE = PARUS_ACTION_MSG_DELETE;
 exports.PARUS_ACTION_MSG_SET_STATE = PARUS_ACTION_MSG_SET_STATE;
 exports.PARUS_ACTION_MSG_GET_LIST = PARUS_ACTION_MSG_GET_LIST;
 exports.PARUS_ACTION_STAND_GET_STATE = PARUS_ACTION_STAND_GET_STATE;
+exports.SERVICE_ACTION_CANCEL_AUTH = SERVICE_ACTION_CANCEL_AUTH;
 exports.makeAction = makeAction;

@@ -57,25 +57,25 @@ const REQUEST_METHOD_GET = "GET"; //GET-запрос
 //-------
 
 //сборка стандартного ответа сервера стенда
-function buildServerResp(state, message) {
+const buildServerResp = (state, message) => {
     return {
         state: state,
         message: message
     };
-}
+};
 
 //сборка стандартного отрицательного ответа сервера стенда
-function buildErrResp(message) {
+const buildErrResp = message => {
     return buildServerResp(SERVER_STATE_ERR, message);
-}
+};
 
 //сборка стандартного положительного ответа сервера стенда
-function buildOkResp(message) {
+const buildOkResp = message => {
     return buildServerResp(SERVER_STATE_OK, message);
-}
+};
 
 //протоколирование
-function log(prms) {
+const log = prms => {
     if (prms && prms.msg) {
         //по умолчанию - информация
         if (prms.type === undefined) prms.type = LOG_TYPE_INFO;
@@ -96,16 +96,16 @@ function log(prms) {
                 break;
         }
     }
-}
+};
 
 //получение списка IP-адресов хоста сервера
-function getIPs() {
+const getIPs = () => {
     let ips = [];
     //получим список сетевых интерфейсов
     const ifaces = os.networkInterfaces();
     //обходим сетевые интерфейсы
-    Object.keys(ifaces).forEach(function(ifname) {
-        ifaces[ifname].forEach(function(iface) {
+    Object.keys(ifaces).forEach(ifname => {
+        ifaces[ifname].forEach(iface => {
             //пропускаем локальный адрес и не IPv4 адреса
             if ("IPv4" !== iface.family || iface.internal !== false) return;
             //добавим адрес к резульату
@@ -114,10 +114,10 @@ function getIPs() {
     });
     //вернем ответ
     return ips;
-}
+};
 
 //разбор параметров запроса к серверу
-function parseRequestParams(request, callBack) {
+const parseRequestParams = (request, callBack) => {
     //если это POST-запрос - будем разбирать тело
     if (request.method == REQUEST_METHOD_POST) {
         //если параметры в формате application/x-www-form-urlencoded или application/json
@@ -130,7 +130,7 @@ function parseRequestParams(request, callBack) {
             //POST параметры собираем из тела
             let body = "";
             //забираем данные из тела
-            request.on("data", function(data) {
+            request.on("data", data => {
                 body += data;
                 //слишком большой запрос - возможно флуд
                 if (body.length > 1e6) {
@@ -139,7 +139,7 @@ function parseRequestParams(request, callBack) {
                 }
             });
             //данных больше нет
-            request.on("end", function() {
+            request.on("end", () => {
                 //вернем то чо получилось
                 if (type === REQUEST_STATE_ERR) {
                     callBack(REQUEST_STATE_ERR);
@@ -162,7 +162,7 @@ function parseRequestParams(request, callBack) {
             if (String(request.headers["content-type"]).startsWith(REQUEST_CT_FORM_DATA)) {
                 let form = new mp.Form();
                 //установим обработчик ошибок разбора формы
-                form.on("error", function(err) {
+                form.on("error", err => {
                     callBack(REQUEST_STATE_ERR);
                 });
                 //выполним разбор
@@ -188,7 +188,7 @@ function parseRequestParams(request, callBack) {
         if (JSON.stringify(q) === "{}") callBack(request.headers);
         else callBack(q);
     }
-}
+};
 
 //----------------
 //интерфейс модуля

@@ -36,7 +36,7 @@ const PARUS_RESP_STATE_OK = 1; //от сервера пришел успех
 //-------
 
 //выполнение действия на сервере ПП Парус 8
-function parusServerAction(data) {
+const parusServerAction = data => {
     //преобразуем параметры для передачи
     let reqPrms = {};
     reqPrms[PARUS_REQ_QUERY_PRMS] = JSON.stringify(data.prms);
@@ -77,17 +77,17 @@ function parusServerAction(data) {
             data.callBack(utils.buildErrResp(utils.SERVER_RE_MSG_ERROR_PARUS));
         }
     });
-}
+};
 
 //формирование URL для выгрузки файла с сервера
-function buildDownloadURL(objectAddress) {
+const buildDownloadURL = objectAddress => {
     try {
         let tmpURL = JSON.parse(objectAddress);
         return conf.PARUS_HTTP_ADDRESS + "?" + PARUS_REQ_QUERY_PRMS + "=" + JSON.stringify(tmpURL);
     } catch (e) {
         return null;
     }
-}
+};
 
 //----------------
 //интерфейс модуля

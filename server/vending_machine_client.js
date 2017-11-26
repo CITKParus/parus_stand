@@ -34,7 +34,7 @@ const VENDING_MACHINE_RESP_STATE_OK = "OK"; //от автомата пришел
 //-------
 
 //выполнение действия на вендинговом автомате
-function vendingMachineAction(data) {
+const vendingMachineAction = data => {
     //если автомат доступен
     if (conf.VENDING_MACHINE_ENABLED) {
         utils.log({ msg: "Vending machine enabled - requesting..." });
@@ -74,7 +74,7 @@ function vendingMachineAction(data) {
         utils.log({ msg: "Vending machine disabled" });
         data.callBack(utils.buildOkResp("Vending machine disabled"));
     }
-}
+};
 
 //----------------
 //интерфейс модуля
