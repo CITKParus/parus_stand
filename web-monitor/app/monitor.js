@@ -148,17 +148,11 @@ class Monitor extends React.Component {
                 />
                 <div className="screen-center">
                     {infoDialog}
-                    <div style={{ backgroundColor: "green4" }} className="monitor-col">
-                        <div style={{ backgroundColor: "magenta3" }} className="monitor-line">
-                            {restsNomen}
-                        </div>
-                        <div style={{ backgroundColor: "yellow2" }} className="monitor-line">
-                            {restsDynamic}
-                        </div>
+                    <div className="monitor-col">
+                        <div className="monitor-line">{restsNomen}</div>
+                        <div className="monitor-line">{restsDynamic}</div>
                     </div>
-                    <div style={{ backgroundColor: "red1" }} className="monitor-col monitor-messages-list">
-                        {notifyList}
-                    </div>
+                    <div className="monitor-col monitor-messages-list">{notifyList}</div>
                 </div>
             </div>
         );
