@@ -8,8 +8,11 @@ var SERVER_PORT = 8080; //порт WEB-сервера
 //var WIFI_SSID = "MartyMim"; // имя WiFi-сети
 //var WIFI_PSWD = "var2008eniK"; // ключ WiFi-сети
 //офис
-var WIFI_SSID = "ASUS"; // имя WiFi-сети
-var WIFI_PSWD = "ParUs2013"; // ключ WiFi-сети
+//var WIFI_SSID = "ASUS"; // имя WiFi-сети
+//var WIFI_PSWD = "ParUs2013"; // ключ WiFi-сети
+//АК
+var WIFI_SSID = "RUDA"; // имя WiFi-сети
+var WIFI_PSWD = "Defender0106"; // ключ WiFi-сети
 
 //------------------------------
 // Подключаем внешние библиотеки
