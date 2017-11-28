@@ -4,3 +4,7 @@ export * from "./ScanerInput.component";
 export * from "./ManualInput.component";
 export * from "./IconButton.component";
 export * from "./QRCodeIcon.component";
+export * from "./ShipmentItems.component";
+export * from "./ShipmentLoading.component";
+export * from "./ShipmentResult.component";
+export * from "./ShipmentWelcome.component";

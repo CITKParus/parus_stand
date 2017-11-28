@@ -1,3 +1,9 @@
+/******************************************************************************
+ *
+ * Экран настроек
+ *
+ *****************************************************************************/
+
 import React from "react";
 import { StatusBar, Text, TextInput, View, StyleSheet, Button, AsyncStorage, Alert } from "react-native";
 import { config } from "./config";
@@ -26,18 +32,22 @@ export default class SettingsPage extends React.Component {
     };
     constructor(props) {
         super(props);
+        // Установка состояния
         this.state = {
-            url: config.serverUrl
+            url: config.serverUrl // адрес по умолчанию
         };
     }
-
+    // При загрузке экрана
     async componentDidMount() {
         try {
+            // Считывание текущей настройки адреса из хранилища
             let url = await AsyncStorage.getItem("url");
+            // Если в хранилище адрес не задан
             if (url == null) {
-                url = config.serverUrl;
-                await AsyncStorage.setItem("url", url);
+                url = config.serverUrl; // берется адрес по умолчанию
+                await AsyncStorage.setItem("url", url); // записываем адрес в хранилище
             }
+            // Установка текущего состояния
             this.setState({ url });
         } catch (error) {
             Alert.alert("Ошибка", error);
@@ -47,6 +57,7 @@ export default class SettingsPage extends React.Component {
     render() {
         const { goBack } = this.props.navigation;
         const save = async () => {
+            // Сохранение настройки в хранилище
             await AsyncStorage.setItem("url", this.state.url);
             goBack();
         };

@@ -1,3 +1,9 @@
+/******************************************************************************
+ *
+ * Интерфейс автоматического считывания QR-кодов
+ *
+ *****************************************************************************/
+
 import React from "react";
 import { Text, View, TouchableOpacity, StyleSheet } from "react-native";
 import { ManualInput, QRCodeIcon } from ".";

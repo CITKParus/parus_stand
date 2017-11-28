@@ -1,3 +1,21 @@
+/******************************************************************************
+ *
+ * Настройки навигации приложения
+ *
+ *   ARRRRRRRRRRRRRRRRRRRRRR!
+ *
+ *
+ *              |    |    |
+ *             )_)  )_)  )_)
+ *            )___))___))___)
+ *           )____)____)_____)\
+ *         _____|____|____|____\\\__
+ *---------\                   /---------
+ *  ^^^^^ ^^^^^^^^^^^^^^^^^^^^^
+ *    ^^^^      ^^^^     ^^^    ^^
+ *         ^^^^      ^^^
+ *****************************************************************************/
+
 import React from "react";
 import { StackNavigator } from "react-navigation";
 import ScanerPage from "./ScanerPage";
@@ -11,8 +29,8 @@ const FlowNivigator = StackNavigator(
     },
     {
         headerMode: "none",
-        initialRouteName: "First",
-        mode: "modal"
+        initialRouteName: "First"
+        //mode: "modal"
     }
 );
 const AppNavigator = StackNavigator(

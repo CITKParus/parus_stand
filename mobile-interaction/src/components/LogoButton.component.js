@@ -1,3 +1,9 @@
+/******************************************************************************
+ *
+ * Кнопка с логотипом
+ *
+ *****************************************************************************/
+
 import React from "react";
 import { StyleSheet, Image, TouchableOpacity } from "react-native";
 
@@ -8,8 +14,8 @@ const styles = StyleSheet.create({
         left: 10
     },
     logo: {
-        height: 100,
-        width: 100
+        height: 125,
+        width: 125
     }
 });
 export const LogoButton = props => {

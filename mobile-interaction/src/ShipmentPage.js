@@ -1,17 +1,15 @@
+/******************************************************************************
+ *
+ * Экран отгрузки товара
+ *
+ *****************************************************************************/
+
 import React from "react";
-import {
-    StatusBar,
-    Text,
-    View,
-    StyleSheet,
-    Button,
-    AsyncStorage,
-    Alert,
-    TouchableOpacity,
-    ActivityIndicator
-} from "react-native";
-import { IconButton } from "./components";
-import { SHIPMENT } from "./api";
+import { StatusBar, Text, View, StyleSheet, AsyncStorage, Alert, Image } from "react-native";
+import LinearGradient from "react-native-linear-gradient";
+import { IconButton, ShipmentCell, ShipmentLoading, ShipmentContainer, ShipmentResult } from "./components";
+import { SHIPMENT, CANCEL_AUTH } from "./api";
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -20,37 +18,22 @@ const styles = StyleSheet.create({
     backButton: {
         top: 30,
         right: 0,
-        left: 10
+        left: 10,
+
+        backgroundColor: "transparent"
     },
     mainContainer: {
         alignItems: "center",
-        marginTop: 200
+        marginTop: 300
     },
-    welcomeContainer: {
-        marginBottom: 100,
-        alignItems: "center"
+    logoContainer: {
+        position: "absolute",
+        top: 30,
+        right: 10
     },
-    welcome: {
-        lineHeight: 32,
-        fontSize: 30,
-        marginBottom: 10
-    },
-    restContainer: {},
-    line: {
-        flexDirection: "row",
-        alignItems: "center"
-    },
-    cellButton: {
-        backgroundColor: "black",
-        marginHorizontal: 20,
-        height: 100,
-        width: 200,
-        justifyContent: "center",
-        alignItems: "center"
-    },
-    cellText: {
-        color: "white",
-        fontSize: 20
+    logo: {
+        height: 125,
+        width: 125
     }
 });
 
@@ -59,19 +42,47 @@ export default class ShipmentPage extends React.Component {
         header: null
     };
     navigation = this.props.navigation;
+
+    // Установка состояния по умолчанию
     state = {
-        loading: false,
-        result: false,
-        resultText: "Ошибка",
-        onGoBack: this.navigation.state.params.onGoBack
+        user: this.props.navigation.state.params.response.USER.NAGENT,
+        loading: false, // Режим загрузки выключен
+        loadingText: "Отгружаем...", // Сообщение о загрузке
+        result: false, // Результата еще нет
+        resultText: "Ошибка", // Результат
+        onGoBack: this.navigation.state.params.onGoBack // Действие при возврате на предыдущий экран
     };
-    _navBack = () => {
+
+    // Возврат на предыдущений экран
+    _navBack = async () => {
         this.setState({
-            loading: false
+            loading: true,
+            loadingText: "Ожидайте..."
         });
+        const response = await CANCEL_AUTH(this.state.user);
+        if (response.state == "ERR") {
+            Alert.alert(
+                "Произошла ошибка :(",
+                response.message,
+                [
+                    {
+                        text: "ОК",
+                        onPress: () => {
+                            this.setState({
+                                loading: false
+                            });
+                        }
+                    }
+                ],
+                { cancelable: false }
+            );
+            return;
+        }
         this.state.onGoBack();
         this.navigation.goBack();
     };
+
+    // Отгрузка товара
     ship = async item => {
         this.setState({
             loading: true
@@ -96,106 +107,49 @@ export default class ShipmentPage extends React.Component {
                 ],
                 { cancelable: false }
             );
-        } else {
-            this.setState({
-                loading: false,
-                result: true,
-                resultText: response.message || "Спасибо, не забудьте Вашу накладную"
-            });
+            return;
         }
-    };
-    renderCELLS = (cells, user) => {
-        return cells.map(cell => (
-            <TouchableOpacity
-                onPress={async () => {
-                    await this.ship({
-                        customer: user,
-                        rack_line: cell.NRACK_LINE,
-                        rack_line_cell: cell.NRACK_LINE_CELL
-                    });
-                }}
-                style={[styles.cellButton, { backgroundColor: cell.BEMPTY ? "gray" : "black" }]}
-                key={cell.NRACK_CELL}
-                disabled={cell.BEMPTY}
-            >
-                <Text style={styles.cellText}>{cell.NOMEN_RESTS[0].SNOMMODIF}</Text>
-            </TouchableOpacity>
-        ));
-    };
-    renderREST = (rests, user) => {
-        return rests.map(line => (
-            <View style={styles.line} key={line.NRACK_LINE}>
-                {this.renderCELLS(line.RACK_LINE_CELL_RESTS, user)}
-            </View>
-        ));
+
+        this.setState({
+            loading: false,
+            result: true,
+            resultText: response.message || "Спасибо, не забудьте Вашу накладную"
+        });
     };
     render() {
+        console.log(this.state);
         const { response } = this.props.navigation.state.params;
         return (
-            <View style={styles.container}>
-                <StatusBar barStyle="default" />
-                <IconButton
-                    onPress={this._navBack}
-                    icon="ios-arrow-back"
-                    iconColor="black"
-                    style={styles.backButton}
-                    text="Назад"
-                />
-                {this.state.loading && (
-                    <View style={styles.mainContainer}>
-                        <ActivityIndicator
-                            animating={true}
-                            color="black"
-                            size="large"
-                            style={{
-                                paddingBottom: 100
-                            }}
-                        />
-                        <Text
-                            style={{
-                                fontSize: 34,
-                                fontWeight: "bold",
-                                backgroundColor: "transparent",
-                                color: "black"
-                            }}
-                        >
-                            Отгружаем...
-                        </Text>
-                    </View>
+            <LinearGradient
+                style={styles.container}
+                colors={["#000046", "#1CB5E0"]}
+                start={{ x: 0.0, y: 0.25 }}
+                end={{ x: 0.5, y: 1.0 }}
+            >
+                <StatusBar barStyle="light-content" />
+                {!this.state.loading && (
+                    <IconButton onPress={this._navBack} icon="ios-arrow-back" style={styles.backButton} text="Назад" />
                 )}
-                {!this.state.loading &&
-                    !this.state.result && (
-                        <View style={styles.mainContainer}>
-                            <View style={styles.welcomeContainer}>
-                                <Text style={styles.welcome}>{"Здравствуйте,"}</Text>
-                                <Text style={styles.welcome}>{response.USER.SAGENT_NAME},</Text>
-                                <Text style={styles.welcome}>{"укажите желаемый товар"}</Text>
-                            </View>
-                            <View style={styles.restContainer}>
-                                {this.renderREST(response.RESTS.RACK_LINE_RESTS, response.USER.SAGENT)}
-                            </View>
-                        </View>
-                    )}
-                {this.state.result && (
-                    <View style={styles.mainContainer}>
-                        <Text
-                            style={{
-                                fontSize: 34,
-                                fontWeight: "bold",
-                                backgroundColor: "transparent",
-                                color: "black",
-                                marginHorizontal: 20
-                            }}
-                        >
-                            {this.state.resultText}
-                        </Text>
-
-                        <TouchableOpacity onPress={this._navBack} style={[styles.cellButton, { marginTop: 300 }]}>
-                            <Text style={styles.cellText}>ОК</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-            </View>
+                <View style={styles.logoContainer}>
+                    <Image source={require("./assets/icons/parus_logo.png")} style={styles.logo} />
+                </View>
+                <View style={styles.mainContainer}>
+                    {this.state.loading && <ShipmentLoading text={this.state.loadingText} />}
+                    {!this.state.loading &&
+                        !this.state.result && (
+                            <ShipmentContainer
+                                rests={response.RESTS.RACK_LINE_RESTS}
+                                user={response.USER.SAGENT}
+                                userName={response.USER.SAGENT_NAME}
+                                onPress={this.ship}
+                            />
+                        )}
+                    {this.state.result &&
+                        !this.state.loading && (
+                            <ShipmentResult onPress={this._navBack} resultText={this.state.resultText} />
+                        )}
+                </View>
+            </LinearGradient>
         );
     }
 }

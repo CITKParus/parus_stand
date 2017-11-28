@@ -1,3 +1,9 @@
+/******************************************************************************
+ *
+ * Индикатор работы экрана сканера
+ *
+ *****************************************************************************/
+
 import React from "react";
 import { ActivityIndicator, Text, View, StyleSheet } from "react-native";
 const styles = StyleSheet.create({
