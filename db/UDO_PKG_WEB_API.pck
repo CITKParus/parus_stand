@@ -5,7 +5,7 @@ create or replace package UDO_PKG_WEB_API
  as
 
   /* Константы - режим отладки */
-  BDEBUG                    constant boolean := true; -- Режим отладки
+  BDEBUG                    constant boolean := false; -- Режим отладки
 
   /* Константы - исключение "Сессия истекла" */
   NSESSION_EXPIRED_CODE       constant number(17) := -20500;              -- Код исключения "Сессия истекла"

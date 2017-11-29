@@ -458,7 +458,9 @@ create or replace package UDO_PKG_STAND as
   /* Загрузка стенда товаром */
   procedure LOAD
   (
-    NCOMPANY                number      -- Регистрационный номер организации 
+    NCOMPANY                number,         -- Регистрационный номер организации 
+    NRACK_LINE              number := null, -- Номер яруса стеллажа стенда для загрузки (null - грузить все)
+    NRACK_LINE_CELL         number := null  -- Номер ячейки в ярусе стеллажа стенда для загрузки (null - грузить все)
   );
 
   /* Откат последней загрузки стенда */
@@ -964,7 +966,7 @@ create or replace package body UDO_PKG_STAND as
             loop
               /* ...такую же, как в ячейке */
               if (RACK_NOMEN_CONFS(J).NNOMMODIF = RACK_LINE_CELL_CONFS(I).NNOMMODIF) then
-                /* Такая есть - увеличим хранимое на стенд количество (он всегда загружается полностью) */
+                /* Такая есть - увеличим хранимое на стенде количество (он всегда загружается полностью) */
                 BADD := false;
                 RACK_NOMEN_CONFS(J).NMAX_QUANT := RACK_NOMEN_CONFS(J).NMAX_QUANT + RACK_LINE_CELL_CONFS(I).NCAPACITY;
               end if;
@@ -1619,7 +1621,9 @@ create or replace package body UDO_PKG_STAND as
   /* Загрузка стенда товаром */
   procedure LOAD
   (
-    NCOMPANY                number                        -- Регистрационный номер организации 
+    NCOMPANY                number,                       -- Регистрационный номер организации 
+    NRACK_LINE              number := null,               -- Номер яруса стеллажа стенда для загрузки (null - грузить все)
+    NRACK_LINE_CELL         number := null                -- Номер ячейки в ярусе стеллажа стенда для загрузки (null - грузить все)
   ) is
     /* Типы данных */
     type TNOMEN is record                                 -- Номенклатура загрузки
@@ -1644,6 +1648,29 @@ create or replace package body UDO_PKG_STAND as
     SMSG                    PKG_STD.TSTRING;              -- Текст сообщения процедуры отработки прихода
     NOMENS                  TNOMENS;                      -- Коллекция загружаемых номенклатур
   begin
+    /* Убедимся, что стенд сконфигурирован */
+    if ((RACK_NOMEN_CONFS is null) or (RACK_NOMEN_CONFS.COUNT <= 0)) then
+      P_EXCEPTION(0, 'Стенд не сконфигурирован!');
+    end if;
+  
+    /* Проверим параметры - указывать ячейку можно только указав ярус */
+    if ((NRACK_LINE is null) and (NRACK_LINE_CELL is not null)) then
+      P_EXCEPTION(0,
+                  'При указании номера ячейки в ярусе стеллажа обязательно указывать и ярус стеллажа!');
+    end if;
+  
+    /* Проверим, что указанный ярус стеллажа существует */
+    if (NRACK_LINE is not null) then
+      if (NRACK_LINE <> TRUNC(NRACK_LINE) or (NRACK_LINE not between 1 and NRACK_LINES)) then
+        P_EXCEPTION(0, 'Номер яруса стеллажа стенда указана некорректно!');
+      end if;
+    end if;
+  
+    /* Проверим, что указанная ячейка яруса существует и сконфигурирована */
+    if ((NRACK_LINE is not null) and (NRACK_LINE_CELL is not null)) then
+      CELL_CONF := STAND_GET_RACK_LINE_CELL_CONF(NRACK_LINE => NRACK_LINE, NRACK_LINE_CELL => NRACK_LINE_CELL);
+    end if;
+  
     /* Определим рег. номер каталога */
     FIND_ROOT_CATALOG(NCOMPANY => NCOMPANY, SCODE => 'IncomFromDeps', NCRN => NCRN);
   
@@ -1681,22 +1708,47 @@ create or replace package body UDO_PKG_STAND as
         P_EXCEPTION(0,
                     'Для склада "%s" не указано материально ответственное лицо!',
                     SSTORE_PRODUCE);
-    end;  
-
+    end;
+  
     /* Инициализируеим коллекцию загружаемых номенклатур */
     NOMENS := TNOMENS();
-
+  
     /* Обходим конфигурацию номенклатур стенда для того что бы сформировать коллекцию загружаемых номенклатур */
-    if ((RACK_NOMEN_CONFS is not null) and (RACK_NOMEN_CONFS.COUNT > 0)) then      
-        for I in RACK_NOMEN_CONFS.FIRST .. RACK_NOMEN_CONFS.LAST
+    for I in 1 .. NRACK_LINES
+    loop
+      if ((NRACK_LINE is null) or (((NRACK_LINE is not null)) and (NRACK_LINE = I))) then
+        for J in 1 .. NRACK_LINE_CELLS
         loop
-            NOMENS.EXTEND();
-            NOMENS(NOMENS.LAST).RACK_NOMEN_CONF := RACK_NOMEN_CONFS(I);
-            NOMENS(NOMENS.LAST).NINCOMEFROMDEPSSPEC := null;
+          if ((NRACK_LINE_CELL is null) or (((NRACK_LINE_CELL is not null)) and (NRACK_LINE_CELL = J))) then
+            declare
+              BADD boolean := false;
+            begin
+              /* Считаем конфигурацию ячейки из которой происходит отгрузка */
+              CELL_CONF := STAND_GET_RACK_LINE_CELL_CONF(NRACK_LINE => NRACK_LINE, NRACK_LINE_CELL => NRACK_LINE_CELL);
+              /* Будем добавлять в коллекцию загружаемых номенклатур */
+              BADD := true;
+              if (NOMENS.COUNT > 0) then
+                /* Ищем в уже существующих в коллекции загружаемых номенклатурах... */
+                for N in NOMENS.FIRST .. NOMENS.LAST
+                loop
+                  /* ...такую же, как в ячейке */
+                  if (NOMENS(N).RACK_NOMEN_CONF.NNOMMODIF = CELL_CONF.NNOMMODIF) then
+                    /* Такая есть - добавлять не надо */
+                    BADD := false;
+                  end if;
+                end loop;
+              end if;
+              /* Номенклатуры как в ячейке ещё нет в коллекции загружаемых - значит добавим её */
+              if (BADD) then
+                NOMENS.EXTEND();
+                NOMENS(NOMENS.LAST).RACK_NOMEN_CONF := STAND_GET_RACK_NOMEN_CONF(NNOMMODIF => CELL_CONF.NNOMMODIF);
+                NOMENS(NOMENS.LAST).NINCOMEFROMDEPSSPEC := null;
+              end if;
+            end;
+          end if;
         end loop;
-    else
-      P_EXCEPTION(0, 'Стенд не сконфигурирован!');
-    end if;
+      end if;
+    end loop;
   
     /* Расчитаем очередной номер документа */
     P_INCOMEFROMDEPS_GETNEXTNUMB(NCOMPANY => NCOMPANY,
@@ -1771,56 +1823,60 @@ create or replace package body UDO_PKG_STAND as
     /* Установка мест хранения для спецификации */
     for I in 1 .. NRACK_LINES
     loop
-      for J in 1 .. NRACK_LINE_CELLS
-      loop
-        /* Считаем конфигурацию ячейки */
-        CELL_CONF := STAND_GET_RACK_LINE_CELL_CONF(NRACK_LINE => I, NRACK_LINE_CELL => J);
-        /* Найдем позицию спецификации которой она была загружена */
-        NINCOMEFROMDEPSSPEC := null;
-        for N in NOMENS.FIRST .. NOMENS.LAST
+      if ((NRACK_LINE is null) or (((NRACK_LINE is not null)) and (NRACK_LINE = I))) then
+        for J in 1 .. NRACK_LINE_CELLS
         loop
-          if (NOMENS(N).RACK_NOMEN_CONF.NNOMMODIF = CELL_CONF.NNOMMODIF) then
-            NINCOMEFROMDEPSSPEC := NOMENS(N).NINCOMEFROMDEPSSPEC;
+          if ((NRACK_LINE_CELL is null) or (((NRACK_LINE_CELL is not null)) and (NRACK_LINE_CELL = J))) then
+            /* Считаем конфигурацию ячейки */
+            CELL_CONF := STAND_GET_RACK_LINE_CELL_CONF(NRACK_LINE => I, NRACK_LINE_CELL => J);
+            /* Найдем позицию спецификации которой она была загружена */
+            NINCOMEFROMDEPSSPEC := null;
+            for N in NOMENS.FIRST .. NOMENS.LAST
+            loop
+              if (NOMENS(N).RACK_NOMEN_CONF.NNOMMODIF = CELL_CONF.NNOMMODIF) then
+                NINCOMEFROMDEPSSPEC := NOMENS(N).NINCOMEFROMDEPSSPEC;
+              end if;
+            end loop;
+            if (NINCOMEFROMDEPSSPEC is null) then
+              P_EXCEPTION(0,
+                          'Для модификации "%s" номенклатуры "%s" не удалось определить позицию прихода из подразделения!',
+                          CELL_CONF.SNOMMODIF,
+                          CELL_CONF.SNOMEN);
+            end if;
+            /* Установим место хранения */
+            P_STRPLRESJRNL_INSERT(NCOMPANY        => NCOMPANY,
+                                  SMASTERUNITCODE => 'IncomFromDeps',
+                                  SSLAVEUNITCODE  => 'IncomFromDepsSpecs',
+                                  NMASTERRN       => NINCOMEFROMDEPS,
+                                  NSLAVERN        => NINCOMEFROMDEPSSPEC,
+                                  SSTORE          => SSTORE_GOODS,
+                                  SRACK_PREF      => SRACK_PREF,
+                                  SRACK_NUMB      => SRACK_NUMB,
+                                  SCELL_PREF      => CELL_CONF.SPREF,
+                                  SCELL_NUMB      => CELL_CONF.SNUMB,
+                                  NGOODSSUPPLY    => null,
+                                  NRES_TYPE       => 0,
+                                  SNOMEN          => CELL_CONF.SNOMEN,
+                                  SNOMMODIF       => CELL_CONF.SNOMMODIF,
+                                  SNOMNMODIFPACK  => null,
+                                  NNOMMODIF       => CELL_CONF.NNOMMODIF,
+                                  NNOMNMODIFPACK  => null,
+                                  SARTICLE        => null,
+                                  NARTICLE        => null,
+                                  SGOODSUNIT      => null,
+                                  SDOCTYPE        => SINCDEPS_TYPE,
+                                  DDOCDATE        => TRUNC(sysdate),
+                                  SDOCNUMB        => SDOC_NUMB,
+                                  SDOCPREF        => SINCDEPS_PREF,
+                                  DRESERVING_DATE => sysdate,
+                                  DFREE_DATE      => null,
+                                  NQUANT          => CELL_CONF.NCAPACITY,
+                                  NQUANTALT       => 0,
+                                  NQUANTPACK      => null,
+                                  NRN             => NSTRPLRESJRNL);
           end if;
         end loop;
-        if (NINCOMEFROMDEPSSPEC is null) then
-          P_EXCEPTION(0,
-                      'Для модификации "%s" номенклатуры "%s" не удалось определить позицию прихода из подразделения!',
-                      CELL_CONF.SNOMMODIF,
-                      CELL_CONF.SNOMEN);
-        end if;
-        /* Установим место хранения */
-        P_STRPLRESJRNL_INSERT(NCOMPANY        => NCOMPANY,
-                              SMASTERUNITCODE => 'IncomFromDeps',
-                              SSLAVEUNITCODE  => 'IncomFromDepsSpecs',
-                              NMASTERRN       => NINCOMEFROMDEPS,
-                              NSLAVERN        => NINCOMEFROMDEPSSPEC,
-                              SSTORE          => SSTORE_GOODS,
-                              SRACK_PREF      => SRACK_PREF,
-                              SRACK_NUMB      => SRACK_NUMB,
-                              SCELL_PREF      => CELL_CONF.SPREF,
-                              SCELL_NUMB      => CELL_CONF.SNUMB,
-                              NGOODSSUPPLY    => null,
-                              NRES_TYPE       => 0,
-                              SNOMEN          => CELL_CONF.SNOMEN,
-                              SNOMMODIF       => CELL_CONF.SNOMMODIF,
-                              SNOMNMODIFPACK  => null,
-                              NNOMMODIF       => CELL_CONF.NNOMMODIF,
-                              NNOMNMODIFPACK  => null,
-                              SARTICLE        => null,
-                              NARTICLE        => null,
-                              SGOODSUNIT      => null,
-                              SDOCTYPE        => SINCDEPS_TYPE,
-                              DDOCDATE        => TRUNC(sysdate),
-                              SDOCNUMB        => SDOC_NUMB,
-                              SDOCPREF        => SINCDEPS_PREF,
-                              DRESERVING_DATE => sysdate,
-                              DFREE_DATE      => null,
-                              NQUANT          => CELL_CONF.NCAPACITY,
-                              NQUANTALT       => 0,
-                              NQUANTPACK      => null,
-                              NRN             => NSTRPLRESJRNL);
-      end loop;
+      end if;
     end loop;
   
     /* Отработка документа как "Факт" */

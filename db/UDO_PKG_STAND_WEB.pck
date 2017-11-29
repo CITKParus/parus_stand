@@ -412,7 +412,7 @@ create or replace package body UDO_PKG_STAND_WEB as
     NRACK_LINE_CELL         PKG_STD.TNUMBER;                            -- Ячейка стеллажа для выдачи товара
     NTRANSINVCUST           PKG_STD.TREF;                               -- Рег. номер сформированной РНОП
     SERR                    PKG_STD.TSTRING;                            -- Буфер для ошибок
-  begin
+  begin        
     /* Инициализируем выход */
     DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
     /* Конвертируем параметры в объектное представление */
