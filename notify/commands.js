@@ -55,14 +55,14 @@ const createResp = (state, chatID, message, options) => {
 
 //заглушка - функция в разработке
 const underConstruction = prms => {
-    return new Promise(function(resolve, reject) {
+    return new Promise((resolve, reject) => {
         resolve(createResp(PRC_STATE_OK, prms.message.chatID, CMDS_MSG_UNDER_CONSTRUCTION));
     });
 };
 
 //начало работы с ботом
 const processStart = prms => {
-    return new Promise(function(resolve, reject) {
+    return new Promise((resolve, reject) => {
         let cmd = _.find(SCENARIO, { command: prms.chatState.currentCommand });
         if (!cmd) {
             reject(createResp(PRC_STATE_ERR, prms.message.chatID, CMDS_MSG_NO_COMMAND));

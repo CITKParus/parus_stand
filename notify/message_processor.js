@@ -8,9 +8,11 @@
 //-----------------------------
 
 const _ = require("lodash"); //работа с массивами и коллекциями
+const fs = require("fs"); //работа с файловой системой
 const EventEmitter = require("events"); //обработчик пользовательских событий
 const utils = require("./utils"); //утилиты сервиса
 const commands = require("./commands"); //настройки сценариев отработки команд
+const config = require("./config"); //настройки приложения
 
 //-------------------------
 //глобальные идентификаторы
@@ -50,6 +52,31 @@ class MessageProcessor extends EventEmitter {
             state: CHAT_STATE_WAIT_FOR_COMMAND, //текущее состояние чата
             currentCommand: "" //текущая отрабатываемая команда
         };
+    }
+
+    //сохранение состояния чата
+    saveChatsStateSync() {
+        utils.log("Saving " + this.botState.length + " chats states to " + config.SATE_FILE + "...");
+        //пишем на диск
+        try {
+            fs.writeFileSync(config.SATE_FILE, JSON.stringify(this.botState));
+            utils.log("Done!");
+        } catch (e) {
+            utils.log("Saving state error: " + e.message);
+        }
+    }
+
+    //считывание состояния чата
+    loadChatsStateSync() {
+        utils.log("Loading state from " + config.SATE_FILE + " ...");
+        //формируем ответ
+        try {
+            //читаем с диска
+            this.botState = JSON.parse(fs.readFileSync(config.SATE_FILE));
+            utils.log("Done, " + this.botState.length + " chats loaded!");
+        } catch (e) {
+            utils.log("Loading state error: " + e.message);
+        }
     }
 
     //получение состояния чата

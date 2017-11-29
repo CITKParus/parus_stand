@@ -13,6 +13,7 @@ exports.BOT_TOKEN = "476700469:AAF-Q9C23Bl4odNZRAA4kceXI7fGbFu8DKA"; //уник�
 exports.BOT_USERNAME = "citk_parus_stand_bot"; //имя пользователя бота
 exports.OUT_SEND_DELAY = 1; //интервал опроса очереди исходящих сообщений (мс)
 exports.NOTIFY_CHECK_DELAY = 1000; //интервал опроса очереди уведомлений стенда (мс)
+exports.SATE_FILE = "c:\\repos\\temp\\citk_parus_stand_bot_state.dat"; //файл для хранения состояния чатов
 
 //подключение к серверу стенда
 exports.SERVER_URL = "http://localhost:3030"; //адрес сервера

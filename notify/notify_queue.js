@@ -76,11 +76,13 @@ class NotifyQueue extends EventEmitter {
                         if (r.message && Array.isArray(r.message) && r.message.length > 0) {
                             try {
                                 utils.log("Have new message (NRN: " + r.message[0].NRN + "). Sending to out queue...");
+                                //собираем сообщение
                                 let messageText = r.message[0].SMSG.SMSG;
                                 if (r.message[0].SMSG.SNOTIFY_TYPE == client.SERVER_MSG_NOTIFY_WARN)
                                     messageText = "<i>Предупреждение: " + messageText + "</i>";
                                 if (r.message[0].SMSG.SNOTIFY_TYPE == client.SERVER_MSG_NOTIFY_ERROR)
                                     messageText = "<b>Критическое сообщение: " + messageText + "</b>";
+                                //ставим в очередь на отправку боту
                                 self.sendRespond(
                                     commands.createResp(
                                         commands.PRC_STATE_OK,

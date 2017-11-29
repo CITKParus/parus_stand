@@ -16,7 +16,7 @@ const conf = require("./config"); //константы и настройки
 //-------
 
 //протоколирование работы
-function log(data) {
+const log = data => {
     if (conf.DEBUG) {
         if (data) {
             if (Array.isArray(data)) {
@@ -30,15 +30,15 @@ function log(data) {
             console.log(data);
         }
     }
-}
+};
 
 //проверка на команду
-function isCommand(str) {
+const isCommand = str => {
     return str.startsWith("/");
-}
+};
 
 //извлечение команды из текста
-function getCommand(str) {
+const getCommand = str => {
     //результат работы
     let res = "";
     //если это вообще команда - извлекаем
@@ -48,10 +48,10 @@ function getCommand(str) {
     }
     //вернем результат
     return res;
-}
+};
 
 //разбор сообщения
-function parseMessage(m) {
+const parseMessage = m => {
     //инициализируем результат
     let res = {
         msg: {},
@@ -72,7 +72,7 @@ function parseMessage(m) {
     if (res.isCommand) res.command = getCommand(m.text);
     //вернем ответ
     return res;
-}
+};
 
 //----------------
 //интерфейс модуля
