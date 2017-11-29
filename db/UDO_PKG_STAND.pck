@@ -460,13 +460,15 @@ create or replace package UDO_PKG_STAND as
   (
     NCOMPANY                number,         -- Регистрационный номер организации 
     NRACK_LINE              number := null, -- Номер яруса стеллажа стенда для загрузки (null - грузить все)
-    NRACK_LINE_CELL         number := null  -- Номер ячейки в ярусе стеллажа стенда для загрузки (null - грузить все)
+    NRACK_LINE_CELL         number := null, -- Номер ячейки в ярусе стеллажа стенда для загрузки (null - грузить все)
+    NINCOMEFROMDEPS         out number      -- Регистрационный номер сформированного "Прихода из подразделения"    
   );
 
   /* Откат последней загрузки стенда */
   procedure LOAD_ROLLBACK
   (
-    NCOMPANY                number      -- Регистрационный номер организации
+    NCOMPANY                number,     -- Регистрационный номер организации
+    NINCOMEFROMDEPS         out number  -- Регистрационный номер расформированного "Прихода из подразделения"        
   );
 
   /* Отгрузка со стенда посетителю */
@@ -1623,7 +1625,8 @@ create or replace package body UDO_PKG_STAND as
   (
     NCOMPANY                number,                       -- Регистрационный номер организации 
     NRACK_LINE              number := null,               -- Номер яруса стеллажа стенда для загрузки (null - грузить все)
-    NRACK_LINE_CELL         number := null                -- Номер ячейки в ярусе стеллажа стенда для загрузки (null - грузить все)
+    NRACK_LINE_CELL         number := null,               -- Номер ячейки в ярусе стеллажа стенда для загрузки (null - грузить все)
+    NINCOMEFROMDEPS         out number                    -- Регистрационный номер сформированного "Прихода из подразделения"
   ) is
     /* Типы данных */
     type TNOMEN is record                                 -- Номенклатура загрузки
@@ -1640,7 +1643,6 @@ create or replace package body UDO_PKG_STAND as
     SOUT_DEPARTMENT         INS_DEPARTMENT.CODE%type;     -- Подразделение-отправитель формируемого "Прихода из подразделения"
     SAGENT                  AGNLIST.AGNABBR%type;         -- МОЛ формируемого "Прихода из подразделения"
     SCURRENCY               CURNAMES.CURCODE%type;        -- Валюта формируемого "Прихода из подразделения" (базовая валюта организации)
-    NINCOMEFROMDEPS         INCOMEFROMDEPS.RN%type;       -- Рег. номер сформированного "Прихода из подразделения"
     NINCOMEFROMDEPSSPEC     INCOMEFROMDEPSSPEC.RN%type;   -- Рег. номер сформированной позиции спецификации "Прихода из подразделения"
     NSTRPLRESJRNL           STRPLRESJRNL.RN%type;         -- Рег. номер сформированной записи резервирования по местам хранения
     CELL_CONF               TRACK_LINE_CELL_CONF;         -- Конфигурация ячейки (места хранения) стенда
@@ -1724,7 +1726,7 @@ create or replace package body UDO_PKG_STAND as
               BADD boolean := false;
             begin
               /* Считаем конфигурацию ячейки из которой происходит отгрузка */
-              CELL_CONF := STAND_GET_RACK_LINE_CELL_CONF(NRACK_LINE => NRACK_LINE, NRACK_LINE_CELL => NRACK_LINE_CELL);
+              CELL_CONF := STAND_GET_RACK_LINE_CELL_CONF(NRACK_LINE => I, NRACK_LINE_CELL => J);
               /* Будем добавлять в коллекцию загружаемых номенклатур */
               BADD := true;
               if (NOMENS.COUNT > 0) then
@@ -1903,9 +1905,9 @@ create or replace package body UDO_PKG_STAND as
   /* Откат последней загрузки стенда */
   procedure LOAD_ROLLBACK
   (
-    NCOMPANY                number                  -- Регистрационный номер организации
-  ) is
-    NINCOMEFROMDEPS         INCOMEFROMDEPS.RN%type; -- Рег. номер расформируемого "Прихода из подразделения"
+    NCOMPANY                number,                 -- Регистрационный номер организации
+    NINCOMEFROMDEPS         out number              -- Регистрационный номер расформированного "Прихода из подразделения"    
+  ) is    
     NWARNING                PKG_STD.TREF;           -- Флаг предупреждения процедуры отработки прихода
     SMSG                    PKG_STD.TSTRING;        -- Текст сообщения процедуры отработки прихода
   begin
@@ -1926,9 +1928,14 @@ create or replace package body UDO_PKG_STAND as
          and T.STORE = STORE_TO.RN
          and STORE_TO.AZS_NUMBER = SSTORE_GOODS;
     exception
-      when NO_DATA_FOUND then
-        P_EXCEPTION(0, 'Не найдено ни одной загрузки стенда!');
+      when others then
+        NINCOMEFROMDEPS := null;
     end;
+  
+    /* Проверим, что есть загрузки стенда */
+    if (NINCOMEFROMDEPS is null) then
+      P_EXCEPTION(0, 'Не найдено ни одной загрузки стенда!');
+    end if;
   
     /* Отменяем размещение на местах хранения */
     P_STRPLRESJRNL_INDEPTS_RLLBACK(NCOMPANY => NCOMPANY, NRN => NINCOMEFROMDEPS);
@@ -1962,9 +1969,9 @@ create or replace package body UDO_PKG_STAND as
   
     /* Удаляем документ */
     P_INCOMEFROMDEPS_DELETE(NCOMPANY => NCOMPANY, NRN => NINCOMEFROMDEPS);
-
+  
     /* Запомним остатки по стенду */
-    STAND_SAVE_RACK_REST(NCOMPANY => NCOMPANY, BNOTIFY_REST => false, BNOTIFY_LIMIT => true);    
+    STAND_SAVE_RACK_REST(NCOMPANY => NCOMPANY, BNOTIFY_REST => false, BNOTIFY_LIMIT => true);
   end;
 
   /* Отгрузка со стенда посетителю */

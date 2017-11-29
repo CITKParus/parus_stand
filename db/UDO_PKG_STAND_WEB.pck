@@ -52,6 +52,20 @@ create or replace package UDO_PKG_STAND_WEB as
     CRES                    out clob    -- Результат работы
   );
 
+  /* Загрузка стенда товаром */
+  procedure LOAD
+  (
+    CPRMS                   clob,       -- Входные параметры
+    CRES                    out clob    -- Результат работы
+  );
+  
+  /* Откат последней загрузки стенда */
+  procedure LOAD_ROLLBACK
+  (
+    CPRMS                   clob,       -- Входные параметры
+    CRES                    out clob    -- Результат работы
+  );
+  
   /* Выдача посетителю товара со стенда */
   procedure SHIPMENT
   (
@@ -390,6 +404,81 @@ create or replace package body UDO_PKG_STAND_WEB as
     JRES.PUT(PAIR_NAME => 'RESTS', PAIR_VALUE => STAND_RACK_REST_TO_JSON(R => R).TO_JSON_VALUE());
     /* Отдаём ответ */
     JRES.TO_CLOB(BUF => CRES);
+  exception
+    when others then
+      SERR := sqlerrm;
+      CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                        NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_ERR,
+                                        SRESP_MSG    => SERR);
+      rollback;
+  end;
+  
+  /* Загрузка стенда товаром */
+  procedure LOAD
+  (
+    CPRMS                   clob,                                       -- Входные параметры
+    CRES                    out clob                                    -- Результат работы
+  ) is
+    JPRMS                   JSON;                                       -- Объектное представление параметров запроса
+    NCOMPANY                COMPANIES.RN%type := GET_SESSION_COMPANY(); -- Рег. номер организации    
+    NRACK_LINE              PKG_STD.TNUMBER;                            -- Ярус стеллажа для загрузки товара
+    NRACK_LINE_CELL         PKG_STD.TNUMBER;                            -- Ячейка стеллажа для загрузки товара
+    NINCOMEFROMDEPS         PKG_STD.TREF;                               -- Рег. номер сформированной накладной по приходу из подразделений
+    SERR                    PKG_STD.TSTRING;                            -- Буфер для ошибок
+  begin
+    /* Инициализируем выход */
+    DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
+    /* Конвертируем параметры в объектное представление */
+    JPRMS := JSON(CPRMS);
+    /* Считываем ярус стеллажа для загрузки товара */
+    if ((not JPRMS.EXIST('NRACK_LINE')) or (JPRMS.GET('NRACK_LINE').VALUE_OF() is null)) then
+      NRACK_LINE := null;
+    else
+      NRACK_LINE := UDO_PKG_WEB_API.UTL_CONVERT_TO_NUMBER(SSTR => JPRMS.GET('NRACK_LINE').VALUE_OF(), NSMART => 0);
+    end if;
+    /* Считываем ячейку стеллажа для загрузки товара */
+    if ((not JPRMS.EXIST('NRACK_LINE_CELL')) or (JPRMS.GET('NRACK_LINE_CELL').VALUE_OF() is null)) then
+      NRACK_LINE_CELL := null;
+    else
+      NRACK_LINE_CELL := UDO_PKG_WEB_API.UTL_CONVERT_TO_NUMBER(SSTR   => JPRMS.GET('NRACK_LINE_CELL').VALUE_OF(),
+                                                               NSMART => 0);
+    end if;
+    /* Загружаем товар (приходование на места хранения) */
+    UDO_PKG_STAND.LOAD(NCOMPANY        => NCOMPANY,
+                       NRACK_LINE      => NRACK_LINE,
+                       NRACK_LINE_CELL => NRACK_LINE_CELL,
+                       NINCOMEFROMDEPS => NINCOMEFROMDEPS);
+    /* Отдаём ответ что всё прошло успешно */
+    CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                      NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_OK,
+                                      SRESP_MSG    => NINCOMEFROMDEPS);
+  exception
+    when others then
+      SERR := sqlerrm;
+      CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                        NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_ERR,
+                                        SRESP_MSG    => SERR);
+      rollback;
+  end;
+  
+  /* Откат последней загрузки стенда */
+  procedure LOAD_ROLLBACK
+  (
+    CPRMS                   clob,                                       -- Входные параметры
+    CRES                    out clob                                    -- Результат работы
+  ) is
+    NCOMPANY                COMPANIES.RN%type := GET_SESSION_COMPANY(); -- Рег. номер организации
+    NINCOMEFROMDEPS         PKG_STD.TREF;                               -- Рег. номер расформированного "Прихода из подразделения"        
+    SERR                    PKG_STD.TSTRING;                            -- Буфер для ошибок
+  begin
+    /* Инициализируем выход */
+    DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
+    /* Откатываем последний приход */
+    UDO_PKG_STAND.LOAD_ROLLBACK(NCOMPANY => NCOMPANY, NINCOMEFROMDEPS => NINCOMEFROMDEPS);
+    /* Отдаём ответ что всё прошло успешно */
+    CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                      NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_OK,
+                                      SRESP_MSG    => NINCOMEFROMDEPS);
   exception
     when others then
       SERR := sqlerrm;

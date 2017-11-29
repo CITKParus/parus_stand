@@ -40,6 +40,8 @@ const PARUS_ACTION_DOWNLOAD_GET_URL = "DOWNLOAD_GET_URL"; //подготовка
 const PARUS_ACTION_LOGIN = "LOGIN"; //создание сессии ПП Парус 8
 const PARUS_ACTION_LOGOUT = "LOGOUT"; //завершение сессии ПП Парус 8
 const PARUS_ACTION_AUTH_BY_BARCODE = "AUTH_BY_BARCODE"; //аутентификация посетителя стенда по штрихкоду
+const PARUS_ACTION_LOAD = "LOAD"; //загрузка стенда товаром
+const PARUS_ACTION_LOAD_ROLLBACK = "LOAD_ROLLBACK"; //откат последней загрузки стенда товаром
 const PARUS_ACTION_SHIPMENT = "SHIPMENT"; //отгрузка товара посетителю
 const PARUS_ACTION_SHIPMENT_ROLLBACK = "SHIPMENT_ROLLBACK"; //откат отгрузки товара посетителю
 const PARUS_ACTION_PRINT = "PRINT"; //постановка отгрузочного документа в очередь печати
@@ -236,7 +238,7 @@ const authUserByBarcode = prms => {
                         reject(resp);
                     } else {
                         //завершение удалась - выставляем состояние сервиса
-                        this.srvStateSetWaitForNomen(resp.message.USER.NAGENT, resp.message.USER.SAGENT_NAME);
+                        srvStateSetWaitForNomen(resp.message.USER.NAGENT, resp.message.USER.SAGENT_NAME);
                         //ресолвим с успехом
                         resolve(resp);
                     }
@@ -256,7 +258,7 @@ const cancelAuth = prms => {
             //если указанный идентификатор пользователья стенда соответствует текущему
             if (prms.customerID == SERVICE_STATE.NAGENT) {
                 //сбрасываем и
-                this.srvStateSetFree();
+                srvStateSetFree();
                 //...ресолвим с успехом
                 resolve(utils.buildOkResp("Состояние сервиса сброшено"));
             } else {
@@ -269,6 +271,59 @@ const cancelAuth = prms => {
     });
 };
 
+//загрузка стенда товаром
+const load = prms => {
+    return new Promise((resolve, reject) => {
+        //проверим наличие параметров
+        if (prms) {
+            //исполняем действие на сервере ПП Парус 8
+            pc.parusServerAction({
+                prms: {
+                    SACTION: PARUS_ACTION_LOAD,
+                    SSESSION: PARUS_SESSION,
+                    NRACK_LINE: prms.rack_line,
+                    NRACK_LINE_CELL: prms.rack_line_cell
+                },
+                callBack: resp => {
+                    //проверим результат выполнения
+                    if (resp.state == utils.SERVER_STATE_ERR) {
+                        //завершение не удалось
+                        reject(resp);
+                    } else {
+                        //завершение удалась - ресолвим с успехом
+                        resolve(resp);
+                    }
+                }
+            });
+        } else {
+            reject(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
+        }
+    });
+};
+
+//откат последней загрузки стенда товаром
+const loadRollBack = prms => {
+    return new Promise((resolve, reject) => {
+        //исполняем действие на сервере ПП Парус 8
+        pc.parusServerAction({
+            prms: {
+                SACTION: PARUS_ACTION_LOAD_ROLLBACK,
+                SSESSION: PARUS_SESSION
+            },
+            callBack: resp => {
+                //проверим результат выполнения
+                if (resp.state == utils.SERVER_STATE_ERR) {
+                    //завершение не удалось
+                    reject(resp);
+                } else {
+                    //завершение удалась - ресолвим с успехом
+                    resolve(resp);
+                }
+            }
+        });
+    });
+};
+
 //отгрузка товара посетителю
 const shipment = prms => {
     return new Promise((resolve, reject) => {
@@ -277,7 +332,7 @@ const shipment = prms => {
             if (prms.rack_line) {
                 if (prms.rack_line_cell) {
                     //говорим, что отгружаем
-                    this.srvStateSetShiping();
+                    srvStateSetShiping();
                     //сначала исполняем формирование отгрузочного документа на сервере ПП Парус 8
                     pc.parusServerAction({
                         prms: {
@@ -295,12 +350,13 @@ const shipment = prms => {
                                     type: utils.LOG_TYPE_ERR,
                                     msg: "Error creating shipment document: " + resp.message
                                 });
-                                this.srvStateSetWaitForNomen();
+                                srvStateSetWaitForNomen();
                                 reject(resp);
                             } else {
                                 utils.log({
                                     msg: "Shipment document created successfully. Sending command to vending machine..."
                                 });
+                                let transInvCustID = resp.message;
                                 //завершение удалась - отдадим команду вендинговому аппарату
                                 vm.vendingMachineAction({
                                     line: prms.rack_line_cell,
@@ -316,7 +372,7 @@ const shipment = prms => {
                                                     prms: {
                                                         SACTION: PARUS_ACTION_PRINT,
                                                         SSESSION: PARUS_SESSION,
-                                                        NTRANSINVCUST: resp.message
+                                                        NTRANSINVCUST: transInvCustID
                                                     },
                                                     callBack: printResp => {
                                                         //протоколируем результат постановки в очередь
@@ -326,12 +382,15 @@ const shipment = prms => {
                                                                 type: utils.LOG_TYPE_ERR,
                                                                 msg:
                                                                     "Error sending document to ptint queue: " +
-                                                                    resp.message
+                                                                    printResp.message
                                                             });
                                                             //даже если документ в очередь не встал - скажем что всё ок (вендинг уже не откатишь), но выдадим специальное сообщение (без упоминания печати накладных)
-                                                            this.srvStateSetFree();
+                                                            srvStateSetFree();
                                                             resolve(
-                                                                utils.buildOkResp(utils.SERVER_RE_MSG_SHIPED_NO_PRINT)
+                                                                utils.buildOkResp({
+                                                                    SMSG: utils.SERVER_RE_MSG_SHIPED_NO_PRINT,
+                                                                    NTRANSINVCUST: transInvCustID
+                                                                })
                                                             );
                                                         } else {
                                                             //поставилось в очередь печати
@@ -339,8 +398,13 @@ const shipment = prms => {
                                                                 msg: "Document sended to print queue successfully"
                                                             });
                                                             //сделалось всё - и документ, и автомат и печать в очередь
-                                                            this.srvStateSetFree();
-                                                            resolve(utils.buildOkResp(utils.SERVER_RE_MSG_SHIPED));
+                                                            srvStateSetFree();
+                                                            resolve(
+                                                                utils.buildOkResp({
+                                                                    SMSG: utils.SERVER_RE_MSG_SHIPED,
+                                                                    NTRANSINVCUST: transInvCustID
+                                                                })
+                                                            );
                                                         }
                                                     }
                                                 });
@@ -349,8 +413,13 @@ const shipment = prms => {
                                                 utils.log({
                                                     msg: "Document printing disabled"
                                                 });
-                                                this.srvStateSetFree();
-                                                resolve(utils.buildOkResp(utils.SERVER_RE_MSG_SHIPED_NO_PRINT));
+                                                srvStateSetFree();
+                                                resolve(
+                                                    utils.buildOkResp({
+                                                        SMSG: utils.SERVER_RE_MSG_SHIPED_NO_PRINT,
+                                                        NTRANSINVCUST: transInvCustID
+                                                    })
+                                                );
                                             }
                                         } else {
                                             utils.log({
@@ -365,7 +434,7 @@ const shipment = prms => {
                                                 prms: {
                                                     SACTION: PARUS_ACTION_SHIPMENT_ROLLBACK,
                                                     SSESSION: PARUS_SESSION,
-                                                    NTRANSINVCUST: resp.message
+                                                    NTRANSINVCUST: transInvCustID
                                                 },
                                                 callBack: rollBackResp => {
                                                     //протоколируем результат отката товарного документа
@@ -380,7 +449,7 @@ const shipment = prms => {
                                                         });
                                                     }
                                                     //отдаём ошибку вендингового аппарата и возвращаемся к ожиданию номенклатуры
-                                                    this.srvStateSetWaitForNomen();
+                                                    srvStateSetWaitForNomen();
                                                     reject(r);
                                                 }
                                             });
@@ -398,6 +467,35 @@ const shipment = prms => {
             }
         } else {
             reject(utils.buildErrResp("Не указан посетитель стенда!"));
+        }
+    });
+};
+
+//откат отгрузки посетителю стенда
+const shipmentRollBack = prms => {
+    return new Promise((resolve, reject) => {
+        //проверим наличие параметров
+        if (prms && prms.documentID) {
+            //исполняем действие на сервере ПП Парус 8
+            pc.parusServerAction({
+                prms: {
+                    SACTION: PARUS_ACTION_SHIPMENT_ROLLBACK,
+                    SSESSION: PARUS_SESSION,
+                    NTRANSINVCUST: prms.documentID
+                },
+                callBack: resp => {
+                    //проверим результат выполнения
+                    if (resp.state == utils.SERVER_STATE_ERR) {
+                        //завершение не удалось
+                        reject(resp);
+                    } else {
+                        //завершение удалась - ресолвим с успехом
+                        resolve(resp);
+                    }
+                }
+            });
+        } else {
+            reject(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
         }
     });
 };
@@ -621,9 +719,24 @@ const makeAction = prms => {
                 actionFunction = cancelAuth;
                 break;
             }
+            //загрузка стенда товаром
+            case PARUS_ACTION_LOAD: {
+                actionFunction = load;
+                break;
+            }
+            //откат последней загрузки стенда товаром
+            case PARUS_ACTION_LOAD_ROLLBACK: {
+                actionFunction = loadRollBack;
+                break;
+            }
             //отгрузка товара посетителю
             case PARUS_ACTION_SHIPMENT: {
                 actionFunction = shipment;
+                break;
+            }
+            //откат отгрузки товара посетителю
+            case PARUS_ACTION_SHIPMENT_ROLLBACK: {
+                actionFunction = shipmentRollBack;
                 break;
             }
             //получение списка сообщений очереди уведомлений стенда
@@ -686,10 +799,14 @@ const makeAction = prms => {
                                 //сбросим сессию сервера приложений
                                 PARUS_SESSION = "";
                                 //и попробуем ещё раз - это нас перелогинит и выполнит запрос повторно
-                                self.makeAction(prms).then(r => resolve(r), e => resoleve(e));
+                                self.makeAction(prms).then(r => resolve(r), er => resolve(er));
                             } else {
                                 //просто другая ошибка - отдаём что есть клиенту
-                                resolve(e);
+                                if (e instanceof Error) {
+                                    resolve(utils.buildErrResp("Внутренняя ошибка сервера приложений: " + e.message));
+                                } else {
+                                    resolve(e);
+                                }
                             }
                         })
                 );
@@ -718,6 +835,8 @@ exports.PARUS_ACTION_DOWNLOAD_GET_URL = PARUS_ACTION_DOWNLOAD_GET_URL;
 exports.PARUS_ACTION_LOGIN = PARUS_ACTION_LOGIN;
 exports.PARUS_ACTION_LOGOUT = PARUS_ACTION_LOGOUT;
 exports.PARUS_ACTION_AUTH_BY_BARCODE = PARUS_ACTION_AUTH_BY_BARCODE;
+exports.PARUS_ACTION_LOAD = PARUS_ACTION_LOAD;
+exports.PARUS_ACTION_LOAD_ROLLBACK = PARUS_ACTION_LOAD_ROLLBACK;
 exports.PARUS_ACTION_SHIPMENT = PARUS_ACTION_SHIPMENT;
 exports.PARUS_ACTION_SHIPMENT_ROLLBACK = PARUS_ACTION_SHIPMENT_ROLLBACK;
 exports.PARUS_ACTION_PRINT = PARUS_ACTION_PRINT;
