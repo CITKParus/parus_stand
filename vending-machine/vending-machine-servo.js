@@ -1,7 +1,7 @@
-//----------------------------------------------------
+//-------------------------------------------------------
 // Прошивка вендингового аппарата
-// Вариант для исполнительного механизма на соленоидах
-//----------------------------------------------------
+// Вариант для исполнительного механизма на сервоприводах
+//-------------------------------------------------------
 
 //-----------------------------------
 // Настраиваем константы конфигурации
@@ -23,6 +23,7 @@ var WIFI_PSWD = "var2008eniK"; // ключ WiFi-сети
 // Подключаем внешние библиотеки
 //------------------------------
 
+var servo = require("@amperka/servo"); //работа с сервоприводами
 var wifi = require("@amperka/wifi"); //работа с модулем WiFi
 var http = require("http"); //работа с HTTP
 
@@ -38,9 +39,9 @@ var SERVER_RESP_ERR = "ERR"; //ошибка
 var HARD_LINES = ["1", "2", "3"]; //наименования линий
 var LINES = [
     //конфигурация линий
-    { name: HARD_LINES[0], pin: A2 },
-    { name: HARD_LINES[1], pin: A4 },
-    { name: HARD_LINES[2], pin: P8 }
+    { name: HARD_LINES[0], pin: P8 },
+    { name: HARD_LINES[1], pin: P9 },
+    { name: HARD_LINES[2], pin: P10 }
 ];
 
 //------------------------------
@@ -72,13 +73,16 @@ function lineShipment(lineName, callBack) {
     LINES.forEach(function(line) {
         var tmp = line;
         if (tmp.name == lineName) {
-            tmp.pin.write(true);
+            var s = servo.connect(tmp.pin);
             log("Line " + tmp.name + " opened");
+            s.write(180);
             setTimeout(function() {
-                tmp.pin.write(false);
-                log("Line " + tmp.name + " closed");
-                callBack();
-            }, 100);
+                s.write(0);
+                setTimeout(function() {                    
+                    log("Line " + tmp.name + " closed");
+                    callBack();
+                }, 2000);
+            }, 2000);              
         }
     });
 }
@@ -90,7 +94,7 @@ function init() {
     WIFI_PORT.setup(115200);
     //настраиваем пины для аппаратов отгрузки
     LINES.forEach(function(line) {
-        line.pin.mode("output");
+        line.pin.mode("output");        
         line.pin.write(false);
     });
     log("Done!");
