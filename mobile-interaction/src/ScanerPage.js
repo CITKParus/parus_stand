@@ -8,14 +8,14 @@ import React from "react";
 import Camera from "react-native-camera";
 import Permissions from "react-native-permissions";
 import { StatusBar, Text, View, StyleSheet, Alert, Dimensions } from "react-native";
-import { LogoButton, ScanerLoading, ScanerInput, IconButton } from "./components";
+import LinearGradient from "react-native-linear-gradient";
+import { LogoButton, ScanerLoading, ScanerInput, IconButton, Error } from "./components";
 import { AUTH_BY_BARCODE } from "./api";
 import { connected } from "./utils";
 let { height, width } = Dimensions.get("window");
 const styles = StyleSheet.create({
     pageContainer: {
         flex: 1,
-        backgroundColor: "#fff",
         alignItems: "center",
         justifyContent: "center"
     },
@@ -24,9 +24,6 @@ const styles = StyleSheet.create({
         width: width,
         alignItems: "center",
         justifyContent: "flex-start"
-    },
-    loading: {
-        backgroundColor: "black"
     }
 });
 export default class ScanerPage extends React.Component {
@@ -38,7 +35,8 @@ export default class ScanerPage extends React.Component {
         scannable: true, // Режим сканера
         data: null, // Данные полученные от пользователя (сканером или вручную)
         manual: false, // Режим ручного ввода кода
-        loading: false // Режим загрузки
+        loading: false, // Режим загрузки
+        errorText: null // Сообщение об ошибке
     };
     // Параметры навигации
     navigation = this.props.navigation;
@@ -54,7 +52,8 @@ export default class ScanerPage extends React.Component {
             scannable: true,
             data: null,
             manual: false,
-            loading: false
+            loading: false,
+            errorText: null
         });
     };
 
@@ -108,6 +107,12 @@ export default class ScanerPage extends React.Component {
         });
     };
 
+    // Закрыть экран ошибки
+    _onCancelError = () => {
+        this.setState({
+            errorText: null
+        });
+    };
     // Аутентификация пользователя по коду
     _auth = async () => {
         // Запрос подключения к сети
@@ -115,23 +120,11 @@ export default class ScanerPage extends React.Component {
         // Если есть подключение
         if (!isConnected) {
             // Если нет подключения к сети
-            Alert.alert(
-                "Нет подключения к сети :(",
-                response.message,
-                [
-                    {
-                        text: "Отменить",
-                        onPress: () => {
-                            this.setState({
-                                loading: false,
-                                manual: false, // Режим ручного ввода выключен
-                                scannable: true
-                            });
-                        }
-                    }
-                ],
-                { cancelable: false }
-            );
+            // Показать сообщение об ошибке
+            this.setState({
+                loading: false, // Режим загрузки выключен
+                errorText: "Нет подключения к сети :("
+            });
             return;
         }
         console.log(this.state.data);
@@ -143,25 +136,10 @@ export default class ScanerPage extends React.Component {
             // Если в ответ пришла ошибка
             if (response.state == "ERR") {
                 // Показать сообщение об ошибке
-                Alert.alert(
-                    "Произошла ошибка :(",
-                    response.message,
-                    [
-                        {
-                            text: "Отменить",
-                            // При нажатии на кнопку подтверждения
-                            onPress: () => {
-                                // Установка состояния
-                                this.setState({
-                                    loading: false, // Режим загрузки выключен
-                                    manual: false, // Режим ручного ввода выключен
-                                    scannable: true // Режим сканера включен
-                                });
-                            }
-                        }
-                    ],
-                    { cancelable: false }
-                );
+                this.setState({
+                    loading: false, // Режим загрузки выключен
+                    errorText: response.message
+                });
                 return;
             }
             // Если все хорошо, переход на страницу загрузки с передачей информации о товарах
@@ -170,23 +148,45 @@ export default class ScanerPage extends React.Component {
     };
 
     render() {
-        const { hasCameraPermission, loading, manual } = this.state;
+        const { hasCameraPermission, loading, manual, errorText } = this.state;
         return (
             <View style={styles.pageContainer}>
                 <StatusBar barStyle="light-content" />
                 {hasCameraPermission === null && <Text>Запрашиваю разрешение камеры</Text>}
                 {hasCameraPermission === false && <Text>Разрешение камеры не предоставлено</Text>}
-                {loading && (
-                    <View style={[styles.container, styles.loading]}>
+                {errorText && (
+                    <LinearGradient
+                        style={styles.container}
+                        colors={["#000046", "#1CB5E0"]}
+                        start={{ x: 0.0, y: 0.25 }}
+                        end={{ x: 0.5, y: 1.0 }}
+                    >
                         <LogoButton
                             onPress={() => {
                                 this.refresh();
                             }}
                         />
-                        <ScanerLoading visible={loading} />
-                    </View>
+                        <Error text={errorText} onPress={this._onCancelError} marginTop />
+                    </LinearGradient>
                 )}
+                {loading &&
+                    !errorText && (
+                        <LinearGradient
+                            style={styles.container}
+                            colors={["#000046", "#1CB5E0"]}
+                            start={{ x: 0.0, y: 0.25 }}
+                            end={{ x: 0.5, y: 1.0 }}
+                        >
+                            <LogoButton
+                                onPress={() => {
+                                    this.refresh();
+                                }}
+                            />
+                            <ScanerLoading visible={loading} />
+                        </LinearGradient>
+                    )}
                 {!loading &&
+                    !errorText &&
                     hasCameraPermission && (
                         <Camera onBarCodeRead={this._handleBarCodeRead} type={"front"} style={styles.container}>
                             <LogoButton
@@ -196,7 +196,7 @@ export default class ScanerPage extends React.Component {
                             />
                             <IconButton onPress={this._navToSettings} icon="ios-construct-outline" />
                             <ScanerInput
-                                visible={!loading}
+                                visible={!loading && !errorText}
                                 manual={manual}
                                 onManualChangeText={data => this.setState({ data: data })}
                                 onManualSubmit={this._handleManualButton}

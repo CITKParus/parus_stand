@@ -7,7 +7,7 @@
 import React from "react";
 import { StatusBar, Text, View, StyleSheet, AsyncStorage, Alert, Image } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
-import { IconButton, ShipmentCell, ShipmentLoading, ShipmentContainer, ShipmentResult } from "./components";
+import { IconButton, ShipmentCell, ShipmentLoading, ShipmentContainer, ShipmentResult, Error } from "./components";
 import { SHIPMENT, CANCEL_AUTH } from "./api";
 
 const styles = StyleSheet.create({
@@ -49,7 +49,8 @@ export default class ShipmentPage extends React.Component {
         loading: false, // Режим загрузки выключен
         loadingText: "Отгружаем...", // Сообщение о загрузке
         result: false, // Результата еще нет
-        resultText: "Ошибка", // Результат
+        resultText: null, // Результат
+        errorText: null, // Сообщение об ошибке
         onGoBack: this.navigation.state.params.onGoBack // Действие при возврате на предыдущий экран
     };
 
@@ -61,25 +62,21 @@ export default class ShipmentPage extends React.Component {
         });
         const response = await CANCEL_AUTH(this.state.user);
         if (response.state == "ERR") {
-            Alert.alert(
-                "Произошла ошибка :(",
-                response.message,
-                [
-                    {
-                        text: "ОК",
-                        onPress: () => {
-                            this.setState({
-                                loading: false
-                            });
-                        }
-                    }
-                ],
-                { cancelable: false }
-            );
+            this.setState({
+                loading: false,
+                errorText: response.message
+            });
             return;
         }
         this.state.onGoBack();
         this.navigation.goBack();
+    };
+
+    // Закрыть экран ошибки
+    _onCancelError = () => {
+        this.setState({
+            errorText: null
+        });
     };
 
     // Отгрузка товара
@@ -90,30 +87,19 @@ export default class ShipmentPage extends React.Component {
         const response = await SHIPMENT(item);
 
         if (response.state == "ERR") {
-            Alert.alert(
-                "Произошла ошибка :(",
-                response.message,
-                [
-                    {
-                        text: "ОК",
-                        onPress: () => {
-                            this.setState({
-                                loading: false,
-                                result: false,
-                                resultText: null
-                            });
-                        }
-                    }
-                ],
-                { cancelable: false }
-            );
+            this.setState({
+                loading: false,
+                result: false,
+                resultText: null,
+                errorText: response.message
+            });
             return;
         }
 
         this.setState({
             loading: false,
             result: true,
-            resultText: response.message || "Спасибо, не забудьте Вашу накладную"
+            resultText: response.message.SMSG || "Спасибо, не забудьте Вашу накладную"
         });
     };
     render() {
@@ -135,8 +121,11 @@ export default class ShipmentPage extends React.Component {
                 </View>
                 <View style={styles.mainContainer}>
                     {this.state.loading && <ShipmentLoading text={this.state.loadingText} />}
+
+                    {this.state.errorText && <Error text={this.state.errorText} onPress={this._onCancelError} />}
                     {!this.state.loading &&
-                        !this.state.result && (
+                        !this.state.result &&
+                        !this.state.errorText && (
                             <ShipmentContainer
                                 rests={response.RESTS.RACK_LINE_RESTS}
                                 user={response.USER.SAGENT}
@@ -145,7 +134,8 @@ export default class ShipmentPage extends React.Component {
                             />
                         )}
                     {this.state.result &&
-                        !this.state.loading && (
+                        !this.state.loading &&
+                        !this.state.errorText && (
                             <ShipmentResult onPress={this._navBack} resultText={this.state.resultText} />
                         )}
                 </View>

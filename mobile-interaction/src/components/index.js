@@ -8,3 +8,4 @@ export * from "./ShipmentItems.component";
 export * from "./ShipmentLoading.component";
 export * from "./ShipmentResult.component";
 export * from "./ShipmentWelcome.component";
+export * from "./Error.component";

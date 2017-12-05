@@ -1,18 +1,18 @@
 /******************************************************************************
  *
- * Результат отгрузки
+ * Сообщение об ошибке
  *
  *****************************************************************************/
 
 import React from "react";
-import { TouchableOpacity, Text, View, StyleSheet } from "react-native";
+import { Text, StyleSheet, TouchableOpacity, View } from "react-native";
 const styles = StyleSheet.create({
-    resultContainer: {
+    errorContainer: {
         marginHorizontal: 50,
         alignItems: "center",
         backgroundColor: "transparent"
     },
-    resultText: {
+    errorText: {
         lineHeight: 38,
         fontSize: 34,
         marginVertical: 10,
@@ -34,12 +34,12 @@ const styles = StyleSheet.create({
         color: "#FFF"
     }
 });
-
-export const ShipmentResult = props => (
-    <View style={styles.resultContainer}>
-        <Text style={styles.resultText}>{props.resultText}</Text>
-        <TouchableOpacity onPress={props.onPress} style={styles.button}>
-            <Text style={styles.buttonText}>ОК</Text>
+export const Error = props => (
+    <View style={[styles.errorContainer, props.marginTop ? { marginTop: 400 } : {}]}>
+        <Text style={styles.errorText}>{"Произошла ошибка :("}</Text>
+        <Text style={styles.errorText}>{props.text}</Text>
+        <TouchableOpacity style={styles.button} onPress={props.onPress}>
+            <Text style={styles.buttonText}>OK</Text>
         </TouchableOpacity>
     </View>
 );
