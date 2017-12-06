@@ -9,6 +9,7 @@ create or replace package UDO_PKG_STAND as
 
   /* Константы режима работы стенда */
   NALLOW_MULTI_SUPPLY       PKG_STD.TNUMBER := NALLOW_MULTI_SUPPLY_YES;                 -- Возможность множественной отгрузки
+  SGUEST_BASRCODE           PKG_STD.TSTRING := '0000';                                  -- Штрих-код гостевого посетителя
   
   /* Константы описания склада для стенда */
   SSTORE_PRODUCE            AZSAZSLISTMT.AZS_NUMBER%type := 'Производство';             -- Склад производства готовой продукции
@@ -1604,20 +1605,20 @@ create or replace package body UDO_PKG_STAND as
   ) is
   begin
     /* Найдем контрагента по штрихкоду */
-    STAND_USER := STAND_GET_AGENT_BY_BARCODE(NCOMPANY => NCOMPANY, SBARCODE => SBARCODE);  
+    STAND_USER := STAND_GET_AGENT_BY_BARCODE(NCOMPANY => NCOMPANY, SBARCODE => SBARCODE);
     /* Проверим, что отгрузки данному контрагенту ещё не было (если надо, конечно) */
-    if (NALLOW_MULTI_SUPPLY = NALLOW_MULTI_SUPPLY_NO) then
+    if ((NALLOW_MULTI_SUPPLY = NALLOW_MULTI_SUPPLY_NO) and (SBARCODE <> SGUEST_BASRCODE)) then
       if (STAND_CHECK_SUPPLY(NCOMPANY => NCOMPANY, NAGENT => STAND_USER.NAGENT) = NAGN_SUPPLY_ALREADY) then
         P_EXCEPTION(0,
                     'Извините, отгрузка для посетителя "%s" уже производилась!',
                     STAND_USER.SAGENT_NAME);
       end if;
-    end if;  
+    end if;
     /* Получим остатки по стеллажу, который обслуживает стенд */
-    RACK_REST := STAND_GET_RACK_REST(NCOMPANY     => NCOMPANY,
-                                     SSTORE       => SSTORE_GOODS,
-                                     SPREF        => SRACK_PREF,
-                                     SNUMB        => SRACK_NUMB);
+    RACK_REST := STAND_GET_RACK_REST(NCOMPANY => NCOMPANY,
+                                     SSTORE   => SSTORE_GOODS,
+                                     SPREF    => SRACK_PREF,
+                                     SNUMB    => SRACK_NUMB);
   end;
   
   /* Загрузка стенда товаром */
