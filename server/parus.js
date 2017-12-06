@@ -171,6 +171,7 @@ const logOut = () => {
         if (!PARUS_SESSION) {
             //её нет - и делать нечего
             utils.log({ msg: "No Parus session to be terminated" });
+            srvStateSetFree();
             resolve("");
         } else {
             //сессия есть - будем закрывать её на сервере ПП Парус 8
@@ -191,6 +192,7 @@ const logOut = () => {
                         //забудем сессию
                         PARUS_SESSION = "";
                         //завершение удалась - ресолвим с успехом
+                        srvStateSetFree();
                         resolve(utils.buildOkResp("Terminated"));
                     }
                 }
@@ -255,8 +257,12 @@ const cancelAuth = prms => {
     return new Promise((resolve, reject) => {
         //проверим наличие параметров
         if (prms.customerID) {
-            //если указанный идентификатор пользователья стенда соответствует текущему
-            if (prms.customerID == SERVICE_STATE.NAGENT) {
+            //если указанный идентификатор пользователья стенда соответствует текущему или сейчас на стенде и так никого нет или прилетел спец. код принудительной отмены
+            if (
+                SERVICE_STATE.NAGENT == 0 ||
+                SERVICE_STATE.NAGENT == conf.SERVER_USER_RESET_EMERGENCY_CODE ||
+                prms.customerID == SERVICE_STATE.NAGENT
+            ) {
                 //сбрасываем и
                 srvStateSetFree();
                 //...ресолвим с успехом
@@ -385,7 +391,6 @@ const shipment = prms => {
                                                                     printResp.message
                                                             });
                                                             //даже если документ в очередь не встал - скажем что всё ок (вендинг уже не откатишь), но выдадим специальное сообщение (без упоминания печати накладных)
-                                                            srvStateSetFree();
                                                             resolve(
                                                                 utils.buildOkResp({
                                                                     SMSG: utils.SERVER_RE_MSG_SHIPED_NO_PRINT,
@@ -398,7 +403,6 @@ const shipment = prms => {
                                                                 msg: "Document sended to print queue successfully"
                                                             });
                                                             //сделалось всё - и документ, и автомат и печать в очередь
-                                                            srvStateSetFree();
                                                             resolve(
                                                                 utils.buildOkResp({
                                                                     SMSG: utils.SERVER_RE_MSG_SHIPED,
@@ -413,7 +417,6 @@ const shipment = prms => {
                                                 utils.log({
                                                     msg: "Document printing disabled"
                                                 });
-                                                srvStateSetFree();
                                                 resolve(
                                                     utils.buildOkResp({
                                                         SMSG: utils.SERVER_RE_MSG_SHIPED_NO_PRINT,

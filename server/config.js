@@ -14,6 +14,7 @@ exports.SERVER_NAME = "CITK Demo Stand/0.0.1";
 exports.SERVER_PORT = 3030; //порт
 exports.SERVER_CHECK_TOKENS = true; //флаг контроля токенов доступа клиентов
 exports.SERVER_VERIFY_PARUS_SESSION = false; //флаг принудительной проверки доступности сессии Парус 8
+exports.SERVER_USER_RESET_EMERGENCY_CODE = -321; //ключ аварийного сброса текущего пользователя вендингового автомата
 
 //параметры подключения к HTTP-серверу ПП Парус 8
 exports.PARUS_HTTP_ADDRESS = "http://212.5.81.211:7777/stand/PARUS.UDO_PKG_WEB_API.PROCESS"; //адрес HTTP-сервера
