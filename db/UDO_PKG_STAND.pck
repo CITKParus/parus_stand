@@ -57,6 +57,9 @@ create or replace package UDO_PKG_STAND as
   /* Константы описания используемых дополнительных свойств */
   SDP_BARCODE               DOCS_PROPS.CODE%type := 'ШтрихКод';                         -- Мнемокод дополнительного свойства для храения штрихкода
   
+  /* Константы описания используемых каталогов */
+  SCATALOG_STAND_USERS      ACATALOG.NAME%type := 'Посетители стенда';                  -- Каталог для учёта посетителей стенда в разделе "Контрагенты"
+  
   /* Константы описания типов сообщений очереди стенда */
   SMSG_TYPE_NOTIFY          UDO_T_STAND_MSG.TP%type := 'NOTIFY';                        -- Сообщение типа "Оповещение"
   SMSG_TYPE_RESTS           UDO_T_STAND_MSG.TP%type := 'RESTS';                         -- Сообщение типа "Сведения об остатках"
@@ -1639,20 +1642,19 @@ create or replace package body UDO_PKG_STAND as
     SFULLNAME               varchar2                 -- Наименование организации посетителя
   )
   as
-     NVERSION                 VERSIONS.RN%type;        -- Версия раздела "Контрагенты"
-     nCRN                     ACATALOG.RN%type;        -- Каталог раздела "Контрагенты"
-     nAGENT                   AGNLIST.RN%type;         -- Регистрационный номер нового посетителя
-     NDP_BARCODE              DOCS_PROPS.RN%type;      -- Регистрационный номер дополнительного свойства для хранения штрихкода
-     NDPV_BARCODE             DOCS_PROPS_VALS.RN%type; -- Регистрационный номер значения дополнительного свойства для хранения штрихкода
-     NBARDCODE                PKG_STD.tNUMBER;         -- Штрих-код пользователя
-     
+    NVERSION                VERSIONS.RN%type;        -- Версия раздела "Контрагенты"
+    NCRN                    ACATALOG.RN%type;        -- Каталог раздела "Контрагенты"
+    NAGENT                  AGNLIST.RN%type;         -- Регистрационный номер нового посетителя
+    NDP_BARCODE             DOCS_PROPS.RN%type;      -- Регистрационный номер дополнительного свойства для хранения штрихкода
+    NDPV_BARCODE            DOCS_PROPS_VALS.RN%type; -- Регистрационный номер значения дополнительного свойства для хранения штрихкода
+    NBARDCODE               PKG_STD.TNUMBER;         -- Штрих-код пользователя
   begin
     /* Определим версию раздела "Контрагенты" */
     FIND_VERSION_BY_COMPANY(NCOMPANY => NCOMPANY, SUNITCODE => 'AGNLIST', NVERSION => NVERSION);
-    
+  
     /* Определим регистрационный номер дополнительного свойства для хранения штрихкода */
     FIND_DOCS_PROPS_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SCODE => SDP_BARCODE, NRN => NDP_BARCODE);
-
+  
     /* Найдем максимальное значение штрихкода */
     begin
       select max(TO_NUMBER(F_DOCS_PROPS_GET_STR_VALUE(NPROPERTY => NDP_BARCODE,
@@ -1663,23 +1665,24 @@ create or replace package body UDO_PKG_STAND as
        where AG.VERSION = NVERSION
          and F_DOCS_PROPS_GET_STR_VALUE(NPROPERTY => NDP_BARCODE, SUNITCODE => 'AGNLIST', NDOCUMENT => AG.RN) is not null;
     end;
-
+  
     /* Вычислим новое значение штрихкода*/
-    if NBARDCODE is null or NBARDCODE < 1000 then
+    if ((NBARDCODE is null) or (NBARDCODE < 1000)) then
       /* Если меньше 1000, то начинаем отсчет с начала*/
       NBARDCODE := 1000;
     else
       /* Если больше 1000, то берем следующее значение*/
       NBARDCODE := NBARDCODE + 1;
     end if;
-    
+  
     /* Надйем каталог в разделе "Контрагенты" */
     FIND_ACATALOG_NAME(NFLAG_SMART => 0,
                        NCOMPANY    => NCOMPANY,
                        NVERSION    => NVERSION,
                        SUNITCODE   => 'AGNLIST',
-                       SNAME       => 'Посетители стенда',
+                       SNAME       => SCATALOG_STAND_USERS,
                        NRN         => NCRN);
+  
     /* Добавляем контрагента для посетителя */
     P_AGNLIST_BASE_INSERT(NCOMPANY  => NCOMPANY,
                           NCRN      => NCRN,
@@ -1687,6 +1690,7 @@ create or replace package body UDO_PKG_STAND as
                           SAGNNAME  => SAGNNAME,
                           SFULLNAME => SFULLNAME,
                           NRN       => NAGENT);
+  
     /* Добавляем штрихкода посетителя */
     PKG_DOCS_PROPS_VALS.MODIFY(SPROPERTY   => SDP_BARCODE,
                                SUNITCODE   => 'AGNLIST',
