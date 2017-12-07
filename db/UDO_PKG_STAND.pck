@@ -54,7 +54,7 @@ create or replace package UDO_PKG_STAND as
   NAGN_SUPPLY_NOT_YET       PKG_STD.TNUMBER := 1;                                       -- Отгрузки ещё не было
   NAGN_SUPPLY_ALREADY       PKG_STD.TNUMBER := 2;                                       -- Оггрузка уже была
   
-  /* Констнаты описания испоьзуемых дополнительных свойств */
+  /* Константы описания используемых дополнительных свойств */
   SDP_BARCODE               DOCS_PROPS.CODE%type := 'ШтрихКод';                         -- Мнемокод дополнительного свойства для храения штрихкода
   
   /* Константы описания типов сообщений очереди стенда */
@@ -456,6 +456,15 @@ create or replace package UDO_PKG_STAND as
     RACK_REST               out TRACK_REST   -- Сведения об остатках на стенде
   );    
   
+  /* Добавление нового посетителя */
+  procedure STAND_USER_CREATE  
+  (
+    NCOMPANY                number,     -- Регистрационный номер организации
+    SAGNABBR                varchar2,   -- Фамилия и инициалы посетителя
+    SAGNNAME                varchar2,   -- Фамилия, имя и отчество посетителя
+    SFULLNAME               varchar2    -- Наименование организации посетителя
+  );
+  
   /* Загрузка стенда товаром */
   procedure LOAD
   (
@@ -517,7 +526,7 @@ create or replace package UDO_PKG_STAND as
     NCOMPANY                number,     -- Регистрационный номер органиазации
     NTRANSINVCUST           number      -- Регистрационный номер РНОП
   );
-
+  
 end;
 /
 create or replace package body UDO_PKG_STAND as
@@ -1621,6 +1630,73 @@ create or replace package body UDO_PKG_STAND as
                                      SNUMB    => SRACK_NUMB);
   end;
   
+   /* Добавление нового посетителя */
+  procedure STAND_USER_CREATE  
+  (
+    NCOMPANY                number,                  -- Регистрационный номер организации
+    SAGNABBR                varchar2,                -- Фамилия и инициалы посетителя
+    SAGNNAME                varchar2,                -- Фамилия, имя и отчество посетителя
+    SFULLNAME               varchar2                 -- Наименование организации посетителя
+  )
+  as
+     NVERSION                 VERSIONS.RN%type;        -- Версия раздела "Контрагенты"
+     nCRN                     ACATALOG.RN%type;        -- Каталог раздела "Контрагенты"
+     nAGENT                   AGNLIST.RN%type;         -- Регистрационный номер нового посетителя
+     NDP_BARCODE              DOCS_PROPS.RN%type;      -- Регистрационный номер дополнительного свойства для хранения штрихкода
+     NDPV_BARCODE             DOCS_PROPS_VALS.RN%type; -- Регистрационный номер значения дополнительного свойства для хранения штрихкода
+     NBARDCODE                PKG_STD.tNUMBER;         -- Штрих-код пользователя
+     
+  begin
+    /* Определим версию раздела "Контрагенты" */
+    FIND_VERSION_BY_COMPANY(NCOMPANY => NCOMPANY, SUNITCODE => 'AGNLIST', NVERSION => NVERSION);
+    
+    /* Определим регистрационный номер дополнительного свойства для хранения штрихкода */
+    FIND_DOCS_PROPS_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SCODE => SDP_BARCODE, NRN => NDP_BARCODE);
+
+    /* Найдем максимальное значение штрихкода */
+    begin
+      select max(TO_NUMBER(F_DOCS_PROPS_GET_STR_VALUE(NPROPERTY => NDP_BARCODE,
+                                                      SUNITCODE => 'AGNLIST',
+                                                      NDOCUMENT => AG.RN)))
+        into NBARDCODE
+        from AGNLIST AG
+       where AG.VERSION = NVERSION
+         and F_DOCS_PROPS_GET_STR_VALUE(NPROPERTY => NDP_BARCODE, SUNITCODE => 'AGNLIST', NDOCUMENT => AG.RN) is not null;
+    end;
+
+    /* Вычислим новое значение штрихкода*/
+    if NBARDCODE is null or NBARDCODE < 1000 then
+      /* Если меньше 1000, то начинаем отсчет с начала*/
+      NBARDCODE := 1000;
+    else
+      /* Если больше 1000, то берем следующее значение*/
+      NBARDCODE := NBARDCODE + 1;
+    end if;
+    
+    /* Надйем каталог в разделе "Контрагенты" */
+    FIND_ACATALOG_NAME(NFLAG_SMART => 0,
+                       NCOMPANY    => NCOMPANY,
+                       NVERSION    => NVERSION,
+                       SUNITCODE   => 'AGNLIST',
+                       SNAME       => 'Посетители стенда',
+                       NRN         => NCRN);
+    /* Добавляем контрагента для посетителя */
+    P_AGNLIST_BASE_INSERT(NCOMPANY  => NCOMPANY,
+                          NCRN      => NCRN,
+                          SAGNABBR  => SAGNABBR,
+                          SAGNNAME  => SAGNNAME,
+                          SFULLNAME => SFULLNAME,
+                          NRN       => NAGENT);
+    /* Добавляем штрихкода посетителя */
+    PKG_DOCS_PROPS_VALS.MODIFY(SPROPERTY   => SDP_BARCODE,
+                               SUNITCODE   => 'AGNLIST',
+                               NDOCUMENT   => NAGENT,
+                               SSTR_VALUE  => NBARDCODE,
+                               NNUM_VALUE  => null,
+                               DDATE_VALUE => null,
+                               NRN         => NDPV_BARCODE);
+  end;
+
   /* Загрузка стенда товаром */
   procedure LOAD
   (
@@ -2521,7 +2597,7 @@ create or replace package body UDO_PKG_STAND as
       PRINT_CLEAR_SELECTLIST(NIDENT => NIDENT);
       raise;
   end;
-  
+
 begin
   /* Инициализация настроек стенда */
   STAND_INIT_RACK_CONF(NCOMPANY => GET_SESSION_COMPANY(), SSTORE => SSTORE_GOODS);
