@@ -465,7 +465,8 @@ create or replace package UDO_PKG_STAND as
     NCOMPANY                number,     -- Регистрационный номер организации
     SAGNABBR                varchar2,   -- Фамилия и инициалы посетителя
     SAGNNAME                varchar2,   -- Фамилия, имя и отчество посетителя
-    SFULLNAME               varchar2    -- Наименование организации посетителя
+    SFULLNAME               varchar2,   -- Наименование организации посетителя
+    SCOMMENT                varchar2    -- Цвет заливки организации
   );
   
   /* Загрузка стенда товаром */
@@ -1639,7 +1640,8 @@ create or replace package body UDO_PKG_STAND as
     NCOMPANY                number,                  -- Регистрационный номер организации
     SAGNABBR                varchar2,                -- Фамилия и инициалы посетителя
     SAGNNAME                varchar2,                -- Фамилия, имя и отчество посетителя
-    SFULLNAME               varchar2                 -- Наименование организации посетителя
+    SFULLNAME               varchar2,                -- Наименование организации посетителя
+    SCOMMENT                varchar2                 -- Цвет заливки организации
   )
   as
     NVERSION                VERSIONS.RN%type;        -- Версия раздела "Контрагенты"
@@ -1684,12 +1686,13 @@ create or replace package body UDO_PKG_STAND as
                        NRN         => NCRN);
   
     /* Добавляем контрагента для посетителя */
-    P_AGNLIST_BASE_INSERT(NCOMPANY  => NCOMPANY,
-                          NCRN      => NCRN,
-                          SAGNABBR  => SAGNABBR,
-                          SAGNNAME  => SAGNNAME,
-                          SFULLNAME => SFULLNAME,
-                          NRN       => NAGENT);
+    P_AGNLIST_BASE_INSERT(NCOMPANY     => NCOMPANY,
+                          NCRN         => NCRN,
+                          SAGNABBR     => SAGNABBR,
+                          SAGNNAME     => SAGNNAME,
+                          SFULLNAME    => SFULLNAME,
+                          SAGN_COMMENT => SCOMMENT,
+                          NRN          => NAGENT);
   
     /* Добавляем штрихкода посетителя */
     PKG_DOCS_PROPS_VALS.MODIFY(SPROPERTY   => SDP_BARCODE,
