@@ -77,11 +77,13 @@ export default class ScanerPage extends React.Component {
     _handleBarCodeRead = async data => {
         // Если в режиме сканера
         if (this.state.scannable) {
+            // Поиск id пользователя
+            const code = data.data.replace("https://citkparus.github.io/parus_stand/?id=", "");
             // Установка состояния
             this.setState({
                 loading: true, // Режим загрузки включен
                 scannable: false, // Режим сканера выключен
-                data: data.data // Полученные данные
+                data: code // Полученные данные
             });
             // Аутентификация пользователя по считанному коду
             await this._auth();
