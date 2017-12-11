@@ -112,6 +112,7 @@ export default class ScanerPage extends React.Component {
     // Закрыть экран ошибки
     _onCancelError = () => {
         this.setState({
+            scannable: !this.state.manual,
             errorText: null
         });
     };
