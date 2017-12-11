@@ -462,11 +462,11 @@ create or replace package UDO_PKG_STAND as
   /* Добавление нового посетителя */
   procedure STAND_USER_CREATE  
   (
-    NCOMPANY                number,     -- Регистрационный номер организации
-    SAGNABBR                varchar2,   -- Фамилия и инициалы посетителя
-    SAGNNAME                varchar2,   -- Фамилия, имя и отчество посетителя
-    SFULLNAME               varchar2,   -- Наименование организации посетителя
-    SCOMMENT                varchar2    -- Цвет заливки организации
+    NCOMPANY                number,           -- Регистрационный номер организации
+    SUSER_CODE              varchar2 := null, -- Краткое имя постетилея в формате "Фамилия И.О." (разделитель - пробел), если не задано - авторасчет по полному имени
+    SUSER_NAME              varchar2,         -- Полное имя посетителя в формате "Фамилия Имя Отчество" (разделитель - пробел)
+    SUSER_COMPANY           varchar2,         -- Наименование организации посетителя
+    SCOLOR                  varchar2          -- Цвет заливки заголовка бейджа
   );
   
   /* Загрузка стенда товаром */
@@ -1634,22 +1634,54 @@ create or replace package body UDO_PKG_STAND as
                                      SNUMB    => SRACK_NUMB);
   end;
   
-   /* Добавление нового посетителя */
+  /* Добавление нового посетителя */
   procedure STAND_USER_CREATE  
   (
     NCOMPANY                number,                  -- Регистрационный номер организации
-    SAGNABBR                varchar2,                -- Фамилия и инициалы посетителя
-    SAGNNAME                varchar2,                -- Фамилия, имя и отчество посетителя
-    SFULLNAME               varchar2,                -- Наименование организации посетителя
-    SCOMMENT                varchar2                 -- Цвет заливки организации
-  )
-  as
+    SUSER_CODE              varchar2 := null,        -- Краткое имя постетилея в формате "Фамилия И.О." (разделитель - пробел), если не задано - авторасчет по полному имени
+    SUSER_NAME              varchar2,                -- Полное имя посетителя в формате "Фамилия Имя Отчество" (разделитель - пробел)
+    SUSER_COMPANY           varchar2,                -- Наименование организации посетителя
+    SCOLOR                  varchar2                 -- Цвет заливки заголовка бейджа
+  ) is
     NVERSION                VERSIONS.RN%type;        -- Версия раздела "Контрагенты"
     NCRN                    ACATALOG.RN%type;        -- Каталог раздела "Контрагенты"
     NAGENT                  AGNLIST.RN%type;         -- Регистрационный номер нового посетителя
     NDP_BARCODE             DOCS_PROPS.RN%type;      -- Регистрационный номер дополнительного свойства для хранения штрихкода
     NDPV_BARCODE            DOCS_PROPS_VALS.RN%type; -- Регистрационный номер значения дополнительного свойства для хранения штрихкода
     NBARDCODE               PKG_STD.TNUMBER;         -- Штрих-код пользователя
+    /* Формирование мнемокода в формате "Фамилия И.О." из "Фамилии Имени Отчества" посетителя */
+    function GET_USER_CODE
+    (
+      SUSER_NAME            varchar2                 -- Фамилия Имя Отчество посетителя (через пробел)
+    ) return varchar2 is
+      SRES                  PKG_STD.TSTRING;         -- Результат работы
+      SLAST_NAME            PKG_STD.TSTRING;         -- Буфер для фамилии
+      SFIRST_NAME           PKG_STD.TSTRING;         -- Буфер для имени
+      SFAMILY_NAME          PKG_STD.TSTRING;         -- Буфер для отчества
+      SDELIM                char := ' ';             -- Разделитель слов в выражении
+    begin
+      /* Инициализируем ответ */
+      SRES := SUSER_NAME;
+      /* Если есть разделители - будем разбирать */
+      if ((INSTR(SUSER_NAME, SDELIM) > 1) and (INSTR(SUSER_NAME, SDELIM) <> LENGTH(SUSER_NAME))) then
+        /* Вынимаем фамилию */
+        SLAST_NAME := STRTOK(source => SUSER_NAME, DELIMETER => SDELIM, ITEM => 1);
+        SLAST_NAME := UPPER(SUBSTR(SLAST_NAME, 1, 1)) || SUBSTR(SLAST_NAME, 2);
+        SRES       := SLAST_NAME;
+        /* Вынимаем имя */
+        SFIRST_NAME := UPPER(SUBSTR(STRTOK(source => SUSER_NAME, DELIMETER => SDELIM, ITEM => 2), 1, 1));
+        if (SFIRST_NAME is not null) then
+          SRES := SRES || SDELIM || SFIRST_NAME || '.';
+        end if;
+        /* Вынимаем отчество */
+        SFAMILY_NAME := UPPER(SUBSTR(STRTOK(source => SUSER_NAME, DELIMETER => SDELIM, ITEM => 3), 1, 1));
+        if (SFAMILY_NAME is not null) then
+          SRES := SRES || SFAMILY_NAME || '.';
+        end if;      
+      end if;
+      /* Отдаем результат */
+      return SRES;
+    end;
   begin
     /* Определим версию раздела "Контрагенты" */
     FIND_VERSION_BY_COMPANY(NCOMPANY => NCOMPANY, SUNITCODE => 'AGNLIST', NVERSION => NVERSION);
@@ -1688,10 +1720,10 @@ create or replace package body UDO_PKG_STAND as
     /* Добавляем контрагента для посетителя */
     P_AGNLIST_BASE_INSERT(NCOMPANY     => NCOMPANY,
                           NCRN         => NCRN,
-                          SAGNABBR     => SAGNABBR,
-                          SAGNNAME     => SAGNNAME,
-                          SFULLNAME    => SFULLNAME,
-                          SAGN_COMMENT => SCOMMENT,
+                          SAGNABBR     => NVL(SUSER_CODE, GET_USER_CODE(SUSER_NAME => SUSER_NAME)),
+                          SAGNNAME     => SUSER_NAME,
+                          SFULLNAME    => SUSER_COMPANY,
+                          SAGN_COMMENT => SCOLOR,
                           NRN          => NAGENT);
   
     /* Добавляем штрихкода посетителя */
