@@ -1,19 +1,19 @@
-/* Печать бейджей с QR-кодами пользователей */
 create or replace procedure UDO_P_STAND_USERS_REP
 (
-  NCOMPANY in number, -- Регистрационный номер организации
-  NIDENT   in number -- Идентификатор отмеченных записей
+  NCOMPANY in number,                     -- Регистрационный номер организации
+  NIDENT   in number                      -- Идентификатор отмеченных записей
 ) as
-  NVERSION    VERSIONS.RN%type; -- Версия раздела "Контрагенты"
-  NDP_BARCODE DOCS_PROPS.RN%type; -- Регистрационный номер дополнительного свойства для хранения штрихкода
-  BQRCODE     blob; -- Изображение QR-кода
-  ICNT        int; -- Счетчик посетителей
-  ILIST_COUNT int; -- Счетчик страниц отчета
-  IPOS        int; -- Позиция бейджа на листе (1 или 2)
+  NVERSION    VERSIONS.RN%type;           -- Версия раздела "Контрагенты"
+  NDP_BARCODE DOCS_PROPS.RN%type;         -- Регистрационный номер дополнительного свойства для хранения штрихкода
+  BQRCODE     blob;                       -- Изображение QR-кода
+  ICNT        int;                        -- Счетчик посетителей
+  ILIST_COUNT int;                        -- Счетчик страниц отчета
+  IPOS        int;                        -- Позиция бейджа на листе (1 или 2)
+  SCOLOR      PKG_STD.tSTRING;            -- Цвет ячейки организации
   SSHEET      PKG_STD.TSTRING := 'Лист1'; -- Наименование листа отчета
-  SCELL_SORG  PKG_STD.TSTRING := 'SORG'; -- Наименование ячейки организации посетителя
+  SCELL_SORG  PKG_STD.TSTRING := 'SORG';  -- Наименование ячейки организации посетителя
   SCELL_SNAME PKG_STD.TSTRING := 'SNAME'; -- Наименование ячейки ФИО посетителя
-  SCELL_SBAR  PKG_STD.TSTRING := 'SBAR'; -- Наименование ячейки QR-кода посетителя
+  SCELL_SBAR  PKG_STD.TSTRING := 'SBAR';  -- Наименование ячейки QR-кода посетителя
   SCELL_SCODE PKG_STD.TSTRING := 'SCODE'; -- Наименование ячейки кода посетителя
 begin
   /* Инициализация отчета */
@@ -69,12 +69,17 @@ begin
     end if;
     /* Записываем организацию */
     PRSG_EXCEL.CELL_VALUE_WRITE(SCELL_NAME => SCELL_SORG || IPOS, SCELL_VALUE => REC.FULLNAME);
+    if (REC.AGN_COMMENT is not null) then
+      SCOLOR := REC.AGN_COMMENT;
+    else
+      SCOLOR := '55';
+    end if;
     /* Заливаем ячейку цветом указанным в примечании*/
     PRSG_EXCEL.CELL_ATTRIBUTE_SET(SCELL_NAME       => SCELL_SORG || IPOS,
                                   SATTRIBUTE_NAME  => 'Interior.ColorIndex',
-                                  SATTRIBUTE_VALUE => REC.AGN_COMMENT);
+                                  SATTRIBUTE_VALUE => SCOLOR);
     /* По умолчанию цвет текста - белый, устанавливаем для всех остальных черный*/
-    if REC.AGN_COMMENT not in ('43', '55') then
+    if SCOLOR not in ('43', '55') then
       PRSG_EXCEL.CELL_ATTRIBUTE_SET(SCELL_NAME       => SCELL_SORG || IPOS,
                                     SATTRIBUTE_NAME  => 'Font.ColorIndex',
                                     SATTRIBUTE_VALUE => '1');
