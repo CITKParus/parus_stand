@@ -9,6 +9,7 @@
 
 import React from "react"; //классы React
 import Chart from "chart.js"; //работа с графиками и диаграммами
+import Paper from "material-ui/Paper"; //классы Material UI для контейнера с тенью
 import _ from "lodash"; //работа с коллекциями и объектами
 
 //-------
@@ -101,7 +102,11 @@ class RestsNomen extends React.Component {
     }
     //генерация содержимого
     render() {
-        return <canvas id="RestsNomen" />;
+        return (
+            <Paper className="monitor-chart-paper" zDepth={3}>
+                <canvas id="RestsNomen" />
+            </Paper>
+        );
     }
 }
 
