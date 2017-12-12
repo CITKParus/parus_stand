@@ -22,8 +22,8 @@ const getInitialChartState = () => {
             labels: [],
             datasets: [
                 {
-                    backgroundColor: ["rgba(75, 192, 192, 0.4)", "rgba(255, 159, 64, 0.4)", "rgba(255, 99, 132, 0.4)"],
-                    borderColor: ["rgb(75, 192, 192)", "rgb(255, 159, 64)", "rgb(255, 99, 132)"],
+                    backgroundColor: ["rgba(255, 99, 132, 0.4)", "rgba(255, 159, 64, 0.4)", "rgba(75, 192, 192, 0.4)"],
+                    borderColor: ["rgb(255, 99, 132)", "rgb(255, 159, 64)", "rgb(75, 192, 192)"],
                     borderWidth: 1,
                     data: []
                 }

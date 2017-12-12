@@ -83,7 +83,7 @@ class Monitor extends React.Component {
                         max: 100,
                         meas: "%"
                     };
-                    r.message.RACK_REST_PRC_HISTS.forEach((rest, i) => {
+                    r.message.RACK_REST_PRC_HISTS.reverse().forEach((rest, i) => {
                         tmpRestsDynamic.labels.push(i);
                         tmpRestsDynamic.data.push(rest.NREST_PRC);
                     });
