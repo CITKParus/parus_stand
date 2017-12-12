@@ -48,7 +48,7 @@ create or replace package UDO_PKG_STAND as
   /* Константы описания расходов */
   STRINVCUST_TYPE           DOCTYPES.DOCCODE%type := 'РНОП';                            -- Тип документа "Расходная накладная на отпуск потребителям"
   STRINVCUST_PREF           INCOMEFROMDEPS.DOC_PREF%type := 'РНОП';                     -- Префикс документа "Расходная накладная на отпуск потребителям"
-  STRINVCUST_REPORT         USERREPORTS.CODE%type := 'RL1580';                          -- Мнемокод пользовательского отчета для автоматической печати
+  STRINVCUST_REPORT         USERREPORTS.CODE%type := 'STAND_RL1580';                    -- Мнемокод пользовательского отчета для автоматической печати
     
   /* Констнаты описания состояни отгрузки посетителю стенда */
   NAGN_SUPPLY_NOT_YET       PKG_STD.TNUMBER := 1;                                       -- Отгрузки ещё не было
@@ -2590,19 +2590,19 @@ create or replace package body UDO_PKG_STAND as
     PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'NNUMB_LINES_FIRST',
                                   NDATA_TYPE  => 1,
                                   SSTR_VALUE  => null,
-                                  NNUM_VALUE  => 10,
+                                  NNUM_VALUE  => 0,
                                   DDATE_VALUE => null,
                                   BLIST_IDENT => false);
     PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'NNUMB_LINES_LAST',
                                   NDATA_TYPE  => 1,
                                   SSTR_VALUE  => null,
-                                  NNUM_VALUE  => 10,
+                                  NNUM_VALUE  => 0,
                                   DDATE_VALUE => null,
                                   BLIST_IDENT => false);
     PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'NNUMB_LINES',
                                   NDATA_TYPE  => 1,
                                   SSTR_VALUE  => null,
-                                  NNUM_VALUE  => 10,
+                                  NNUM_VALUE  => 0,
                                   DDATE_VALUE => null,
                                   BLIST_IDENT => false);
     PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'NSHOW_NOMEN',
