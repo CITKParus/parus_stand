@@ -260,7 +260,7 @@ const cancelAuth = prms => {
             //если указанный идентификатор пользователья стенда соответствует текущему или сейчас на стенде и так никого нет или прилетел спец. код принудительной отмены
             if (
                 SERVICE_STATE.NAGENT == 0 ||
-                SERVICE_STATE.NAGENT == conf.SERVER_USER_RESET_EMERGENCY_CODE ||
+                prms.customerID == conf.SERVER_USER_RESET_EMERGENCY_CODE ||
                 prms.customerID == SERVICE_STATE.NAGENT
             ) {
                 //сбрасываем и
