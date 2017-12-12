@@ -31,3 +31,51 @@
     width: 48px;
     height: 48px;
 }
+
+.monitor-chart {
+    height: 100%;
+    width: 90%;
+    display: table;
+    padding: 20px;
+}
+
+.monitor-chart-paper {
+    height: 80%;
+    width: 80%;    
+    text-align: center;
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.monitor-stand-state {
+    height: 100%;
+    width: 90%;
+    display: table;
+    padding: 20px;
+}
+
+.monitor-stand-state-paper {
+    height: 80%;
+    width: 80%;    
+    text-align: center;
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.monitor-stand-state-info-enter {
+    opacity: 0.01;
+}
+  
+.monitor-stand-state-info-enter.monitor-stand-state-info-enter-active {
+    opacity: 1;
+    transition: opacity 1000ms ease-in;
+}
+  
+.monitor-stand-state-info-leave {
+    opacity: 1;
+}
+  
+.monitor-stand-state-info-leave.monitor-stand-state-info-leave-active {
+    opacity: 0.01;
+    transition: opacity 500ms ease-in;
+}

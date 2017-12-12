@@ -27,7 +27,7 @@ const SERVER_ACTION_STAND_GET_STATE = "STAND_GET_STATE"; //получение с
 const SERVER_STATE_ERR = "ERR"; //состояние сервера - ошибка
 const SERVER_STATE_OK = "OK"; //состояние сервера - всё нормально
 
-//типовые сообщения коиента
+//типовые сообщения клиента
 const CLIENT_RE_MSG_ERROR = "Ошибка сервера стенда!"; //ошибка при обращении к внешнему сервису
 const CLIENT_RE_MSG_UNEXPECTED_RESPONSE = "Неожиданный ответ сервера стенда!"; //ошибка при разборе ответа внешнего сервиса
 
