@@ -59,7 +59,7 @@ class DevicePrintQueue {
 
     //отправка файла на принтер
     sendFileToPrinter(fileName) {
-        return new Promise(function(resolve, reject) {
+        return new Promise((resolve, reject) => {
             if (fileName && fileName != "") {
                 const sp = child_process.spawn(conf.POWER_SHELL, ["-File", conf.PRINTER_SCRIPT, fileName]);
                 sp.on("error", err => {

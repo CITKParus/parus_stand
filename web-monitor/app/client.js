@@ -65,7 +65,7 @@ const objectToReqestBodyParams = obj => {
 
 //выполнение действия на сервере стенда
 const standServerAction = prms => {
-    return new Promise(function(resolve, reject) {
+    return new Promise((resolve, reject) => {
         let headers = {}; //заголовок запроса
         let body = null; //тело запроса
         let method = prms.method || REQUEST_METHOD_POST; //метод (POST, GET, PUT и т.п.)
