@@ -19,15 +19,8 @@ var http = require("http"); //работа с HTTP
 //подключение к сети и параметры WEB-сервера
 var WIFI_PORT = PrimarySerial; //порт (URAT) подключения WiFi-модуля
 var SERVER_PORT = 8080; //порт WEB-сервера
-//дом
-var WIFI_SSID = "MartyMim"; // имя WiFi-сети
-var WIFI_PSWD = "var2008eniK"; // ключ WiFi-сети
-//офис
-//var WIFI_SSID = "ASUS"; // имя WiFi-сети
-//var WIFI_PSWD = "ParUs2013"; // ключ WiFi-сети
-//АК
-//var WIFI_SSID = "RUDA"; // имя WiFi-сети
-//var WIFI_PSWD = "Defender0106"; // ключ WiFi-сети
+var WIFI_SSID = "ASUS"; // имя WiFi-сети
+var WIFI_PSWD = "ParUs2013"; // ключ WiFi-сети
 
 //состояния ответа WEB-сервера
 var SERVER_RESP_OK = "OK"; //успех
