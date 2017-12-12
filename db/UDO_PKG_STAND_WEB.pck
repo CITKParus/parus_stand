@@ -495,15 +495,19 @@ create or replace package body UDO_PKG_STAND_WEB as
     CRES                    out clob                                    -- Результат работы
   ) is
     JPRMS                   JSON;                                       -- Объектное представление параметров запроса
+    JRES                    JSON;                                       -- Объектное представление ответа
     NCOMPANY                COMPANIES.RN%type := GET_SESSION_COMPANY(); -- Рег. номер организации
     SCUSTOMER               PKG_STD.TSTRING;                            -- Мнемокод контрагента-посетителя
     NRACK_LINE              PKG_STD.TNUMBER;                            -- Ярус стеллажа для выдачи товара
     NRACK_LINE_CELL         PKG_STD.TNUMBER;                            -- Ячейка стеллажа для выдачи товара
     NTRANSINVCUST           PKG_STD.TREF;                               -- Рег. номер сформированной РНОП
+    RESTS_HIST_TMP          UDO_PKG_STAND.TMESSAGES;                    -- Буфер для истории остатков
     SERR                    PKG_STD.TSTRING;                            -- Буфер для ошибок
-  begin        
+  begin
     /* Инициализируем выход */
     DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
+    /* Инициализируем ответ */
+    JRES := JSON();
     /* Конвертируем параметры в объектное представление */
     JPRMS := JSON(CPRMS);
     /* Считываем контрагента-посетителя */
@@ -534,10 +538,20 @@ create or replace package body UDO_PKG_STAND_WEB as
                            NRACK_LINE      => NRACK_LINE,
                            NRACK_LINE_CELL => NRACK_LINE_CELL,
                            NTRANSINVCUST   => NTRANSINVCUST);
-    /* Отдаём ответ что всё прошло успешно */
-    CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
-                                      NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_OK,
-                                      SRESP_MSG    => NTRANSINVCUST);
+    /* Считываем остатки по стенду после отгрузки */
+    RESTS_HIST_TMP := UDO_PKG_STAND.MSG_GET_LIST(DFROM  => null,
+                                                 STP    => UDO_PKG_STAND.SMSG_TYPE_REST_PRC,
+                                                 NLIMIT => 1,
+                                                 NORDER => UDO_PKG_STAND.NMSG_ORDER_DESC);
+    /* Формируем ответ */
+    JRES.PUT(PAIR_NAME => 'NTRANSINVCUST', PAIR_VALUE => NTRANSINVCUST);
+    if ((RESTS_HIST_TMP is not null) and (RESTS_HIST_TMP.COUNT = 1)) then
+      JRES.PUT(PAIR_NAME => 'NRESTS_PRC_CURR', PAIR_VALUE => TO_NUMBER(RESTS_HIST_TMP(RESTS_HIST_TMP.FIRST).SMSG));
+    else
+      JRES.PUT(PAIR_NAME => 'NRESTS_PRC_CURR', PAIR_VALUE => 0);
+    end if;
+    /* Отдаём ответ  */
+    JRES.TO_CLOB(BUF => CRES);    
   exception
     when others then
       SERR := sqlerrm;
@@ -545,7 +559,7 @@ create or replace package body UDO_PKG_STAND_WEB as
                                         NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_ERR,
                                         SRESP_MSG    => SERR);
       rollback;
-  end;  
+  end;
   
   /* Откат выдачи посетителю товара со стенда */
   procedure SHIPMENT_ROLLBACK
