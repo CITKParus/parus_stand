@@ -2012,7 +2012,7 @@ create or replace package body UDO_PKG_STAND as
     P_STRPLRESJRNL_INDEPTS_PROCESS(NCOMPANY => NCOMPANY, NRN => NINCOMEFROMDEPS);
   
     /* Оповестим о загузке стенда */
-    MSG_INSERT_NOTIFY(SMSG => 'Стнед успешно загружен...', SNOTIFY_TYPE => SNOTIFY_TYPE_INFO);
+    MSG_INSERT_NOTIFY(SMSG => 'Стенд успешно загружен...', SNOTIFY_TYPE => SNOTIFY_TYPE_INFO);
   
     /* Запомним остатки по стенду */
     STAND_SAVE_RACK_REST(NCOMPANY => NCOMPANY, BNOTIFY_REST => true, BNOTIFY_LIMIT => false);
