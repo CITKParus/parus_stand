@@ -1,563 +1,563 @@
 create or replace package UDO_PKG_STAND as
   /*
-    РЈС‚РёР»РёС‚С‹ РґР»СЏ СЂР°Р±РѕС‚С‹ СЃС‚РµРЅРґР°
+    Утилиты для работы стенда
   */
 
-  /* РљРѕРЅСЃС‚Р°РЅС‚С‹ РѕРїРёСЃР°РЅРёСЏ СЂРµР¶РёРјР° СЂР°Р±РѕС‚С‹ СЃС‚РµРЅРґР° */
-  NALLOW_MULTI_SUPPLY_YES   PKG_STD.TNUMBER := 1;                                       -- Р Р°Р·СЂРµС€Р°С‚СЊ РјРЅРѕР¶РµСЃС‚РІРµРЅРЅСѓСЋ РѕС‚РіСЂСѓР·РєСѓ РѕРґРЅРѕРјСѓ РїРѕСЃРµС‚РёС‚РµР»СЋ
-  NALLOW_MULTI_SUPPLY_NO    PKG_STD.TNUMBER := 0;                                       -- РќРµ СЂР°Р·СЂРµС€Р°С‚СЊ РјРЅРѕР¶РµСЃС‚РІРµРЅРЅСѓСЋ РѕС‚РіСЂСѓР·РєСѓ РѕРґРЅРѕРјСѓ РїРѕСЃРµС‚РёС‚РµР»СЋ
+  /* Константы описания режима работы стенда */
+  NALLOW_MULTI_SUPPLY_YES   PKG_STD.TNUMBER := 1;                                       -- Разрешать множественную отгрузку одному посетителю
+  NALLOW_MULTI_SUPPLY_NO    PKG_STD.TNUMBER := 0;                                       -- Не разрешать множественную отгрузку одному посетителю
 
-  /* РљРѕРЅСЃС‚Р°РЅС‚С‹ СЂРµР¶РёРјР° СЂР°Р±РѕС‚С‹ СЃС‚РµРЅРґР° */
-  NALLOW_MULTI_SUPPLY       PKG_STD.TNUMBER := NALLOW_MULTI_SUPPLY_YES;                 -- Р’РѕР·РјРѕР¶РЅРѕСЃС‚СЊ РјРЅРѕР¶РµСЃС‚РІРµРЅРЅРѕР№ РѕС‚РіСЂСѓР·РєРё
-  SGUEST_BASRCODE           PKG_STD.TSTRING := '0000';                                  -- РЁС‚СЂРёС…-РєРѕРґ РіРѕСЃС‚РµРІРѕРіРѕ РїРѕСЃРµС‚РёС‚РµР»СЏ
+  /* Константы режима работы стенда */
+  NALLOW_MULTI_SUPPLY       PKG_STD.TNUMBER := NALLOW_MULTI_SUPPLY_YES;                 -- Возможность множественной отгрузки
+  SGUEST_BASRCODE           PKG_STD.TSTRING := '0000';                                  -- Штрих-код гостевого посетителя
+  
+  /* Константы описания склада для стенда */
+  SSTORE_PRODUCE            AZSAZSLISTMT.AZS_NUMBER%type := 'Производство';             -- Склад производства готовой продукции
+  SSTORE_GOODS              AZSAZSLISTMT.AZS_NUMBER%type := 'СГП';                      -- Склад отгрузки готовой продукции
+  SRACK_PREF                STPLRACKS.PREF%type := 'АВТОМАТ';                           -- Префикс стеллажа склада отгрузки готовой продукции
+  SRACK_NUMB                STPLRACKS.NUMB%type := '1';                                 -- Номер стеллажа склада отгрузки готовой продукции
+  SRACK_CELL_PREF_TMPL      STPLCELLS.PREF%type := 'ЯРУС';                              -- Шаблон префикса места хранения
+  SRACK_CELL_NUMB_TMPL      STPLCELLS.NUMB%type := 'МЕСТО';                             -- Шаблон номера места зранения
+  NRACK_LINES               PKG_STD.TNUMBER := 1;                                       -- Количество ярусов стеллажа
+  NRACK_LINE_CELLS          PKG_STD.TNUMBER := 3;                                       -- Количество ячеек (мест хранения) в ярусе
+  NRACK_CELL_CAPACITY       PKG_STD.TNUMBER := 5;                                       -- Максимальное количество номенклатуры в ячейке хранения
+  NRACK_CELL_SHIP_CNT       PKG_STD.TNUMBER := 1;                                       -- Количество номенклатуры, отгружаемое потребителю за одну транзакцию
+  NRESTS_LIMIT_PRC_MIN      PKG_STD.TLNUMBER := 40;                                     -- Минимальный критический остаток по складу (в %)  
+  NRESTS_LIMIT_PRC_MDL      PKG_STD.TLNUMBER := 60;                                     -- Средний остаток по складу (в %)  
 
-  /* РљРѕРЅСЃС‚Р°РЅС‚С‹ РѕРїРёСЃР°РЅРёСЏ СЃРєР»Р°РґР° РґР»СЏ СЃС‚РµРЅРґР° */
-  SSTORE_PRODUCE            AZSAZSLISTMT.AZS_NUMBER%type := 'РџСЂРѕРёР·РІРѕРґСЃС‚РІРѕ';             -- РЎРєР»Р°Рґ РїСЂРѕРёР·РІРѕРґСЃС‚РІР° РіРѕС‚РѕРІРѕР№ РїСЂРѕРґСѓРєС†РёРё
-  SSTORE_GOODS              AZSAZSLISTMT.AZS_NUMBER%type := 'РЎР“Рџ';                      -- РЎРєР»Р°Рґ РѕС‚РіСЂСѓР·РєРё РіРѕС‚РѕРІРѕР№ РїСЂРѕРґСѓРєС†РёРё
-  SRACK_PREF                STPLRACKS.PREF%type := 'РђР’РўРћРњРђРў';                           -- РџСЂРµС„РёРєСЃ СЃС‚РµР»Р»Р°Р¶Р° СЃРєР»Р°РґР° РѕС‚РіСЂСѓР·РєРё РіРѕС‚РѕРІРѕР№ РїСЂРѕРґСѓРєС†РёРё
-  SRACK_NUMB                STPLRACKS.NUMB%type := '1';                                 -- РќРѕРјРµСЂ СЃС‚РµР»Р»Р°Р¶Р° СЃРєР»Р°РґР° РѕС‚РіСЂСѓР·РєРё РіРѕС‚РѕРІРѕР№ РїСЂРѕРґСѓРєС†РёРё
-  SRACK_CELL_PREF_TMPL      STPLCELLS.PREF%type := 'РЇР РЈРЎ';                              -- РЁР°Р±Р»РѕРЅ РїСЂРµС„РёРєСЃР° РјРµСЃС‚Р° С…СЂР°РЅРµРЅРёСЏ
-  SRACK_CELL_NUMB_TMPL      STPLCELLS.NUMB%type := 'РњР•РЎРўРћ';                             -- РЁР°Р±Р»РѕРЅ РЅРѕРјРµСЂР° РјРµСЃС‚Р° Р·СЂР°РЅРµРЅРёСЏ
-  NRACK_LINES               PKG_STD.TNUMBER := 1;                                       -- РљРѕР»РёС‡РµСЃС‚РІРѕ СЏСЂСѓСЃРѕРІ СЃС‚РµР»Р»Р°Р¶Р°
-  NRACK_LINE_CELLS          PKG_STD.TNUMBER := 3;                                       -- РљРѕР»РёС‡РµСЃС‚РІРѕ СЏС‡РµРµРє (РјРµСЃС‚ С…СЂР°РЅРµРЅРёСЏ) РІ СЏСЂСѓСЃРµ
-  NRACK_CELL_CAPACITY       PKG_STD.TNUMBER := 5;                                       -- РњР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РІ СЏС‡РµР№РєРµ С…СЂР°РЅРµРЅРёСЏ
-  NRACK_CELL_SHIP_CNT       PKG_STD.TNUMBER := 1;                                       -- РљРѕР»РёС‡РµСЃС‚РІРѕ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹, РѕС‚РіСЂСѓР¶Р°РµРјРѕРµ РїРѕС‚СЂРµР±РёС‚РµР»СЋ Р·Р° РѕРґРЅСѓ С‚СЂР°РЅР·Р°РєС†РёСЋ
-  NRESTS_LIMIT_PRC_MIN      PKG_STD.TLNUMBER := 40;                                     -- РњРёРЅРёРјР°Р»СЊРЅС‹Р№ РєСЂРёС‚РёС‡РµСЃРєРёР№ РѕСЃС‚Р°С‚РѕРє РїРѕ СЃРєР»Р°РґСѓ (РІ %)
-  NRESTS_LIMIT_PRC_MDL      PKG_STD.TLNUMBER := 60;                                     -- РЎСЂРµРґРЅРёР№ РѕСЃС‚Р°С‚РѕРє РїРѕ СЃРєР»Р°РґСѓ (РІ %)
+  /* Константы описания движения по складу */
+  SDEF_STORE_MOVE_IN        AZSGSMWAYSTYPES.GSMWAYS_MNEMO%type := 'Приход внутренний';  -- Операция прихода по умолчанию
+  SDEF_STORE_MOVE_OUT       AZSGSMWAYSTYPES.GSMWAYS_MNEMO%type := 'Расход внешний';     -- Операция расхода по умолчанию
+  SDEF_STORE_PARTY          INCOMDOC.CODE%type := 'Готовая продукция';                  -- Партия по умолчанию
+  SDEF_FACE_ACC             FACEACC.NUMB%type := 'Универсальный';                       -- Лицевой счет по умолчанию
+  SDEF_TARIF                DICTARIF.CODE%type := 'Базовый';                            -- Тариф по умолчанию
+  SDEF_SHEEP_VIEW           DICSHPVW.CODE%type := 'Самовывоз';                          -- Вид отгрузки по умолчанию
+  SDEF_PAY_TYPE             AZSGSMPAYMENTSTYPES.GSMPAYMENTS_MNEMO%type := 'Без оплаты'; -- Вид оплаты по умолчанию
+  SDEF_TAX_GROUP            DICTAXGR.CODE%type := 'Без налогов';                        -- Налоговая группа по умолчанию
+  SDEF_NOMEN_1              DICNOMNS.NOMEN_CODE%type := 'Dirol';                        -- Номенклатура по умолчанию (стеллаж 1, ячейка 1)
+  SDEF_NOMEN_MODIF_1        NOMMODIF.MODIF_CODE%type := 'Малиновый';                    -- Модификация номенклатуры по умолчанию (стеллаж 1, ячейка 1)
+  SDEF_NOMEN_2              DICNOMNS.NOMEN_CODE%type := 'Dirol';                        -- Номенклатура по умолчанию (стеллаж 1, ячейка 2)
+  SDEF_NOMEN_MODIF_2        NOMMODIF.MODIF_CODE%type := 'Дынный';                       -- Модификация номенклатуры по умолчанию (стеллаж 1, ячейка 2)
+  SDEF_NOMEN_3              DICNOMNS.NOMEN_CODE%type := 'Dirol';                        -- Номенклатура по умолчанию (стеллаж 1, ячейка 3)
+  SDEF_NOMEN_MODIF_3        NOMMODIF.MODIF_CODE%type := 'Мятный';                       -- Модификация номенклатуры по умолчанию (стеллаж 1, ячейка 3)
 
-  /* РљРѕРЅСЃС‚Р°РЅС‚С‹ РѕРїРёСЃР°РЅРёСЏ РґРІРёР¶РµРЅРёСЏ РїРѕ СЃРєР»Р°РґСѓ */
-  SDEF_STORE_MOVE_IN        AZSGSMWAYSTYPES.GSMWAYS_MNEMO%type := 'РџСЂРёС…РѕРґ РІРЅСѓС‚СЂРµРЅРЅРёР№';  -- РћРїРµСЂР°С†РёСЏ РїСЂРёС…РѕРґР° РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
-  SDEF_STORE_MOVE_OUT       AZSGSMWAYSTYPES.GSMWAYS_MNEMO%type := 'Р Р°СЃС…РѕРґ РІРЅРµС€РЅРёР№';     -- РћРїРµСЂР°С†РёСЏ СЂР°СЃС…РѕРґР° РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
-  SDEF_STORE_PARTY          INCOMDOC.CODE%type := 'Р“РѕС‚РѕРІР°СЏ РїСЂРѕРґСѓРєС†РёСЏ';                  -- РџР°СЂС‚РёСЏ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
-  SDEF_FACE_ACC             FACEACC.NUMB%type := 'РЈРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№';                       -- Р›РёС†РµРІРѕР№ СЃС‡РµС‚ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
-  SDEF_TARIF                DICTARIF.CODE%type := 'Р‘Р°Р·РѕРІС‹Р№';                            -- РўР°СЂРёС„ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
-  SDEF_SHEEP_VIEW           DICSHPVW.CODE%type := 'РЎР°РјРѕРІС‹РІРѕР·';                          -- Р’РёРґ РѕС‚РіСЂСѓР·РєРё РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
-  SDEF_PAY_TYPE             AZSGSMPAYMENTSTYPES.GSMPAYMENTS_MNEMO%type := 'Р‘РµР· РѕРїР»Р°С‚С‹'; -- Р’РёРґ РѕРїР»Р°С‚С‹ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
-  SDEF_TAX_GROUP            DICTAXGR.CODE%type := 'Р‘РµР· РЅР°Р»РѕРіРѕРІ';                        -- РќР°Р»РѕРіРѕРІР°СЏ РіСЂСѓРїРїР° РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
-  SDEF_NOMEN_1              DICNOMNS.NOMEN_CODE%type := 'Orbit';                        -- РќРѕРјРµРЅРєР»Р°С‚СѓСЂР° РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (1)
-  SDEF_NOMEN_MODIF_1        NOMMODIF.MODIF_CODE%type := 'РњСЏС‚РЅС‹Р№';                       -- РњРѕРґРёС„РёРєР°С†РёСЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (1)
-  SDEF_NOMEN_2              DICNOMNS.NOMEN_CODE%type := 'Orbit';                        -- РќРѕРјРµРЅРєР»Р°С‚СѓСЂР° РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (2)
-  SDEF_NOMEN_MODIF_2        NOMMODIF.MODIF_CODE%type := 'Р¤СЂСѓРєС‚РѕРІС‹Р№';                    -- РњРѕРґРёС„РёРєР°С†РёСЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (2)
-  SDEF_NOMEN_3              DICNOMNS.NOMEN_CODE%type := 'Orbit';                        -- РќРѕРјРµРЅРєР»Р°С‚СѓСЂР° РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (3)
-  SDEF_NOMEN_MODIF_3        NOMMODIF.MODIF_CODE%type := 'РљР»Р°СЃСЃРёС‡РµСЃРєРёР№';                 -- РњРѕРґРёС„РёРєР°С†РёСЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (3)
+  /* Константы описания приходов */
+  SINCDEPS_TYPE             DOCTYPES.DOCCODE%type := 'ПНП';                             -- Тип документа "Приход из подразделений"
+  SINCDEPS_PREF             INCOMEFROMDEPS.DOC_PREF%type := 'ПНП';                      -- Префикс документа "Приход из подразделений"
 
-  /* РљРѕРЅСЃС‚Р°РЅС‚С‹ РѕРїРёСЃР°РЅРёСЏ РїСЂРёС…РѕРґРѕРІ */
-  SINCDEPS_TYPE             DOCTYPES.DOCCODE%type := 'РџРќРџ';                             -- РўРёРї РґРѕРєСѓРјРµРЅС‚Р° "РџСЂРёС…РѕРґ РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёР№"
-  SINCDEPS_PREF             INCOMEFROMDEPS.DOC_PREF%type := 'РџРќРџ';                      -- РџСЂРµС„РёРєСЃ РґРѕРєСѓРјРµРЅС‚Р° "РџСЂРёС…РѕРґ РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёР№"
+  /* Константы описания расходов */
+  STRINVCUST_TYPE           DOCTYPES.DOCCODE%type := 'РНОП';                            -- Тип документа "Расходная накладная на отпуск потребителям"
+  STRINVCUST_PREF           INCOMEFROMDEPS.DOC_PREF%type := 'РНОП';                     -- Префикс документа "Расходная накладная на отпуск потребителям"
+  STRINVCUST_REPORT         USERREPORTS.CODE%type := 'STAND_RL1580';                    -- Мнемокод пользовательского отчета для автоматической печати
+    
+  /* Констнаты описания состояни отгрузки посетителю стенда */
+  NAGN_SUPPLY_NOT_YET       PKG_STD.TNUMBER := 1;                                       -- Отгрузки ещё не было
+  NAGN_SUPPLY_ALREADY       PKG_STD.TNUMBER := 2;                                       -- Оггрузка уже была
+  
+  /* Константы описания используемых дополнительных свойств */
+  SDP_BARCODE               DOCS_PROPS.CODE%type := 'ШтрихКод';                         -- Мнемокод дополнительного свойства для храения штрихкода
+  
+  /* Константы описания используемых каталогов */
+  SCATALOG_STAND_USERS      ACATALOG.NAME%type := 'Посетители стенда';                  -- Каталог для учёта посетителей стенда в разделе "Контрагенты"
+  
+  /* Константы описания типов сообщений очереди стенда */
+  SMSG_TYPE_NOTIFY          UDO_T_STAND_MSG.TP%type := 'NOTIFY';                        -- Сообщение типа "Оповещение"
+  SMSG_TYPE_RESTS           UDO_T_STAND_MSG.TP%type := 'RESTS';                         -- Сообщение типа "Сведения об остатках"
+  SMSG_TYPE_REST_PRC        UDO_T_STAND_MSG.TP%type := 'REST_PRC';                      -- Сообщение типа "Сведения об остатках (% загруженности)"  
+  SMSG_TYPE_PRINT           UDO_T_STAND_MSG.TP%type := 'PRINT';                         -- Сообщение типа "Очередь печати"
+  
+  /* Константы описания типов оповещения для уведомительных сообщений  */
+  SNOTIFY_TYPE_INFO         PKG_STD.TSTRING := 'INFORMATION';                           -- Информация
+  SNOTIFY_TYPE_WARN         PKG_STD.TSTRING := 'WARNING';                               -- Предупреждение
+  SNOTIFY_TYPE_ERROR        PKG_STD.TSTRING := 'ERROR';                                 -- Ошибка
+  
+  /* Константы описания типов сообщений очереди стенда */
+  SMSG_STATE_UNDEFINED      UDO_T_STAND_MSG.STS%type := 'UNDEFINED';                    -- Состояние "Неопределно"
+  SMSG_STATE_NOT_SENDED     UDO_T_STAND_MSG.STS%type := 'NOT_SENDED';                   -- Состояние "Неотправлено"
+  SMSG_STATE_NOT_PRINTED    UDO_T_STAND_MSG.STS%type := 'NOT_PRINTED';                  -- Состояние "Нераспечатано"
+  SMSG_STATE_SENDED         UDO_T_STAND_MSG.STS%type := 'SENDED';                       -- Состояние "Отправлено"
+  SMSG_STATE_PRINTED        UDO_T_STAND_MSG.STS%type := 'PRINTED';                      -- Состояние "Распечатано"
 
-  /* РљРѕРЅСЃС‚Р°РЅС‚С‹ РѕРїРёСЃР°РЅРёСЏ СЂР°СЃС…РѕРґРѕРІ */
-  STRINVCUST_TYPE           DOCTYPES.DOCCODE%type := 'Р РќРћРџ';                            -- РўРёРї РґРѕРєСѓРјРµРЅС‚Р° "Р Р°СЃС…РѕРґРЅР°СЏ РЅР°РєР»Р°РґРЅР°СЏ РЅР° РѕС‚РїСѓСЃРє РїРѕС‚СЂРµР±РёС‚РµР»СЏРј"
-  STRINVCUST_PREF           INCOMEFROMDEPS.DOC_PREF%type := 'Р РќРћРџ';                     -- РџСЂРµС„РёРєСЃ РґРѕРєСѓРјРµРЅС‚Р° "Р Р°СЃС…РѕРґРЅР°СЏ РЅР°РєР»Р°РґРЅР°СЏ РЅР° РѕС‚РїСѓСЃРє РїРѕС‚СЂРµР±РёС‚РµР»СЏРј"
-  STRINVCUST_REPORT         USERREPORTS.CODE%type := 'STAND_RL1580';                    -- РњРЅРµРјРѕРєРѕРґ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРѕРіРѕ РѕС‚С‡РµС‚Р° РґР»СЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕР№ РїРµС‡Р°С‚Рё
+  /* Константы описания порядка сортировки сообщений очереди стенда */
+  NMSG_ORDER_ASC            PKG_STD.TNUMBER := 1;                                       -- Сначала старые
+  NMSG_ORDER_DESC           PKG_STD.TNUMBER := -1;                                      -- Cначала новые
+  
+  /* Константы описания состояния отчета в очереди печати */
+  NRPT_QUEUE_STATE_INS      PKG_STD.TNUMBER := 0;                                       -- Поставлено в очередь
+  NRPT_QUEUE_STATE_RUN      PKG_STD.TNUMBER := 1;                                       -- Обрабатывается
+  NRPT_QUEUE_STATE_OK       PKG_STD.TNUMBER := 2;                                       -- Завершено успешно
+  NRPT_QUEUE_STATE_ERR      PKG_STD.TNUMBER := 3;                                       -- Завершено с ошибкой
+  
+  /* Константы описания состояния отчета в очереди печати */
+  SRPT_QUEUE_STATE_INS      PKG_STD.TSTRING := 'QUEUE_STATE_INS';                       -- Поставлено в очередь
+  SRPT_QUEUE_STATE_RUN      PKG_STD.TSTRING := 'QUEUE_STATE_RUN';                       -- Обрабатывается
+  SRPT_QUEUE_STATE_OK       PKG_STD.TSTRING := 'QUEUE_STATE_OK';                        -- Завершено успешно
+  SRPT_QUEUE_STATE_ERR      PKG_STD.TSTRING := 'QUEUE_STATE_ERR';                       -- Завершено с ошибкой
 
-  /* РљРѕРЅСЃС‚РЅР°С‚С‹ РѕРїРёСЃР°РЅРёСЏ СЃРѕСЃС‚РѕСЏРЅРё РѕС‚РіСЂСѓР·РєРё РїРѕСЃРµС‚РёС‚РµР»СЋ СЃС‚РµРЅРґР° */
-  NAGN_SUPPLY_NOT_YET       PKG_STD.TNUMBER := 1;                                       -- РћС‚РіСЂСѓР·РєРё РµС‰С‘ РЅРµ Р±С‹Р»Рѕ
-  NAGN_SUPPLY_ALREADY       PKG_STD.TNUMBER := 2;                                       -- РћРіРіСЂСѓР·РєР° СѓР¶Рµ Р±С‹Р»Р°
-
-  /* РљРѕРЅСЃС‚Р°РЅС‚С‹ РѕРїРёСЃР°РЅРёСЏ РёСЃРїРѕР»СЊР·СѓРµРјС‹С… РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹С… СЃРІРѕР№СЃС‚РІ */
-  SDP_BARCODE               DOCS_PROPS.CODE%type := 'РЁС‚СЂРёС…РљРѕРґ';                         -- РњРЅРµРјРѕРєРѕРґ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕРіРѕ СЃРІРѕР№СЃС‚РІР° РґР»СЏ С…СЂР°РµРЅРёСЏ С€С‚СЂРёС…РєРѕРґР°
-
-  /* РљРѕРЅСЃС‚Р°РЅС‚С‹ РѕРїРёСЃР°РЅРёСЏ РёСЃРїРѕР»СЊР·СѓРµРјС‹С… РєР°С‚Р°Р»РѕРіРѕРІ */
-  SCATALOG_STAND_USERS      ACATALOG.NAME%type := 'РџРѕСЃРµС‚РёС‚РµР»Рё СЃС‚РµРЅРґР°';                  -- РљР°С‚Р°Р»РѕРі РґР»СЏ СѓС‡С‘С‚Р° РїРѕСЃРµС‚РёС‚РµР»РµР№ СЃС‚РµРЅРґР° РІ СЂР°Р·РґРµР»Рµ "РљРѕРЅС‚СЂР°РіРµРЅС‚С‹"
-
-  /* РљРѕРЅСЃС‚Р°РЅС‚С‹ РѕРїРёСЃР°РЅРёСЏ С‚РёРїРѕРІ СЃРѕРѕР±С‰РµРЅРёР№ РѕС‡РµСЂРµРґРё СЃС‚РµРЅРґР° */
-  SMSG_TYPE_NOTIFY          UDO_T_STAND_MSG.TP%type := 'NOTIFY';                        -- РЎРѕРѕР±С‰РµРЅРёРµ С‚РёРїР° "РћРїРѕРІРµС‰РµРЅРёРµ"
-  SMSG_TYPE_RESTS           UDO_T_STAND_MSG.TP%type := 'RESTS';                         -- РЎРѕРѕР±С‰РµРЅРёРµ С‚РёРїР° "РЎРІРµРґРµРЅРёСЏ РѕР± РѕСЃС‚Р°С‚РєР°С…"
-  SMSG_TYPE_REST_PRC        UDO_T_STAND_MSG.TP%type := 'REST_PRC';                      -- РЎРѕРѕР±С‰РµРЅРёРµ С‚РёРїР° "РЎРІРµРґРµРЅРёСЏ РѕР± РѕСЃС‚Р°С‚РєР°С… (% Р·Р°РіСЂСѓР¶РµРЅРЅРѕСЃС‚Рё)"
-  SMSG_TYPE_PRINT           UDO_T_STAND_MSG.TP%type := 'PRINT';                         -- РЎРѕРѕР±С‰РµРЅРёРµ С‚РёРїР° "РћС‡РµСЂРµРґСЊ РїРµС‡Р°С‚Рё"
-
-  /* РљРѕРЅСЃС‚Р°РЅС‚С‹ РѕРїРёСЃР°РЅРёСЏ С‚РёРїРѕРІ РѕРїРѕРІРµС‰РµРЅРёСЏ РґР»СЏ СѓРІРµРґРѕРјРёС‚РµР»СЊРЅС‹С… СЃРѕРѕР±С‰РµРЅРёР№  */
-  SNOTIFY_TYPE_INFO         PKG_STD.TSTRING := 'INFORMATION';                           -- РРЅС„РѕСЂРјР°С†РёСЏ
-  SNOTIFY_TYPE_WARN         PKG_STD.TSTRING := 'WARNING';                               -- РџСЂРµРґСѓРїСЂРµР¶РґРµРЅРёРµ
-  SNOTIFY_TYPE_ERROR        PKG_STD.TSTRING := 'ERROR';                                 -- РћС€РёР±РєР°
-
-  /* РљРѕРЅСЃС‚Р°РЅС‚С‹ РѕРїРёСЃР°РЅРёСЏ С‚РёРїРѕРІ СЃРѕРѕР±С‰РµРЅРёР№ РѕС‡РµСЂРµРґРё СЃС‚РµРЅРґР° */
-  SMSG_STATE_UNDEFINED      UDO_T_STAND_MSG.STS%type := 'UNDEFINED';                    -- РЎРѕСЃС‚РѕСЏРЅРёРµ "РќРµРѕРїСЂРµРґРµР»РЅРѕ"
-  SMSG_STATE_NOT_SENDED     UDO_T_STAND_MSG.STS%type := 'NOT_SENDED';                   -- РЎРѕСЃС‚РѕСЏРЅРёРµ "РќРµРѕС‚РїСЂР°РІР»РµРЅРѕ"
-  SMSG_STATE_NOT_PRINTED    UDO_T_STAND_MSG.STS%type := 'NOT_PRINTED';                  -- РЎРѕСЃС‚РѕСЏРЅРёРµ "РќРµСЂР°СЃРїРµС‡Р°С‚Р°РЅРѕ"
-  SMSG_STATE_SENDED         UDO_T_STAND_MSG.STS%type := 'SENDED';                       -- РЎРѕСЃС‚РѕСЏРЅРёРµ "РћС‚РїСЂР°РІР»РµРЅРѕ"
-  SMSG_STATE_PRINTED        UDO_T_STAND_MSG.STS%type := 'PRINTED';                      -- РЎРѕСЃС‚РѕСЏРЅРёРµ "Р Р°СЃРїРµС‡Р°С‚Р°РЅРѕ"
-
-  /* РљРѕРЅСЃС‚Р°РЅС‚С‹ РѕРїРёСЃР°РЅРёСЏ РїРѕСЂСЏРґРєР° СЃРѕСЂС‚РёСЂРѕРІРєРё СЃРѕРѕР±С‰РµРЅРёР№ РѕС‡РµСЂРµРґРё СЃС‚РµРЅРґР° */
-  NMSG_ORDER_ASC            PKG_STD.TNUMBER := 1;                                       -- РЎРЅР°С‡Р°Р»Р° СЃС‚Р°СЂС‹Рµ
-  NMSG_ORDER_DESC           PKG_STD.TNUMBER := -1;                                      -- CРЅР°С‡Р°Р»Р° РЅРѕРІС‹Рµ
-
-  /* РљРѕРЅСЃС‚Р°РЅС‚С‹ РѕРїРёСЃР°РЅРёСЏ СЃРѕСЃС‚РѕСЏРЅРёСЏ РѕС‚С‡РµС‚Р° РІ РѕС‡РµСЂРµРґРё РїРµС‡Р°С‚Рё */
-  NRPT_QUEUE_STATE_INS      PKG_STD.TNUMBER := 0;                                       -- РџРѕСЃС‚Р°РІР»РµРЅРѕ РІ РѕС‡РµСЂРµРґСЊ
-  NRPT_QUEUE_STATE_RUN      PKG_STD.TNUMBER := 1;                                       -- РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚СЃСЏ
-  NRPT_QUEUE_STATE_OK       PKG_STD.TNUMBER := 2;                                       -- Р—Р°РІРµСЂС€РµРЅРѕ СѓСЃРїРµС€РЅРѕ
-  NRPT_QUEUE_STATE_ERR      PKG_STD.TNUMBER := 3;                                       -- Р—Р°РІРµСЂС€РµРЅРѕ СЃ РѕС€РёР±РєРѕР№
-
-  /* РљРѕРЅСЃС‚Р°РЅС‚С‹ РѕРїРёСЃР°РЅРёСЏ СЃРѕСЃС‚РѕСЏРЅРёСЏ РѕС‚С‡РµС‚Р° РІ РѕС‡РµСЂРµРґРё РїРµС‡Р°С‚Рё */
-  SRPT_QUEUE_STATE_INS      PKG_STD.TSTRING := 'QUEUE_STATE_INS';                       -- РџРѕСЃС‚Р°РІР»РµРЅРѕ РІ РѕС‡РµСЂРµРґСЊ
-  SRPT_QUEUE_STATE_RUN      PKG_STD.TSTRING := 'QUEUE_STATE_RUN';                       -- РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚СЃСЏ
-  SRPT_QUEUE_STATE_OK       PKG_STD.TSTRING := 'QUEUE_STATE_OK';                        -- Р—Р°РІРµСЂС€РµРЅРѕ СѓСЃРїРµС€РЅРѕ
-  SRPT_QUEUE_STATE_ERR      PKG_STD.TSTRING := 'QUEUE_STATE_ERR';                       -- Р—Р°РІРµСЂС€РµРЅРѕ СЃ РѕС€РёР±РєРѕР№
-
-  /* РўРёРїС‹ РґР°РЅРЅС‹С… - РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ СЏС‡РµР№РєРё СЃС‚РµРЅРґР° */
+  /* Типы данных - конфигурация ячейки стенда */
   type TRACK_LINE_CELL_CONF is record
   (
-    NRACK_CELL              STPLCELLS.RN%type,                                          -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЏС‡РµР№РєРё
-    NRACK_LINE              PKG_STD.TREF,                                               -- РќРѕРјРµСЂ СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° РЅР° РєРѕС‚РѕСЂРѕРј РЅР°С…РѕРґРёС‚СЃСЏ С‡РµР№РєР°
-    NRACK_LINE_CELL         PKG_STD.TREF,                                               -- РќРѕРјРµСЂ СЏС‡РµР№РєРё РІ СЏСЂСѓСЃРµ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
-    SPREF                   STPLCELLS.PREF%type,                                        -- РџСЂРµС„РёРєСЃ СЏС‡РµР№РєРё
-    SNUMB                   STPLCELLS.NUMB%type,                                        -- РќРѕРјРµСЂ СЏС‡РµР№РєРё
-    SNAME                   PKG_STD.TSTRING,                                            -- РџРѕР»РЅРѕРµ РЅР°РёРјРµРЅРѕРІР°РЅРёРµ СЏС‡РµР№РєРё
-    NNOMEN                  DICNOMNS.RN%type,                                           -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ С…СЂР°РЅРµРЅРёСЏ
-    SNOMEN                  DICNOMNS.NOMEN_CODE%type,                                   -- РњРЅРµРјРѕРєРѕРґ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ С…СЂР°РЅРµРЅРёСЏ
-    NNOMMODIF               NOMMODIF.RN%type,                                           -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РјРѕРґРёС„РёРєР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ С…СЂР°РЅРµРЅРёСЏ
-    SNOMMODIF               NOMMODIF.MODIF_CODE%type,                                   -- РњРЅРµРјРѕРєРѕРґ РјРѕРґРёС„РёРєР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ С…СЂР°РЅРµРЅРёСЏ
-    NCAPACITY               PKG_STD.TNUMBER,                                            -- Р’РјРµСЃС‚РёРјРѕСЃС‚СЊ СЏС‡РµР№РєРё
-    NSHIP_CNT               PKG_STD.TNUMBER                                             -- РћС‚РіСЂСѓР¶Р°РµРјРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ
+    NRACK_CELL              STPLCELLS.RN%type,                                          -- Регистрационный номер ячейки
+    NRACK_LINE              PKG_STD.TREF,                                               -- Номер яруса стеллажа на котором находится чейка
+    NRACK_LINE_CELL         PKG_STD.TREF,                                               -- Номер ячейки в ярусе стеллажа стенда
+    SPREF                   STPLCELLS.PREF%type,                                        -- Префикс ячейки
+    SNUMB                   STPLCELLS.NUMB%type,                                        -- Номер ячейки
+    SNAME                   PKG_STD.TSTRING,                                            -- Полное наименование ячейки
+    NNOMEN                  DICNOMNS.RN%type,                                           -- Регистрационный номер номенклатуры хранения
+    SNOMEN                  DICNOMNS.NOMEN_CODE%type,                                   -- Мнемокод номенклатуры хранения
+    NNOMMODIF               NOMMODIF.RN%type,                                           -- Регистрационный номер модификации номенклатуры хранения
+    SNOMMODIF               NOMMODIF.MODIF_CODE%type,                                   -- Мнемокод модификации номенклатуры хранения
+    NCAPACITY               PKG_STD.TNUMBER,                                            -- Вместимость ячейки
+    NSHIP_CNT               PKG_STD.TNUMBER                                             -- Отгружаемое количество
   );
-
-  /* РўРёРїС‹ РґР°РЅРЅС‹С… - РєРѕР»Р»РµРєС†РёСЏ РєРѕРЅС„РёРіСѓСЂР°С†РёР№ СЏС‡РµРµРє СЏСЂСѓСЃРѕРІ СЃС‚РµРЅРґР° */
+  
+  /* Типы данных - коллекция конфигураций ячеек ярусов стенда */
   type TRACK_LINE_CELL_CONFS is table of TRACK_LINE_CELL_CONF;
 
-  /* РўРёРїС‹ РґР°РЅРЅС‹С… - РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ СЃС‚РµРЅРґР° */
+  /* Типы данных - конфигурация номенклатуры стенда */
   type TRACK_NOMEN_CONF is record
   (
-    NNOMEN                  DICNOMNS.RN%type,                                           -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ С…СЂР°РЅРµРЅРёСЏ
-    SNOMEN                  DICNOMNS.NOMEN_CODE%type,                                   -- РњРЅРµРјРѕРєРѕРґ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ С…СЂР°РЅРµРЅРёСЏ
-    NNOMMODIF               NOMMODIF.RN%type,                                           -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РјРѕРґРёС„РёРєР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ С…СЂР°РЅРµРЅРёСЏ
-    SNOMMODIF               NOMMODIF.MODIF_CODE%type,                                   -- РњРЅРµРјРѕРєРѕРґ РјРѕРґРёС„РёРєР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ С…СЂР°РЅРµРЅРёСЏ
-    NMAX_QUANT              PKG_STD.TLNUMBER,                                           -- РњР°РєСЃРёРјР°Р»СЊРЅРѕ РІРѕР·РјРѕР¶РЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РЅР° СЃС‚РµРЅРґРµ
-    NMEAS                   DICMUNTS.RN%type,                                           -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЃРЅРѕРІРЅРѕР№ Р•Р РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹
-    SMEAS                   DICMUNTS.MEAS_MNEMO%type                                    -- РњРЅРµРјРѕРєРѕРґ РѕСЃРЅРѕРІРЅРѕР№ Р•Р РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹
+    NNOMEN                  DICNOMNS.RN%type,                                           -- Регистрационный номер номенклатуры хранения
+    SNOMEN                  DICNOMNS.NOMEN_CODE%type,                                   -- Мнемокод номенклатуры хранения
+    NNOMMODIF               NOMMODIF.RN%type,                                           -- Регистрационный номер модификации номенклатуры хранения
+    SNOMMODIF               NOMMODIF.MODIF_CODE%type,                                   -- Мнемокод модификации номенклатуры хранения
+    NMAX_QUANT              PKG_STD.TLNUMBER,                                           -- Максимально возможное количество номенклатуры на стенде
+    NMEAS                   DICMUNTS.RN%type,                                           -- Регистрационный номер основной ЕИ номенклатуры
+    SMEAS                   DICMUNTS.MEAS_MNEMO%type                                    -- Мнемокод основной ЕИ номенклатуры
   );
 
-  /* РўРёРїС‹ РґР°РЅРЅС‹С… - РєРѕР»Р»РµРєС†РёСЏ РєРѕРЅС„РёРіСѓСЂР°С†РёР№ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ СЃС‚РµРЅРґР° */
+  /* Типы данных - коллекция конфигураций номенклатуры стенда */
   type TRACK_NOMEN_CONFS is table of TRACK_NOMEN_CONF;
 
-  /* РўРёРїС‹ РґР°РЅРЅС‹С… - СЃРєР»Р°РґСЃРєРѕР№ РѕСЃС‚Р°С‚РѕРє РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ */
+  /* Типы данных - складской остаток номенклатуры */
   type TNOMEN_REST is record
   (
-    NNOMEN                  DICNOMNS.RN%type,                                           -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РѕСЃС‚Р°С‚РєР°
-    SNOMEN                  DICNOMNS.NOMEN_CODE%type,                                   -- РњРЅРµРјРѕРєРѕРґ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РѕСЃС‚Р°С‚РєР°
-    NNOMMODIF               NOMMODIF.RN%type,                                           -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РјРѕРґРёС„РёРєР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РѕСЃС‚Р°С‚РєР°
-    SNOMMODIF               NOMMODIF.MODIF_CODE%type,                                   -- РњРЅРµРјРѕРєРѕРґ РјРѕРґРёС„РёРєР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РѕСЃС‚Р°С‚РєР°
-    NREST                   STPLGOODSSUPPLY.QUANT%type,                                 -- РћСЃС‚Р°С‚РѕРє РІ РѕРЅСЃРЅРѕРІРЅРѕР№ Р•Р
-    NMEAS                   DICMUNTS.RN%type,                                           -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЃРЅРѕРІРЅРѕР№ Р•Р РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РѕСЃС‚Р°С‚РєР°
-    SMEAS                   DICMUNTS.MEAS_MNEMO%type                                    -- РњРЅРµРјРѕРєРѕРґ РѕСЃРЅРѕРІРЅРѕРµ Р•Р РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РѕСЃС‚Р°С‚РєР°
+    NNOMEN                  DICNOMNS.RN%type,                                           -- Регистрационный номер номенклатуры остатка
+    SNOMEN                  DICNOMNS.NOMEN_CODE%type,                                   -- Мнемокод номенклатуры остатка
+    NNOMMODIF               NOMMODIF.RN%type,                                           -- Регистрационный номер модификации номенклатуры остатка
+    SNOMMODIF               NOMMODIF.MODIF_CODE%type,                                   -- Мнемокод модификации номенклатуры остатка
+    NREST                   STPLGOODSSUPPLY.QUANT%type,                                 -- Остаток в онсновной ЕИ
+    NMEAS                   DICMUNTS.RN%type,                                           -- Регистрационный номер основной ЕИ номенклатуры остатка
+    SMEAS                   DICMUNTS.MEAS_MNEMO%type                                    -- Мнемокод основное ЕИ номенклатуры остатка
   );
-
-  /* РўРёРїС‹ РґР°РЅРЅС‹С… - РєРѕР»Р»РµРєС†РёСЏ СЃРєР»Р°РґСЃРєРёС… РѕСЃС‚Р°С‚РєРѕРІ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ */
+  
+  /* Типы данных - коллекция складских остатков номенклатуры */
   type TNOMEN_RESTS is table of TNOMEN_REST;
-
-  /* РўРёРїС‹ РґР°РЅРЅС‹С… - СЃРєР»Р°РґСЃРєРѕР№ РѕСЃС‚Р°С‚РѕРє СЏС‡РµР№РєРё СЃС‚РµР»Р»Р°Р¶Р° (РјРµСЃС‚Р° С…СЂР°РЅРµРЅРёСЏ) */
+  
+  /* Типы данных - складской остаток ячейки стеллажа (места хранения) */
   type TRACK_LINE_CELL_REST is record
   (
-    NRACK_CELL              STPLCELLS.RN%type,                                          -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЏС‡РµР№РєРё
-    SRACK_CELL_PREF         STPLCELLS.PREF%type,                                        -- РџСЂРµС„РёРєСЃ СЏС‡РµР№РєРё
-    SRACK_CELL_NUMB         STPLCELLS.NUMB%type,                                        -- РќРѕРјРµСЂ СЏС‡РµР№РєРё
-    SRACK_CELL_NAME         PKG_STD.TSTRING,                                            -- РџРѕР»РЅРѕРµ РЅР°РёРјРµРЅРѕРІР°РЅРёРµ СЏС‡РµР№РєРё
-    NRACK_LINE              PKG_STD.TREF,                                               -- РќРѕРјРµСЂ СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° РЅР° РєРѕС‚РѕСЂРѕРј РЅР°С…РѕРґРёС‚СЃСЏ С‡РµР№РєР°
-    NRACK_LINE_CELL         PKG_STD.TREF,                                               -- РќРѕРјРµСЂ СЏС‡РµР№РєРё РІ СЏСЂСѓСЃРµ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
-    BEMPTY                  boolean,                                                    -- Р¤Р»Р°Рі РїСѓСЃС‚РѕР№ СЏС‡РµР№РєРё
-    NOMEN_RESTS             TNOMEN_RESTS := TNOMEN_RESTS()                              -- РћСЃС‚Р°С‚РєРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ
+    NRACK_CELL              STPLCELLS.RN%type,                                          -- Регистрационный номер ячейки
+    SRACK_CELL_PREF         STPLCELLS.PREF%type,                                        -- Префикс ячейки
+    SRACK_CELL_NUMB         STPLCELLS.NUMB%type,                                        -- Номер ячейки
+    SRACK_CELL_NAME         PKG_STD.TSTRING,                                            -- Полное наименование ячейки
+    NRACK_LINE              PKG_STD.TREF,                                               -- Номер яруса стеллажа на котором находится чейка
+    NRACK_LINE_CELL         PKG_STD.TREF,                                               -- Номер ячейки в ярусе стеллажа стенда
+    BEMPTY                  boolean,                                                    -- Флаг пустой ячейки
+    NOMEN_RESTS             TNOMEN_RESTS := TNOMEN_RESTS()                              -- Остатки номенклатур
   );
-
-  /* РўРёРїС‹ РґР°РЅРЅС‹С… - РєРѕР»Р»РµРєС†РёСЏ СЃРєР»Р°РґСЃРєРёС… РѕСЃС‚Р°С‚РєРѕРІ СЏС‡РµРµРє СЃС‚РµР»Р»Р°Р¶Р° (РјРµСЃС‚Р° С…СЂР°РЅРµРЅРёСЏ) */
+  
+  /* Типы данных - коллекция складских остатков ячеек стеллажа (места хранения) */
   type TRACK_LINE_CELL_RESTS is table of TRACK_LINE_CELL_REST;
-
-  /* РўРёРїС‹ РґР°РЅРЅС‹С… - СЃРєР»Р°РґСЃРєРёРµ РѕСЃС‚Р°С‚РєРё СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° */
+  
+  /* Типы данных - складские остатки яруса стеллажа */
   type TRACK_LINE_REST is record
   (
-    NRACK_LINE              PKG_STD.TREF,                                               -- РќРѕРјРµСЂ СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р°
-    NRACK_LINE_CELLS_CNT    PKG_STD.TREF,                                               -- РљРѕР»РёС‡РµСЃС‚РІРѕ СЏС‡РµРµРє СЏСЂСѓСЃР°
-    BEMPTY                  boolean,                                                    -- Р¤Р»Р°Рі РїСѓСЃС‚РѕРіРѕ СЏСЂСѓСЃР°
-    RACK_LINE_CELL_RESTS    TRACK_LINE_CELL_RESTS := TRACK_LINE_CELL_RESTS()            -- РћСЃС‚Р°С‚РєРё РІ РјРµСЃС‚Р°С… С…СЂР°РЅРµРЅРёСЏ СЏСЂСѓСЃР°
+    NRACK_LINE              PKG_STD.TREF,                                               -- Номер яруса стеллажа
+    NRACK_LINE_CELLS_CNT    PKG_STD.TREF,                                               -- Количество ячеек яруса
+    BEMPTY                  boolean,                                                    -- Флаг пустого яруса
+    RACK_LINE_CELL_RESTS    TRACK_LINE_CELL_RESTS := TRACK_LINE_CELL_RESTS()            -- Остатки в местах хранения яруса
   );
-
-  /* РўРёРїС‹ РґР°РЅРЅС‹С… - РєРѕР»Р»РµРєС†РёСЏ СЃРєР»Р°РґСЃРєРёС… РѕСЃС‚Р°С‚РєРѕРІ СЏСЂСѓСЃРѕРІ СЃС‚РµР»Р»Р°Р¶Р° */
+  
+  /* Типы данных - коллекция складских остатков ярусов стеллажа */
   type TRACK_LINE_RESTS is table of TRACK_LINE_REST;
-
-  /* РўРёРїС‹ РґР°РЅРЅС‹С… - СЃРєР»Р°РґСЃРєРёРµ РѕСЃС‚Р°С‚РєРё СЃС‚РµР»Р»Р°Р¶Р° */
+  
+  /* Типы данных - складские остатки стеллажа */
   type TRACK_REST is record
   (
-    NRACK                   STPLRACKS.RN%type,                                          -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃС‚РµР»Р»Р°Р¶Р°
-    NSTORE                  AZSAZSLISTMT.RN%type,                                       -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃРєР»Р°РґР° СЃС‚РµР»Р»Р°Р¶Р°
-    SSTORE                  AZSAZSLISTMT.AZS_NUMBER%type,                               -- РњРЅРµРјРѕРєРѕРґ СЃРєР»Р°РґР° СЃС‚РµР»Р»Р°Р¶Р°
-    SRACK_PREF              STPLRACKS.PREF%type,                                        -- РџСЂРµС„РёРєСЃ СЃС‚РµР»Р»Р°Р¶Р°
-    SRACK_NUMB              STPLRACKS.NUMB%type,                                        -- РќРѕРјРµСЂ СЃС‚РµР»Р»Р°Р¶Р°
-    SRACK_NAME              PKG_STD.TSTRING,                                            -- РџРѕР»РЅРѕРµ РЅР°РёРјРµРЅРѕРІР°РЅРёРµ СЃС‚РµР»Р»Р°Р¶Р°
-    NRACK_LINES_CNT         PKG_STD.TREF,                                               -- РљРѕР»РёС‡РµСЃС‚РІРѕ СЏСЂСѓСЃРѕРІ СЃС‚РµР»Р»Р°Р¶Р°
-    BEMPTY                  boolean,                                                    -- Р¤Р»Р°Рі РїСѓСЃС‚РѕРіРѕ СЃС‚РµР»Р»Р°Р¶Р°
-    RACK_LINE_RESTS         TRACK_LINE_RESTS := TRACK_LINE_RESTS()                      -- РћСЃС‚Р°С‚РєРё РІ СЏСЂСѓСЃР°С… СЃС‚РµР»Р»Р°Р¶Р°
+    NRACK                   STPLRACKS.RN%type,                                          -- Регистрационный номер стеллажа
+    NSTORE                  AZSAZSLISTMT.RN%type,                                       -- Регистрационный номер склада стеллажа
+    SSTORE                  AZSAZSLISTMT.AZS_NUMBER%type,                               -- Мнемокод склада стеллажа
+    SRACK_PREF              STPLRACKS.PREF%type,                                        -- Префикс стеллажа
+    SRACK_NUMB              STPLRACKS.NUMB%type,                                        -- Номер стеллажа
+    SRACK_NAME              PKG_STD.TSTRING,                                            -- Полное наименование стеллажа
+    NRACK_LINES_CNT         PKG_STD.TREF,                                               -- Количество ярусов стеллажа
+    BEMPTY                  boolean,                                                    -- Флаг пустого стеллажа        
+    RACK_LINE_RESTS         TRACK_LINE_RESTS := TRACK_LINE_RESTS()                      -- Остатки в ярусах стеллажа
   );
-
-  /* РўРёРї РґР°РЅРЅС‹С… - РёСЃС‚РѕСЂРёСЏ Р·Р°РіСЂСѓР¶РµРЅРЅРѕСЃС‚Рё (% РѕСЃС‚Р°С‚РєР° РІРѕ РІСЂРµРјРµРЅРё) СЃС‚РµРЅРґР° */
+  
+  /* Тип данных - история загруженности (% остатка во времени) стенда */
   type TRACK_REST_PRC_HIST is record
   (
-    DTS                     date,                                                       -- Р”Р°С‚Р° РѕСЃС‚Р°С‚РєР°
-    STS                     PKG_STD.TSTRING,                                            -- РЎС‚СЂРѕРєРѕРІРѕРµ РїСЂРµРґСЃС‚Р°РІР»РµРЅРёРµ РґР°С‚С‹ РѕСЃС‚Р°С‚РєР° (Р”Р”.РњРњ.Р“Р“Р“Р“ Р§Р§24:РњРњ:РЎРЎ)
-    NREST_PRC               PKG_STD.TLNUMBER                                            -- % Р·Р°РіСЂСѓР¶РµРЅРЅРѕСЃС‚Рё СЃС‚РµРЅРґР° РЅР° РґР°С‚Сѓ
+    DTS                     date,                                                       -- Дата остатка
+    STS                     PKG_STD.TSTRING,                                            -- Строковое представление даты остатка (ДД.ММ.ГГГГ ЧЧ24:ММ:СС)
+    NREST_PRC               PKG_STD.TLNUMBER                                            -- % загруженности стенда на дату
   );
-
-  /* РўРёРї РґР°РЅРЅС‹С… - Р·Р°РїРёСЃСЊ РёСЃС‚РѕСЂРёРё РѕСЃС‚Р°С‚РєРѕРІ СЃС‚РµРЅРґР° */
+  
+  /* Тип данных - запись истории остатков стенда */
   type TRACK_REST_PRC_HISTS is table of TRACK_REST_PRC_HIST;
-
-  /* РўРёРїС‹ РґР°РЅРЅС‹С… - РїРѕСЃРµС‚РёС‚РµР»СЊ СЃС‚РµРЅРґР° */
+  
+  /* Типы данных - посетитель стенда */
   type TSTAND_USER is record
   (
-    NAGENT                  AGNLIST.RN%type,                                            -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РєРѕРЅС‚СЂР°РіРµРЅС‚Р°-РїРѕСЃРµС‚РёС‚РµР»СЏ
-    SAGENT                  AGNLIST.AGNABBR%type,                                       -- РњРЅРµРјРѕРєРѕРґ РєРѕРЅС‚СЂР°РіРµРЅС‚Р°-РїРѕСЃРµС‚РёС‚РµР»СЏ
-    SAGENT_NAME             AGNLIST.AGNNAME%type                                        -- РќР°РёРјРµРЅРѕРІР°РЅРёРµ РєРѕРЅС‚СЂР°РіРµРЅС‚Р°-РїРѕСЃРµС‚РёС‚РµР»СЏ
+    NAGENT                  AGNLIST.RN%type,                                            -- Регистрационный номер контрагента-посетителя
+    SAGENT                  AGNLIST.AGNABBR%type,                                       -- Мнемокод контрагента-посетителя
+    SAGENT_NAME             AGNLIST.AGNNAME%type                                        -- Наименование контрагента-посетителя
   );
-
-  /* РўРёРїС‹ РґР°РЅРЅС‹С… - СЃРѕРѕР±С‰РµРЅРёРµ */
+  
+  /* Типы данных - сообщение */
   type TMESSAGE is record
   (
-    NRN                     UDO_T_STAND_MSG.RN%type,                                    -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃРѕРѕР±С‰РµРЅРёСЏ
-    DTS                     UDO_T_STAND_MSG.TS%type,                                    -- Р”Р°С‚Р° СЃРѕРѕР±С‰РµРЅРёСЏ
-    STS                     PKG_STD.TSTRING,                                            -- РЎС‚СЂРѕРєРѕРІРѕРµ РїСЂРµРґСЃС‚Р°РІР»РµРЅРёРµ РґР°С‚С‹ СЃРѕРѕР±С‰РµРЅРёСЏ (Р”Р”.РњРњ.Р“Р“Р“Р“ Р§Р§24:РњРњ:РЎРЎ)
-    STP                     UDO_T_STAND_MSG.TP%type,                                    -- РўРёРї СЃРѕРѕР±С‰РµРЅРёСЏ
-    SMSG                    UDO_T_STAND_MSG.MSG%type,                                   -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ
-    SSTS                    UDO_T_STAND_MSG.STS%type                                    -- РЎРѕСЃС‚РѕСЏРЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ
+    NRN                     UDO_T_STAND_MSG.RN%type,                                    -- Регистрационный номер сообщения
+    DTS                     UDO_T_STAND_MSG.TS%type,                                    -- Дата сообщения
+    STS                     PKG_STD.TSTRING,                                            -- Строковое представление даты сообщения (ДД.ММ.ГГГГ ЧЧ24:ММ:СС)
+    STP                     UDO_T_STAND_MSG.TP%type,                                    -- Тип сообщения
+    SMSG                    UDO_T_STAND_MSG.MSG%type,                                   -- Текст сообщения
+    SSTS                    UDO_T_STAND_MSG.STS%type                                    -- Состояние сообщения
   );
-
-  /* РўРёРїС‹ РґР°РЅРЅС‹С… - РєРѕР»Р»РµРєС†РёСЏ СЃРѕРѕР±С‰РµРЅРёР№ */
-  type TMESSAGES is table of TMESSAGE;
-
-  /* РўРёРїС‹ РґР°РЅРЅС‹С… - СЃРѕСЃС‚РѕСЏРЅРёРµ СЃС‚РµРЅРґР° */
+  
+  /* Типы данных - коллекция сообщений */
+  type TMESSAGES is table of TMESSAGE;  
+  
+  /* Типы данных - состояние стенда */  
   type TSTAND_STATE is record
   (
-    NRESTS_LIMIT_PRC_MIN    PKG_STD.TLNUMBER,                                           -- РњРёРЅРёРјР°Р»СЊРЅС‹Р№ РєСЂРёС‚РёС‡РµСЃРєРёР№ РѕСЃС‚Р°С‚РѕРє РїРѕ СЃС‚РµРЅРґСѓ (РІ %)
-    NRESTS_LIMIT_PRC_MDL    PKG_STD.TLNUMBER,                                           -- РЎСЂРµРґРЅРёР№ РєСЂРёС‚РёС‡РµСЃРєРёР№ РѕСЃС‚Р°С‚РѕРє РїРѕ СЃС‚РµРЅРґСѓ (РІ %)
-    NRESTS_PRC_CURR         PKG_STD.TLNUMBER,                                           -- РўРµРєСѓС‰Р°СЏ Р·Р°РіСЂСѓР¶РµРЅРЅРѕСЃС‚СЊ СЃС‚РµРЅРґР° (%)
-    NOMEN_CONFS             TRACK_NOMEN_CONFS,                                          -- РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ СЃС‚РµРЅРґР°
-    NOMEN_RESTS             TNOMEN_RESTS,                                               -- РћСЃС‚Р°С‚РєРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ СЃС‚РµРЅРґР°
-    RACK_REST_PRC_HISTS     TRACK_REST_PRC_HISTS,                                       -- РСЃС‚РѕСЂРёСЏ % Р·Р°РіСЂСѓР¶РµРЅРЅРѕСЃС‚Рё СЃС‚РµРЅРґР°
-    RACK_REST               TRACK_REST,                                                 -- РћСЃС‚Р°С‚РєРё РїРѕ РјРµСЃС‚Р°Рј С…СЂР°РЅРµРЅРёСЏ СЃС‚РµРЅРґР°
-    MESSAGES                TMESSAGES                                                   -- РЎРѕРѕР±С‰РµРЅРёСЏ СЃС‚РµРЅРґР°
+    NRESTS_LIMIT_PRC_MIN    PKG_STD.TLNUMBER,                                           -- Минимальный критический остаток по стенду (в %)  
+    NRESTS_LIMIT_PRC_MDL    PKG_STD.TLNUMBER,                                           -- Средний критический остаток по стенду (в %)  
+    NRESTS_PRC_CURR         PKG_STD.TLNUMBER,                                           -- Текущая загруженность стенда (%)
+    NOMEN_CONFS             TRACK_NOMEN_CONFS,                                          -- Конфигурация номенклатур стенда
+    NOMEN_RESTS             TNOMEN_RESTS,                                               -- Остатки номенклатур стенда
+    RACK_REST_PRC_HISTS     TRACK_REST_PRC_HISTS,                                       -- История % загруженности стенда
+    RACK_REST               TRACK_REST,                                                 -- Остатки по местам хранения стенда    
+    MESSAGES                TMESSAGES                                                   -- Сообщения стенда
   );
-
-  /* РўРёРїС‹ РґР°РЅРЅС‹С… - СЃРѕСЃС‚РѕСЏРЅРёРµ РїРѕР·РёС†РёРё РѕС‡РµСЂРµРґРё РїРµС‡Р°С‚Рё РѕС‚С‡РµС‚РѕРІ */
+  
+  /* Типы данных - состояние позиции очереди печати отчетов */
   type TRPT_QUEUE_STATE is record
   (
-    NRN                     RPTPRTQUEUE.RN%type,                                        -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РїРѕР·РёС†РёРё РѕС‡РµСЂРµРґРё
-    SSTATE                  PKG_STD.TSTRING,                                            -- РЎРѕСЃС‚РѕСЏРЅРёРµ (СЃРј. РєРѕРЅСЃС‚Р°РЅС‚С‹ SRPT_QUEUE_STATE_*)
-    SERR                    RPTPRTQUEUE.ERROR_TEXT%type,                                -- РЎРѕРѕР±С‰РµРЅРёРµ РѕР± РѕС€РёР±РєРµ (РµСЃР»Рё Р±С‹Р»Р°)
-    SFILE_NAME              PKG_STD.TSTRING,                                            -- РРјСЏ С„Р°Р№Р»Р° РѕС‚С‡РµС‚Р°
-    SURL                    PKG_STD.TSTRING                                             -- URL РґР»СЏ РІС‹РіСЂСѓР·РєРё РіРѕС‚РѕРІРѕРіРѕ РѕС‚С‡РµС‚Р°
+    NRN                     RPTPRTQUEUE.RN%type,                                        -- Регистрационный номер позиции очереди
+    SSTATE                  PKG_STD.TSTRING,                                            -- Состояние (см. константы SRPT_QUEUE_STATE_*)
+    SERR                    RPTPRTQUEUE.ERROR_TEXT%type,                                -- Сообщение об ошибке (если была)
+    SFILE_NAME              PKG_STD.TSTRING,                                            -- Имя файла отчета
+    SURL                    PKG_STD.TSTRING                                             -- URL для выгрузки готового отчета
   );
-
-  /* Р‘Р°Р·РѕРІРѕРµ РґРѕР±Р°РІР»РµРЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ РІ РѕС‡РµСЂРµРґСЊ */
+  
+  /* Базовое добавление сообщения в очередь */
   procedure MSG_BASE_INSERT
   (
-    STP                     varchar2,   -- РўРёРї СЃРѕРѕР±С‰РµРЅРёСЏ
-    SMSG                    varchar2,   -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ
-    NRN                     out number  -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РґРѕР±Р°РІР»РµРЅРЅРѕРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ
+    STP                     varchar2,   -- Тип сообщения
+    SMSG                    varchar2,   -- Текст сообщения
+    NRN                     out number  -- Регистрационный номер добавленного сообщения
   );
-
-  /* Р‘Р°Р·РѕРІРѕРµ СѓРґР°Р»РµРЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ РёР· РѕС‡РµСЂРµРґРё */
+  
+  /* Базовое удаление сообщения из очереди */
   procedure MSG_BASE_DELETE
   (
-    NRN                     number      -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃРѕРѕР±С‰РµРЅРёСЏ
+    NRN                     number      -- Регистрационный номер сообщения
   );
-
-  /* Р‘Р°Р·РѕРІР°СЏ СѓСЃС‚Р°РЅРѕРІРєР° СЃРѕСЃС‚РѕСЏРЅРёСЏ СЃРѕРѕР±С‰РµРЅРёСЏ РѕС‡РµСЂРµРґРё */
+  
+  /* Базовая установка состояния сообщения очереди */
   procedure MSG_BASE_SET_STATE
   (
-    NRN                     number,     -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃРѕРѕР±С‰РµРЅРёСЏ
-    SSTS                    varchar2    -- РЎРѕСЃС‚РѕСЏРЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ (СЃРј. РєРѕРЅСЃС‚Р°РЅС‚С‹ SMSG_STATE_*)
+    NRN                     number,     -- Регистрационный номер сообщения
+    SSTS                    varchar2    -- Состояние сообщения (см. константы SMSG_STATE_*)
   );
-
-  /* Р”РѕР±Р°РІР»РµРЅРёРµ РІ РѕС‡РµСЂРµРґСЊ СЃРѕРѕР±С‰РµРЅРёСЏ С‚РёРїР° "РћРїРѕРІРµС‰РµРЅРёРµ" */
+  
+  /* Добавление в очередь сообщения типа "Оповещение" */
   procedure MSG_INSERT_NOTIFY
   (
-    SMSG                    varchar2,                     -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ
-    SNOTIFY_TYPE            varchar2 := SNOTIFY_TYPE_INFO -- РўРёРї РѕРїРѕРІРµС‰РµРЅРёСЏ (СЃРј. РєРѕРЅСЃС‚Р°РЅС‚С‹ SNOTIFY_TYPE_*)
-  );
-
-  /* Р”РѕР±Р°РІР»РµРЅРёРµ РІ РѕС‡РµСЂРµРґСЊ СЃРѕРѕР±С‰РµРЅРёСЏ С‚РёРїР° "РЎРІРµРґРµРЅРёСЏ РѕР± РѕСЃС‚Р°С‚РєР°С…" */
+    SMSG                    varchar2,                     -- Текст сообщения
+    SNOTIFY_TYPE            varchar2 := SNOTIFY_TYPE_INFO -- Тип оповещения (см. константы SNOTIFY_TYPE_*)
+  );  
+  
+  /* Добавление в очередь сообщения типа "Сведения об остатках" */
   procedure MSG_INSERT_RESTS
   (
-    SMSG                    varchar2    -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ
+    SMSG                    varchar2    -- Текст сообщения
   );
 
-    /* Р”РѕР±Р°РІР»РµРЅРёРµ РІ РѕС‡РµСЂРµРґСЊ СЃРѕРѕР±С‰РµРЅРёСЏ С‚РёРїР° "РЎРІРµРґРµРЅРёСЏ РѕР± РѕСЃС‚Р°С‚РєР°С… (% Р·Р°РіСЂСѓР¶РµРЅРЅРѕСЃС‚Рё)" */
+    /* Добавление в очередь сообщения типа "Сведения об остатках (% загруженности)" */
   procedure MSG_INSERT_REST_PRC
   (
-    SMSG                    varchar2    -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ
+    SMSG                    varchar2    -- Текст сообщения
   );
-
-  /* Р”РѕР±Р°РІР»РµРЅРёРµ РІ РѕС‡РµСЂРµРґСЊ СЃРѕРѕР±С‰РµРЅРёСЏ С‚РёРїР° "РћС‡РµСЂРµРґСЊ РїРµС‡Р°С‚Рё" */
+  
+  /* Добавление в очередь сообщения типа "Очередь печати" */
   procedure MSG_INSERT_PRINT
   (
-    SMSG                    varchar2    -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ
+    SMSG                    varchar2    -- Текст сообщения
   );
-
-  /* Р”РѕР±Р°РІР»РµРЅРёРµ РІ РѕС‡РµСЂРµРґСЊ СЃРѕРѕР±С‰РµРЅРёСЏ */
+  
+  /* Добавление в очередь сообщения */
   procedure MSG_INSERT
   (
-    STP                     varchar2,                     -- РўРёРї СЃРѕРѕР±С‰РµРЅРёСЏ
-    SMSG                    varchar2,                     -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ
-    SNOTIFY_TYPE            varchar2 := SNOTIFY_TYPE_INFO -- РўРёРї РѕРїРѕРІРµС‰РµРЅРёСЏ (СЃРј. РєРѕРЅСЃС‚Р°РЅС‚С‹ SNOTIFY_TYPE_*)
+    STP                     varchar2,                     -- Тип сообщения
+    SMSG                    varchar2,                     -- Текст сообщения
+    SNOTIFY_TYPE            varchar2 := SNOTIFY_TYPE_INFO -- Тип оповещения (см. константы SNOTIFY_TYPE_*)
   );
-
-  /* РЈРґР°Р»РµРЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ РёР· РѕС‡РµСЂРµРґРё */
+  
+  /* Удаление сообщения из очереди */
   procedure MSG_DELETE
   (
-    NRN                     number      -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃРѕРѕР±С‰РµРЅРёСЏ
+    NRN                     number      -- Регистрационный номер сообщения
   );
-
-  /* РЈСЃС‚Р°РЅРѕРІРєР° СЃРѕСЃС‚РѕСЏРЅРёСЏ СЃРѕРѕР±С‰РµРЅРёСЏ РѕС‡РµСЂРµРґРё */
+  
+  /* Установка состояния сообщения очереди */
   procedure MSG_SET_STATE
   (
-    NRN                     number,     -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃРѕРѕР±С‰РµРЅРёСЏ
-    SSTS                    varchar2    -- РЎРѕСЃС‚РѕСЏРЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ (СЃРј. РєРѕРЅСЃС‚Р°РЅС‚С‹ SMSG_STATE_*)
+    NRN                     number,     -- Регистрационный номер сообщения
+    SSTS                    varchar2    -- Состояние сообщения (см. константы SMSG_STATE_*)
   );
-
-  /* РЎС‡РёС‚С‹РІР°РЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ РёР· РѕС‡РµСЂРµРґРё */
+  
+  /* Считывание сообщения из очереди */
   function MSG_GET
   (
-    NRN                     number,     -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃРѕРѕР±С‰РµРЅРёСЏ
-    NSMART                  number := 0 -- РџСЂРёР·РЅР°Рє РІС‹РґР°С‡Рё СЃРѕРѕР±С‰РµРЅРёСЏ РѕР± РѕС€РёР±РєРµ (0 - РІС‹РґР°РІР°С‚СЊ, 1 - РЅРµ РІС‹РґР°РІР°С‚СЊ)
+    NRN                     number,     -- Регистрационный номер сообщения
+    NSMART                  number := 0 -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
   ) return UDO_T_STAND_MSG%rowtype;
-
-  /* РЎС‡РёС‚С‹РІР°РЅРёРµ РЅРѕРІС‹С… СЃРѕРѕР±С‰РµРЅРёР№ РёР· РѕС‡РµСЂРµРґРё */
+  
+  /* Считывание новых сообщений из очереди */
   function MSG_GET_LIST
   (
-    DFROM                   date := null,            -- Р”Р°С‚Р° СЃ РєРѕС‚РѕСЂРѕР№ РЅРµРѕР±С…РѕРґРёРјРѕ РЅР°С‡Р°С‚СЊ СЃРїРёСЃРѕРє (null - РЅРµ СѓС‡РёС‚С‹РІР°С‚СЊ)
-    STP                     varchar2 := null,        -- РўРёРї СЃРѕРѕР±С‰РµРЅРёР№ (null - РІСЃРµ, СЃРј. РєРѕРЅСЃС‚Р°РЅС‚С‹ SMSG_TYPE_*)
-    SSTS                    varchar2 := null,        -- РЎРѕСЃС‚РѕСЏРЅРёРµ СЃРѕРѕР±С‰РµРЅРёР№ (null - Р»СЋР±РѕРµ, СЃРј. РєРѕРЅСЃС‚Р°РЅС‚С‹ SMSG_STATE_*)
-    NLIMIT                  number := null,          -- РњР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ (null - РІСЃРµ)
-    NORDER                  number := NMSG_ORDER_ASC -- РџРѕСЂСЏРґРѕРє СЃРѕСЂС‚РёСЂРѕРІРєРё (СЃРј. РєРѕРЅСЃС‚РЅР°С‚С‹ SMSG_ORDER_*)
-  ) return TMESSAGES;
-
-  /* Р¤РѕСЂРјРёСЂРѕРІР°РЅРёРµ РЅР°РёРјРµРЅРѕРІР°РЅРёСЏ СЃС‚РµР»Р»Р°Р¶Р° (РїСЂРµС„РёРєСЃ-РЅРѕРјРµСЂ) */
-  function RACK_BUILD_NAME
+    DFROM                   date := null,            -- Дата с которой необходимо начать список (null - не учитывать)
+    STP                     varchar2 := null,        -- Тип сообщений (null - все, см. константы SMSG_TYPE_*)
+    SSTS                    varchar2 := null,        -- Состояние сообщений (null - любое, см. константы SMSG_STATE_*)
+    NLIMIT                  number := null,          -- Максимальное количество (null - все)
+    NORDER                  number := NMSG_ORDER_ASC -- Порядок сортировки (см. констнаты SMSG_ORDER_*)
+  ) return TMESSAGES;  
+  
+  /* Формирование наименования стеллажа (префикс-номер) */
+  function RACK_BUILD_NAME 
   (
-    SPREF                   varchar2,   -- РџСЂРµС„РёРєСЃ СЃС‚РµР»Р»Р°Р¶Р°
-    SNUMB                   varchar2    -- РќРѕРјРµСЂ СЃС‚РµР»Р»Р°Р¶Р°
+    SPREF                   varchar2,   -- Префикс стеллажа
+    SNUMB                   varchar2    -- Номер стеллажа
   ) return varchar2;
-
-  /* Р¤РѕСЂРјРёСЂРѕРІР°РЅРёРµ РїСЂРµС„РёРєСЃР° СЏС‡РµР№РєРё СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° СЃРєР»Р°РґР° */
+  
+  /* Формирование префикса ячейки яруса стеллажа склада */
   function RACK_LINE_CELL_BUILD_PREF
   (
-    NRACK_LINE              number,     -- РќРѕРјРµСЂ СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° РІ РєРѕС‚РѕСЂРѕРј РЅР°С…РѕРґРёС‚СЃСЏ СЏС‡РµР№РєР°
-    SPREF_TMPL              varchar2    -- РЁР°Р±Р»РѕРЅ РїСЂРµС„РёРєСЃР°
+    NRACK_LINE              number,     -- Номер яруса стеллажа в котором находится ячейка               
+    SPREF_TMPL              varchar2    -- Шаблон префикса
   ) return varchar2;
 
-  /* Р¤РѕСЂРјРёСЂРѕРІР°РЅРёРµ РЅРѕРјРµСЂР° СЏС‡РµР№РєРё СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° СЃРєР»Р°РґР° */
+  /* Формирование номера ячейки яруса стеллажа склада */
   function RACK_LINE_CELL_BUILD_NUMB
   (
-    NRACK_LINE_CELL         number,     -- РќРѕРјРµСЂ СЏС‡РµР№РєРё РІ СЏСЂСѓСЃРµ СЃС‚РµР»Р»Р°Р¶Р°
-    SNUMB_TMPL              varchar2    -- РЁР°Р±Р»РѕРЅ РЅРѕРјРµСЂР°
+    NRACK_LINE_CELL         number,     -- Номер ячейки в ярусе стеллажа
+    SNUMB_TMPL              varchar2    -- Шаблон номера
   ) return varchar2;
-
-  /* Р¤РѕСЂРјРёСЂРѕРІР°РЅРёСЏ РїРѕР»РЅРѕРіРѕ РёРјРµРЅРё (РїСЂРµС„РёРєСЃ-РЅРѕРјРµСЂ) СЏС‡РµР№РєРё СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° СЃРєР»Р°РґР° (РїРѕ РїСЂРµС„РёРєСЃСѓ Рё РЅРѕРјРµСЂСѓ)*/
+  
+  /* Формирования полного имени (префикс-номер) ячейки яруса стеллажа склада (по префиксу и номеру)*/
   function RACK_LINE_CELL_BUILD_NAME
   (
-    SPREF                   varchar2,   -- РџСЂРµС„РёРєСЃ СЏС‡РµР№РєРё
-    SNUMB                   varchar2    -- РќРѕРјРµСЂ СЏС‡РµР№РєРё
-  ) return varchar2;
-
-  /* Р¤РѕСЂРјРёСЂРѕРІР°РЅРёСЏ РїРѕР»РЅРѕРіРѕ РёРјРµРЅРё (РїСЂРµС„РёРєСЃ-РЅРѕРјРµСЂ) СЏС‡РµР№РєРё СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° СЃРєР»Р°РґР° (РїРѕ РєРѕРѕСЂРґРёРЅР°С‚Р°Рј)*/
+    SPREF                   varchar2,   -- Префикс ячейки
+    SNUMB                   varchar2    -- Номер ячейки
+  ) return varchar2;  
+  
+  /* Формирования полного имени (префикс-номер) ячейки яруса стеллажа склада (по координатам)*/
   function RACK_LINE_CELL_BUILD_NAME
   (
-    NRACK_LINE              number,     -- РќРѕРјРµСЂ СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° РІ РєРѕС‚РѕСЂРѕРј РЅР°С…РѕРґРёС‚СЃСЏ СЏС‡РµР№РєР°
-    NRACK_LINE_CELL         number,     -- РќРѕРјРµСЂ СЏС‡РµР№РєРё РІ СЏСЂСѓСЃРµ СЃС‚РµР»Р»Р°Р¶Р°
-    SPREF_TMPL              varchar2,   -- РЁР°Р±Р»РѕРЅ РїСЂРµС„РёРєСЃР°
-    SNUMB_TMPL              varchar2    -- РЁР°Р±Р»РѕРЅ РЅРѕРјРµСЂР°
+    NRACK_LINE              number,     -- Номер яруса стеллажа в котором находится ячейка
+    NRACK_LINE_CELL         number,     -- Номер ячейки в ярусе стеллажа
+    SPREF_TMPL              varchar2,   -- Шаблон префикса    
+    SNUMB_TMPL              varchar2    -- Шаблон номера
   ) return varchar2;
-
-  /* РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РєРѕРЅС„РёРіСѓСЂР°С†РёРё СЏС‡РµРµРє СЃС‚РµРЅРґР° */
+  
+  /* Инициализация конфигурации ячеек стенда */
   procedure STAND_INIT_RACK_LINE_CELL_CONF
   (
-    NCOMPANY                number,     -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    SSTORE                  varchar2    -- РњРЅРµРјРѕРєРѕРґ СЃРєР»Р°РґР° СЃС‚РµРЅРґР°
+    NCOMPANY                number,     -- Регистрационный номер организации 
+    SSTORE                  varchar2    -- Мнемокод склада стенда
   );
-
-  /* РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РєРѕРЅС„РёРіСѓСЂР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ СЃС‚РµРЅРґР° */
+  
+  /* Инициализация конфигурации номенклатур стенда */
   procedure STAND_INIT_RACK_NOMEN_CONF;
 
-  /* РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РєРѕРЅС„РёРіСѓСЂР°С†РёРё СЃС‚РµРЅРґР° */
+  /* Инициализация конфигурации стенда */
   procedure STAND_INIT_RACK_CONF
   (
-    NCOMPANY                number,     -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    SSTORE                  varchar2    -- РњРЅРµРјРѕРєРѕРґ СЃРєР»Р°РґР° СЃС‚РµРЅРґР°
+    NCOMPANY                number,     -- Регистрационный номер организации 
+    SSTORE                  varchar2    -- Мнемокод склада стенда
   );
-
-  /* РџРѕР»СѓС‡РµРЅРёРµ РєРѕРЅС„РёРіСѓСЂР°С†РёРё СЏС‡РµР№РєРё СЃС‚РµРЅРґР° */
+  
+  /* Получение конфигурации ячейки стенда */
   function STAND_GET_RACK_LINE_CELL_CONF
   (
-    NRACK_LINE              number,     -- РќРѕРјРµСЂ СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
-    NRACK_LINE_CELL         number      -- РќРѕРјРµСЂ СЏС‡РµР№РєРё РІ СЏСЂСѓСЃРµ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
+    NRACK_LINE              number,     -- Номер яруса стеллажа стенда
+    NRACK_LINE_CELL         number      -- Номер ячейки в ярусе стеллажа стенда
   ) return TRACK_LINE_CELL_CONF;
-
-  /* РџРѕР»СѓС‡РµРЅРёРµ РєРѕРЅС„РёРіСѓСЂР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ СЃС‚РµРЅРґР° (РїРѕ СЂРµРі. РЅРѕРјРµСЂСѓ РјРѕРґРёС„РёРєР°С†РёРё) */
+  
+  /* Получение конфигурации номенклатуры стенда (по рег. номеру модификации) */
   function STAND_GET_RACK_NOMEN_CONF
   (
-    NNOMMODIF               number      -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РјРѕРґРёС„РёРєР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹
+    NNOMMODIF               number      -- Регистрационный номер модификации номенклатуры
   ) return TRACK_NOMEN_CONF;
-
-  /* РџРѕР»СѓС‡РµРЅРёРµ РєРѕРЅС„РёРіСѓСЂР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ СЃС‚РµРЅРґР° (РїРѕ РјРЅРµРјРѕРєРѕРґСѓ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ Рё РјРѕРґРёС„РёРєР°С†РёРё) */
+  
+  /* Получение конфигурации номенклатуры стенда (по мнемокоду номенклатуры и модификации) */
   function STAND_GET_RACK_NOMEN_CONF
   (
-    SNOMEN                  varchar2,   -- РњРЅРµРјРѕРєРѕРґ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹
-    SNOMMODIF               varchar2    -- РњРЅРµРјРѕРєРѕРґ РјРѕРґРёС„РёРєР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹
+    SNOMEN                  varchar2,   -- Мнемокод номенклатуры
+    SNOMMODIF               varchar2    -- Мнемокод модификации номенклатуры
   ) return TRACK_NOMEN_CONF;
-
-  /* РџРѕР»СѓС‡РµРЅРёРµ РѕСЃС‚Р°С‚РєРѕРІ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР° РїРѕ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂР°Рј */
+  
+  /* Получение остатков стеллажа стенда по номенклатурам */
   function STAND_GET_RACK_NOMEN_REST
   (
-    NCOMPANY                number,           -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    SSTORE                  varchar2,         -- РњРЅРµРјРѕРєРѕРґ СЃРєР»Р°РґР° СЃС‚РµРЅРґР°
-    SPREF                   varchar2,         -- РџСЂРµС„РёРєСЃ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
-    SNUMB                   varchar2,         -- РќРѕРјРµСЂ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
-    SCELL                   varchar2 := null, -- РќР°РёРјРµРЅРѕРІР°РЅРёРµ (РїСЂРµС„РёРєСЃ-РЅРѕРјРµСЂ) СЏС‡РµР№РєРё СЃС‚РµР»Р»Р°Р¶Р° (null - РїРѕ РІСЃРµРј)
-    SNOMEN                  varchar2 := null, -- РќРѕРјРµРЅРєР»Р°С‚СѓСЂР° (null - РїРѕ РІСЃРµРј)
-    SNOMEN_MODIF            varchar2 := null  -- РњРѕРґРёС„РёРєР°С†РёСЏ (null - РїРѕ РІСЃРµРј)
+    NCOMPANY                number,           -- Регистрационный номер организации
+    SSTORE                  varchar2,         -- Мнемокод склада стенда
+    SPREF                   varchar2,         -- Префикс стеллажа стенда
+    SNUMB                   varchar2,         -- Номер стеллажа стенда
+    SCELL                   varchar2 := null, -- Наименование (префикс-номер) ячейки стеллажа (null - по всем)    
+    SNOMEN                  varchar2 := null, -- Номенклатура (null - по всем)
+    SNOMEN_MODIF            varchar2 := null  -- Модификация (null - по всем)
   ) return TNOMEN_RESTS;
-
-  /* РџРѕР»СѓС‡РµРЅРёРµ РѕСЃС‚Р°С‚РєРѕРІ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР° РїРѕ РјРµСЃС‚Р°Рј С…СЂР°РЅРµРЅРёСЏ */
+  
+  /* Получение остатков стеллажа стенда по местам хранения */
   function STAND_GET_RACK_REST
   (
-    NCOMPANY                number,     -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    SSTORE                  varchar2,   -- РњРЅРµРјРѕРєРѕРґ СЃРєР»Р°РґР° СЃС‚РµРЅРґР°
-    SPREF                   varchar2,   -- РџСЂРµС„РёРєСЃ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
-    SNUMB                   varchar2    -- РќРѕРјРµСЂ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
+    NCOMPANY                number,     -- Регистрационный номер организации
+    SSTORE                  varchar2,   -- Мнемокод склада стенда
+    SPREF                   varchar2,   -- Префикс стеллажа стенда
+    SNUMB                   varchar2    -- Номер стеллажа стенда
   ) return TRACK_REST;
-
-  /* РџРѕРёСЃРє РєРѕРЅС‚СЂР°РіРµРЅС‚Р°-РїРѕСЃРµС‚РёС‚РµР»СЏ СЃС‚РµРЅРґР° РїРѕ С€С‚СЂРёС…РєРѕРґСѓ */
+  
+  /* Поиск контрагента-посетителя стенда по штрихкоду */
   function STAND_GET_AGENT_BY_BARCODE
   (
-    NCOMPANY                number,     -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    SBARCODE                varchar2    -- РЁС‚СЂРёС…РєРѕРґ
+    NCOMPANY                number,     -- Регистрационный номер организации
+    SBARCODE                varchar2    -- Штрихкод
   ) return TSTAND_USER;
-
-  /* РџРѕР»СѓС‡РµРЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ СЃС‚РµРЅРґР° */
+  
+  /* Получение состояния стенда */
   procedure STAND_GET_STATE
   (
-    NCOMPANY                number,          -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    STAND_STATE             out TSTAND_STATE -- РЎРѕСЃС‚РѕСЏРЅРёРµ СЃС‚РµРЅРґР°
+    NCOMPANY                number,          -- Регистрационный номер организации
+    STAND_STATE             out TSTAND_STATE -- Состояние стенда
   );
 
-  /* РЎРѕС…СЂР°РЅРµРЅРёРµ С‚РµРєСѓС‰РёС… РѕСЃС‚Р°С‚РєРѕРІ РїРѕ СЃС‚РµРЅРґСѓ */
+  /* Сохранение текущих остатков по стенду */
   procedure STAND_SAVE_RACK_REST
   (
-    NCOMPANY                number,     -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР°Р·Р°С†РёРё
-    BNOTIFY_REST            boolean,    -- Р¤Р»Р°Рі РѕРїРѕРІРµС‰РµРЅРёСЏ Рѕ С‚РµРєСѓС‰РµРј РѕСЃС‚Р°С‚РєРµ
-    BNOTIFY_LIMIT           boolean     -- Р¤Р»Р°Рі РѕРїРѕРІРµС‰РµРЅРёСЏ Рѕ РєСЂРёС‚РёС‡РµСЃРєРѕРј СЃРЅРёР¶РµРЅРёРё РѕСЃС‚Р°С‚РєР°
+    NCOMPANY                number,     -- Регистрационный номер органиазации
+    BNOTIFY_REST            boolean,    -- Флаг оповещения о текущем остатке
+    BNOTIFY_LIMIT           boolean     -- Флаг оповещения о критическом снижении остатка
   );
-
-  /* РџСЂРѕРІРµСЂРєР° РѕСЃСѓС‰РµСЃС‚РІР»РµРЅРёСЏ РІС‹РґР°С‡Рё РєРѕРЅС‚СЂР°РіРµРЅС‚Сѓ-РїРѕСЃРµС‚РёС‚РµР»СЋ С‚РѕРІР°СЂР° СЃРѕ СЃС‚РµРЅРґР° (СЃРј. РєРѕРЅСЃС‚Р°РЅС‚С‹ NAGN_SUPPLY_*) */
+  
+  /* Проверка осуществления выдачи контрагенту-посетителю товара со стенда (см. константы NAGN_SUPPLY_*) */
   function STAND_CHECK_SUPPLY
   (
-    NCOMPANY                number,     -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    NAGENT                  number      -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РєРѕРЅС‚СЂР°РіРµРЅС‚Р°
+    NCOMPANY                number,     -- Регистрационный номер организации
+    NAGENT                  number      -- Регистрационный номер контрагента
   ) return number;
-
-  /* РђСѓС‚РµРЅС‚РёС„РёРєР°С†РёСЏ РїРѕСЃРµС‚РёС‚РµР»СЏ СЃС‚РµРЅРґР° РїРѕ С€С‚СЂРёС…РєРѕРґСѓ */
+  
+  /* Аутентификация посетителя стенда по штрихкоду */
   procedure STAND_AUTH_BY_BARCODE
   (
-    NCOMPANY                number,          -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    SBARCODE                varchar2,        -- РЁС‚СЂРёС…РєРѕРґ
-    STAND_USER              out TSTAND_USER, -- РЎРІРµРґРµРЅРёСЏ Рѕ РїРѕР»СЊР·РѕРІР°С‚РµР»Рµ СЃС‚РµРЅРґР°
-    RACK_REST               out TRACK_REST   -- РЎРІРµРґРµРЅРёСЏ РѕР± РѕСЃС‚Р°С‚РєР°С… РЅР° СЃС‚РµРЅРґРµ
-  );
-
-  /* Р”РѕР±Р°РІР»РµРЅРёРµ РЅРѕРІРѕРіРѕ РїРѕСЃРµС‚РёС‚РµР»СЏ */
-  procedure STAND_USER_CREATE
+    NCOMPANY                number,          -- Регистрационный номер организации
+    SBARCODE                varchar2,        -- Штрихкод
+    STAND_USER              out TSTAND_USER, -- Сведения о пользователе стенда
+    RACK_REST               out TRACK_REST   -- Сведения об остатках на стенде
+  );    
+  
+  /* Добавление нового посетителя */
+  procedure STAND_USER_CREATE  
   (
-    NCOMPANY                number,           -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    SUSER_CODE              varchar2 := null, -- РљСЂР°С‚РєРѕРµ РёРјСЏ РїРѕСЃС‚РµС‚РёР»РµСЏ РІ С„РѕСЂРјР°С‚Рµ "Р¤Р°РјРёР»РёСЏ Р.Рћ." (СЂР°Р·РґРµР»РёС‚РµР»СЊ - РїСЂРѕР±РµР»), РµСЃР»Рё РЅРµ Р·Р°РґР°РЅРѕ - Р°РІС‚РѕСЂР°СЃС‡РµС‚ РїРѕ РїРѕР»РЅРѕРјСѓ РёРјРµРЅРё
-    SUSER_NAME              varchar2,         -- РџРѕР»РЅРѕРµ РёРјСЏ РїРѕСЃРµС‚РёС‚РµР»СЏ РІ С„РѕСЂРјР°С‚Рµ "Р¤Р°РјРёР»РёСЏ РРјСЏ РћС‚С‡РµСЃС‚РІРѕ" (СЂР°Р·РґРµР»РёС‚РµР»СЊ - РїСЂРѕР±РµР»)
-    SUSER_COMPANY           varchar2,         -- РќР°РёРјРµРЅРѕРІР°РЅРёРµ РѕСЂРіР°РЅРёР·Р°С†РёРё РїРѕСЃРµС‚РёС‚РµР»СЏ
-    SCOLOR                  varchar2          -- Р¦РІРµС‚ Р·Р°Р»РёРІРєРё Р·Р°РіРѕР»РѕРІРєР° Р±РµР№РґР¶Р°
+    NCOMPANY                number,           -- Регистрационный номер организации
+    SUSER_CODE              varchar2 := null, -- Краткое имя постетилея в формате "Фамилия И.О." (разделитель - пробел), если не задано - авторасчет по полному имени
+    SUSER_NAME              varchar2,         -- Полное имя посетителя в формате "Фамилия Имя Отчество" (разделитель - пробел)
+    SUSER_COMPANY           varchar2,         -- Наименование организации посетителя
+    SCOLOR                  varchar2          -- Цвет заливки заголовка бейджа
   );
-
-  /* Р—Р°РіСЂСѓР·РєР° СЃС‚РµРЅРґР° С‚РѕРІР°СЂРѕРј */
+  
+  /* Загрузка стенда товаром */
   procedure LOAD
   (
-    NCOMPANY                number,         -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    NRACK_LINE              number := null, -- РќРѕРјРµСЂ СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР° РґР»СЏ Р·Р°РіСЂСѓР·РєРё (null - РіСЂСѓР·РёС‚СЊ РІСЃРµ)
-    NRACK_LINE_CELL         number := null, -- РќРѕРјРµСЂ СЏС‡РµР№РєРё РІ СЏСЂСѓСЃРµ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР° РґР»СЏ Р·Р°РіСЂСѓР·РєРё (null - РіСЂСѓР·РёС‚СЊ РІСЃРµ)
-    NINCOMEFROMDEPS         out number      -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃС„РѕСЂРјРёСЂРѕРІР°РЅРЅРѕРіРѕ "РџСЂРёС…РѕРґР° РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёСЏ"
+    NCOMPANY                number,         -- Регистрационный номер организации 
+    NRACK_LINE              number := null, -- Номер яруса стеллажа стенда для загрузки (null - грузить все)
+    NRACK_LINE_CELL         number := null, -- Номер ячейки в ярусе стеллажа стенда для загрузки (null - грузить все)
+    NINCOMEFROMDEPS         out number      -- Регистрационный номер сформированного "Прихода из подразделения"    
   );
 
-  /* РћС‚РєР°С‚ РїРѕСЃР»РµРґРЅРµР№ Р·Р°РіСЂСѓР·РєРё СЃС‚РµРЅРґР° */
+  /* Откат последней загрузки стенда */
   procedure LOAD_ROLLBACK
   (
-    NCOMPANY                number,     -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    NINCOMEFROMDEPS         out number  -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЂР°СЃС„РѕСЂРјРёСЂРѕРІР°РЅРЅРѕРіРѕ "РџСЂРёС…РѕРґР° РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёСЏ"
+    NCOMPANY                number,     -- Регистрационный номер организации
+    NINCOMEFROMDEPS         out number  -- Регистрационный номер расформированного "Прихода из подразделения"        
   );
 
-  /* РћС‚РіСЂСѓР·РєР° СЃРѕ СЃС‚РµРЅРґР° РїРѕСЃРµС‚РёС‚РµР»СЋ */
+  /* Отгрузка со стенда посетителю */
   procedure SHIPMENT
   (
-    NCOMPANY                number,     -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    SCUSTOMER               varchar2,   -- РњРЅРµРјРѕРєРѕРґ РєРѕРЅС‚СЂР°РіРµРЅС‚Р°-РїРѕРєСѓРїР°С‚РµР»СЏ
-    NRACK_LINE              number,     -- РќРѕРјРµСЂ СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
-    NRACK_LINE_CELL         number,     -- РќРѕРјРµСЂ СЏС‡РµР№РєРё РІ СЏСЂСѓСЃРµ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
-    NTRANSINVCUST           out number  -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃС„РѕСЂРјРёСЂРѕРІР°РЅРЅРѕР№ Р РќРћРџ
+    NCOMPANY                number,     -- Регистрационный номер организации
+    SCUSTOMER               varchar2,   -- Мнемокод контрагента-покупателя
+    NRACK_LINE              number,     -- Номер яруса стеллажа стенда
+    NRACK_LINE_CELL         number,     -- Номер ячейки в ярусе стеллажа стенда
+    NTRANSINVCUST           out number  -- Регистрационный номер сформированной РНОП    
   );
 
-  /* РћС‚РєР°С‚ РѕС‚РіСЂСѓР·РєРё СЃРѕ СЃС‚РµРЅРґР° */
+  /* Откат отгрузки со стенда */
   procedure SHIPMENT_ROLLBACK
   (
-    NCOMPANY                number,     -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    NTRANSINVCUST           number      -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕС‚РіСЂСѓР·РѕС‡РЅРѕР№ Р РќРћРџ
+    NCOMPANY                number,     -- Регистрационный номер организации
+    NTRANSINVCUST           number      -- Регистрационный номер отгрузочной РНОП
   );
-
-  /* РЎС‡РёС‚С‹РІР°РЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ Р·Р°РїРёСЃРё РѕС‡РµСЂРµРґРё РїРµС‡Р°С‚Рё */
+  
+  /* Считывание состояния записи очереди печати */
   procedure PRINT_GET_STATE
   (
-    SSESSION                varchar2,            -- РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ СЃРµСЃСЃРёРё
-    NRPTPRTQUEUE            number,              -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ Р·Р°РїРёСЃРё РѕС‡РµСЂРµРґРё РїРµС‡Р°С‚Рё
-    RPT_QUEUE_STATE         out TRPT_QUEUE_STATE -- РЎРѕСЃС‚РѕСЏРЅРёРµ РїРѕР·РёС†РёРё РѕС‡РµСЂРµРґРё РїРµС‡Р°С‚Рё
+    SSESSION                varchar2,            -- Идентификатор сессии    
+    NRPTPRTQUEUE            number,              -- Регистрационный номер записи очереди печати
+    RPT_QUEUE_STATE         out TRPT_QUEUE_STATE -- Состояние позиции очереди печати
   );
-
-  /* Р—Р°РїРѕР»РЅРµРЅРёРµ СЃРїРёСЃРєР° РѕС‚РјРµС‡РµРЅРЅС‹С… РґР»СЏ РїРµС‡Р°С‚Рё РґРѕРєСѓРјРµРЅС‚РѕРІ (Р°РІС‚РѕРЅРѕРјРЅР°СЏ С‚СЂР°РЅР·Р°РєС†РёСЏ) */
+  
+  /* Заполнение списка отмеченных для печати документов (автономная транзакция) */
   procedure PRINT_SET_SELECTLIST
   (
-    NIDENT                  number,     -- РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ Р±СѓС„РµСЂР°
-    NDOCUMENT               number,     -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РґРѕРєСѓРјРµРЅС‚Р°
-    SUNITCODE               varchar2    -- РљРѕРґ СЂР°Р·РґРµР»Р° РґРѕРєСѓРјРµРЅС‚Р°
+    NIDENT                  number,     -- Идентификатор буфера
+    NDOCUMENT               number,     -- Регистрационный номер документа
+    SUNITCODE               varchar2    -- Код раздела документа
   );
-
-  /* РћС‡РёСЃС‚РєР° СЃРїРёСЃРєР° РѕС‚РјРµС‡РµРЅРЅС‹С… РґР»СЏ РїРµС‡Р°С‚Рё РґРѕРєСѓРјРµРЅС‚РѕРІ (Р°РІС‚РѕРЅРѕРјРЅР°СЏ С‚СЂР°РЅР·Р°РєС†РёСЏ) */
+  
+  /* Очистка списка отмеченных для печати документов (автономная транзакция) */
   procedure PRINT_CLEAR_SELECTLIST
   (
-    NIDENT                  number      -- РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ Р±СѓС„РµСЂР°
+    NIDENT                  number      -- Идентификатор буфера
   );
-
-  /* РџРµС‡Р°С‚СЊ Р РќРћРџ С‡РµСЂРµР· СЃРµСЂРІРµСЂ РїРµС‡Р°С‚Рё */
+  
+  /* Печать РНОП через сервер печати */
   procedure PRINT
   (
-    NCOMPANY                number,     -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР°Р·Р°С†РёРё
-    NTRANSINVCUST           number      -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ Р РќРћРџ
+    NCOMPANY                number,     -- Регистрационный номер органиазации
+    NTRANSINVCUST           number      -- Регистрационный номер РНОП
   );
-
+  
 end;
 /
 create or replace package body UDO_PKG_STAND as
 
-  /* Р“Р»РѕР±Р°Р»Р»СЊРЅС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ СЃС‚РµРЅРґР° */
-  RACK_LINE_CELL_CONFS      TRACK_LINE_CELL_CONFS; -- РњРµСЃС‚Р° С…СЂР°РЅРµРЅРёСЏ СЃС‚РµРЅРґР°
-  RACK_NOMEN_CONFS          TRACK_NOMEN_CONFS;     -- РќРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ СЃС‚РµРЅРґР°
-
-  /* Р‘Р°Р·РѕРІРѕРµ РґРѕР±Р°РІР»РµРЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ РІ РѕС‡РµСЂРµРґСЊ */
+  /* Глобалльные переменные конфигурация стенда */
+  RACK_LINE_CELL_CONFS      TRACK_LINE_CELL_CONFS; -- Места хранения стенда
+  RACK_NOMEN_CONFS          TRACK_NOMEN_CONFS;     -- Номенклатуры стенда
+  
+  /* Базовое добавление сообщения в очередь */
   procedure MSG_BASE_INSERT
   (
-    STP                     varchar2,                 -- РўРёРї СЃРѕРѕР±С‰РµРЅРёСЏ
-    SMSG                    varchar2,                 -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ
-    NRN                     out number                -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РґРѕР±Р°РІР»РµРЅРЅРѕРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ
+    STP                     varchar2,                 -- Тип сообщения
+    SMSG                    varchar2,                 -- Текст сообщения
+    NRN                     out number                -- Регистрационный номер добавленного сообщения
   ) is
-    SSTS                    UDO_T_STAND_MSG.STS%type; -- РЎРѕСЃС‚РѕСЏРЅРёРµ С„РѕСЂРјРёСЂСѓРµРјРѕРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ
+    SSTS                    UDO_T_STAND_MSG.STS%type; -- Состояние формируемого сообщения
   begin
-    /* РџСЂРѕРІРµСЂРёРј РїР°СЂР°РјРµС‚СЂС‹ */
+    /* Проверим параметры */
     if (STP not in (SMSG_TYPE_NOTIFY, SMSG_TYPE_RESTS, SMSG_TYPE_REST_PRC, SMSG_TYPE_PRINT)) then
-      P_EXCEPTION(0, 'РўРёРї СЃРѕРѕР±С‰РµРЅРёСЏ "%s" РЅРµ РїРѕРґРґРµСЂР¶РёРІР°РµС‚СЃСЏ!', STP);
+      P_EXCEPTION(0, 'Тип сообщения "%s" не поддерживается!', STP);
     end if;
     if (SMSG is null) then
-      P_EXCEPTION(0, 'РќРµ СѓРєР°Р·Р°РЅРѕ СЃРѕРѕР±С‰РµРЅРёРµ РґР»СЏ РґРѕР±Р°РІР»РµРЅРёСЏ!');
+      P_EXCEPTION(0, 'Не указано сообщение для добавления!');
     end if;
-    /* РЎС„РѕСЂРјРёСЂСѓРµРј СЂРµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ */
+    /* Сформируем регистрационный номер */
     NRN := GEN_ID();
-    /* РћРїСЂРµРґРµР»РёРј СЃРѕСЃС‚РѕСЏРЅРёРµ */
+    /* Определим состояние */
     case STP
       when SMSG_TYPE_NOTIFY then
         SSTS := SMSG_STATE_NOT_SENDED;
@@ -566,205 +566,205 @@ create or replace package body UDO_PKG_STAND as
       else
         SSTS := SMSG_STATE_UNDEFINED;
     end case;
-    /* Р”РѕР±Р°РІРёРј СЃРѕРѕР±С‰РµРЅРёРµ */
+    /* Добавим сообщение */
     insert into UDO_T_STAND_MSG (RN, TS, TP, MSG, STS) values (NRN, sysdate, STP, SMSG, SSTS);
   end;
-
-  /* Р‘Р°Р·РѕРІРѕРµ СѓРґР°Р»РµРЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ РёР· РѕС‡РµСЂРµРґРё */
+    
+  /* Базовое удаление сообщения из очереди */
   procedure MSG_BASE_DELETE
   (
-    NRN                     number      -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃРѕРѕР±С‰РµРЅРёСЏ
+    NRN                     number      -- Регистрационный номер сообщения
   ) is
   begin
-    /* РЈРґР°Р»РёРј СЃРѕРѕР±С‰РµРЅРёРµ */
+    /* Удалим сообщение */
     delete from UDO_T_STAND_MSG T where T.RN = NRN;
   end;
-
-  /* Р‘Р°Р·РѕРІР°СЏ СѓСЃС‚Р°РЅРѕРІРєР° СЃРѕСЃС‚РѕСЏРЅРёСЏ СЃРѕРѕР±С‰РµРЅРёСЏ РѕС‡РµСЂРµРґРё */
+  
+  /* Базовая установка состояния сообщения очереди */
   procedure MSG_BASE_SET_STATE
   (
-    NRN                     number,                  -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃРѕРѕР±С‰РµРЅРёСЏ
-    SSTS                    varchar2                 -- РЎРѕСЃС‚РѕСЏРЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ (СЃРј. РєРѕРЅСЃС‚Р°РЅС‚С‹ SMSG_STATE_*)
+    NRN                     number,                  -- Регистрационный номер сообщения
+    SSTS                    varchar2                 -- Состояние сообщения (см. константы SMSG_STATE_*)
   ) is
-    REC                     UDO_T_STAND_MSG%rowtype; -- Р—Р°РїРёСЃСЊ РјРѕРґРёС„РёС†РёСЂСѓРµРјРѕРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ
+    REC                     UDO_T_STAND_MSG%rowtype; -- Запись модифицируемого сообщения
   begin
-    /* РЎС‡РёС‚Р°РµРј СЃРѕРѕР±С‰РµРЅРёРµ */
+    /* Считаем сообщение */
     REC := MSG_GET(NRN => NRN, NSMART => 0);
-    /* РџСЂРѕРІРµСЂРёРј РєРѕСЂСЂРµРєС‚РЅРѕСЃС‚СЊ СѓРєР°Р·Р°РЅРёСЏ СЃРѕСЃС‚РѕСЏРЅРёСЏ */
+    /* Проверим корректность указания состояния */
     case REC.TP
-      /* РЎРѕРѕР±С‰РµРЅРёРµ С‚РёРїР° "РћРїРѕРІРµС‰РµРЅРёРµ" */
+      /* Сообщение типа "Оповещение" */
       when SMSG_TYPE_NOTIFY then
         begin
           if (SSTS not in (SMSG_STATE_NOT_SENDED, SMSG_STATE_SENDED)) then
             P_EXCEPTION(0,
-                        'РЈСЃС‚Р°РЅРѕРІРєР° СЃРѕСЃС‚РѕСЏРЅРёСЏ "%s" РґР»СЏ СЃРѕРѕР±С‰РµРЅРёСЏ С‚РёРїР° "%s" РЅРµРґРѕРїСѓСЃС‚РёРјРѕ!',
+                        'Установка состояния "%s" для сообщения типа "%s" недопустимо!',
                         SSTS,
                         REC.TP);
           end if;
         end;
-      /* РЎРѕРѕР±С‰РµРЅРёРµ С‚РёРїР° "РЎРІРµРґРµРЅРёСЏ РѕР± РѕСЃС‚Р°С‚РєР°С…" */
+      /* Сообщение типа "Сведения об остатках" */
       when SMSG_TYPE_RESTS then
         begin
           if (SSTS not in (SMSG_STATE_UNDEFINED)) then
             P_EXCEPTION(0,
-                        'РЈСЃС‚Р°РЅРѕРІРєР° СЃРѕСЃС‚РѕСЏРЅРёСЏ "%s" РґР»СЏ СЃРѕРѕР±С‰РµРЅРёСЏ С‚РёРїР° "%s" РЅРµРґРѕРїСѓСЃС‚РёРјРѕ!',
+                        'Установка состояния "%s" для сообщения типа "%s" недопустимо!',
                         SSTS,
                         REC.TP);
           end if;
         end;
-      /* РЎРѕРѕР±С‰РµРЅРёРµ С‚РёРїР° "РЎРІРµРґРµРЅРёСЏ РѕР± РѕСЃС‚Р°С‚РєР°С… (% Р·Р°РіСЂСѓР¶РµРЅРЅРѕСЃС‚Рё)"   */
+      /* Сообщение типа "Сведения об остатках (% загруженности)"   */
       when SMSG_TYPE_REST_PRC then
         begin
           if (SSTS not in (SMSG_STATE_UNDEFINED)) then
             P_EXCEPTION(0,
-                        'РЈСЃС‚Р°РЅРѕРІРєР° СЃРѕСЃС‚РѕСЏРЅРёСЏ "%s" РґР»СЏ СЃРѕРѕР±С‰РµРЅРёСЏ С‚РёРїР° "%s" РЅРµРґРѕРїСѓСЃС‚РёРјРѕ!',
+                        'Установка состояния "%s" для сообщения типа "%s" недопустимо!',
                         SSTS,
                         REC.TP);
           end if;
         end;
-      /* РЎРѕРѕР±С‰РµРЅРёРµ С‚РёРїР° "РћС‡РµСЂРµРґСЊ РїРµС‡Р°С‚Рё" */
+      /* Сообщение типа "Очередь печати" */
       when SMSG_TYPE_PRINT then
         begin
           if (SSTS not in (SMSG_STATE_NOT_PRINTED, SMSG_STATE_PRINTED)) then
             P_EXCEPTION(0,
-                        'РЈСЃС‚Р°РЅРѕРІРєР° СЃРѕСЃС‚РѕСЏРЅРёСЏ "%s" РґР»СЏ СЃРѕРѕР±С‰РµРЅРёСЏ С‚РёРїР° "%s" РЅРµРґРѕРїСѓСЃС‚РёРјРѕ!',
+                        'Установка состояния "%s" для сообщения типа "%s" недопустимо!',
                         SSTS,
                         REC.TP);
           end if;
         end;
-      /* РќРµРёР·РІРµСЃС‚РЅС‹Р№ С‚РёРї СЃРѕРѕР±С‰РµРЅРёСЏ */
+      /* Неизвестный тип сообщения */
       else
         P_EXCEPTION(0,
-                    'РЈСЃС‚Р°РЅРѕРІРєР° СЃРѕСЃС‚РѕСЏРЅРёСЏ РґР»СЏ СЃРѕРѕР±С‰РµРЅРёР№ С‚РёРїР° "%s" РЅРµ РїРѕРґРґРµСЂР¶РёРІР°РµС‚СЃСЏ!',
+                    'Установка состояния для сообщений типа "%s" не поддерживается!',
                     REC.TP);
     end case;
-    /* РЈСЃС‚Р°РЅРѕРІРёРј СЃРѕСЃС‚РѕСЏРЅРёРµ РІ СЃРѕРѕР±С‰РµРЅРёРё */
+    /* Установим состояние в сообщении */
     update UDO_T_STAND_MSG T set T.STS = SSTS where T.RN = REC.RN;
   end;
-
-  /* Р”РѕР±Р°РІР»РµРЅРёРµ РІ РѕС‡РµСЂРµРґСЊ СЃРѕРѕР±С‰РµРЅРёСЏ С‚РёРїР° "РћРїРѕРІРµС‰РµРЅРёРµ" */
+  
+  /* Добавление в очередь сообщения типа "Оповещение" */
   procedure MSG_INSERT_NOTIFY
   (
-    SMSG                    varchar2,                     -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ
-    SNOTIFY_TYPE            varchar2 := SNOTIFY_TYPE_INFO -- РўРёРї РѕРїРѕРІРµС‰РµРЅРёСЏ (СЃРј. РєРѕРЅСЃС‚Р°РЅС‚С‹ SNOTIFY_TYPE_*)
+    SMSG                    varchar2,                     -- Текст сообщения
+    SNOTIFY_TYPE            varchar2 := SNOTIFY_TYPE_INFO -- Тип оповещения (см. константы SNOTIFY_TYPE_*)    
   ) is
-    NRN                     UDO_T_STAND_MSG.RN%type; -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РґРѕР±Р°РІР»РµРЅРЅРѕРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ
-    JM                      JSON;                    -- РћР±СЉРµРєС‚РЅРѕРµ РїСЂРµРґСЃС‚Р°РІР»РµРЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ
+    NRN                     UDO_T_STAND_MSG.RN%type; -- Регистрационный номер добавленного сообщения
+    JM                      JSON;                    -- Объектное представление сообщения
   begin
-    /* РџСЂРѕРІРµСЂРёРј С‚РёРї РѕРїРѕРІРµС‰РµРЅРёСЏ */
+    /* Проверим тип оповещения */
     if (SNOTIFY_TYPE is null) then
       P_EXCEPTION(0,
-                  'РќРµ СѓРєР°Р·Р°РЅ С‚РёРї РѕРїРѕРІРµС‰РµРЅРёСЏ РґР»СЏ СѓРІРµРґРѕРјРёС‚РµР»СЊРЅРѕРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ!');
+                  'Не указан тип оповещения для уведомительного сообщения!');
     end if;
     if (SNOTIFY_TYPE not in (SNOTIFY_TYPE_INFO, SNOTIFY_TYPE_WARN, SNOTIFY_TYPE_ERROR)) then
-      P_EXCEPTION(0, 'РўРёРї РѕРїРѕРІРµС‰РµРЅРёСЏ "%s" РЅРµ РїРѕРґРґРµСЂР¶РёРІР°РµС‚СЃСЏ!', SNOTIFY_TYPE);
+      P_EXCEPTION(0, 'Тип оповещения "%s" не поддерживается!', SNOTIFY_TYPE);
     end if;
-    /* РЎРѕР±РµСЂС‘Рј СЃРѕРѕР±С‰РµРЅРёРµ */
+    /* Соберём сообщение */
     JM := JSON();
     JM.PUT(PAIR_NAME => 'SMSG', PAIR_VALUE => SMSG);
     JM.PUT(PAIR_NAME => 'SNOTIFY_TYPE', PAIR_VALUE => SNOTIFY_TYPE);
-    /* Р’С‹РїРѕР»РЅРёРј Р±Р°Р·РѕРІРѕРµ РґРѕР±Р°РІР»РµРЅРёРµ РІ РѕС‡РµСЂРµРґСЊ СЃРѕРѕР±С‰РµРЅРёР№ */
+    /* Выполним базовое добавление в очередь сообщений */
     MSG_BASE_INSERT(STP => SMSG_TYPE_NOTIFY, SMSG => JM.TO_CHAR(), NRN => NRN);
   end;
-
-  /* Р”РѕР±Р°РІР»РµРЅРёРµ РІ РѕС‡РµСЂРµРґСЊ СЃРѕРѕР±С‰РµРЅРёСЏ С‚РёРїР° "РЎРІРµРґРµРЅРёСЏ РѕР± РѕСЃС‚Р°С‚РєР°С…" */
+  
+  /* Добавление в очередь сообщения типа "Сведения об остатках" */
   procedure MSG_INSERT_RESTS
   (
-    SMSG                    varchar2                 -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ
+    SMSG                    varchar2                 -- Текст сообщения
   ) is
-    NRN                     UDO_T_STAND_MSG.RN%type; -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РґРѕР±Р°РІР»РµРЅРЅРѕРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ
+    NRN                     UDO_T_STAND_MSG.RN%type; -- Регистрационный номер добавленного сообщения
   begin
-    /* Р’С‹РїРѕР»РЅРёРј Р±Р°Р·РѕРІРѕРµ РґРѕР±Р°РІР»РµРЅРёРµ РІ РѕС‡РµСЂРµРґСЊ СЃРѕРѕР±С‰РµРЅРёР№ */
+    /* Выполним базовое добавление в очередь сообщений */
     MSG_BASE_INSERT(STP => SMSG_TYPE_RESTS, SMSG => SMSG, NRN => NRN);
   end;
 
-  /* Р”РѕР±Р°РІР»РµРЅРёРµ РІ РѕС‡РµСЂРµРґСЊ СЃРѕРѕР±С‰РµРЅРёСЏ С‚РёРїР° "РЎРІРµРґРµРЅРёСЏ РѕР± РѕСЃС‚Р°С‚РєР°С… (% Р·Р°РіСЂСѓР¶РµРЅРЅРѕСЃС‚Рё)" */
+  /* Добавление в очередь сообщения типа "Сведения об остатках (% загруженности)" */
   procedure MSG_INSERT_REST_PRC
   (
-    SMSG                    varchar2                 -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ
+    SMSG                    varchar2                 -- Текст сообщения
   ) is
-    NRN                     UDO_T_STAND_MSG.RN%type; -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РґРѕР±Р°РІР»РµРЅРЅРѕРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ
+    NRN                     UDO_T_STAND_MSG.RN%type; -- Регистрационный номер добавленного сообщения
   begin
-    /* Р’С‹РїРѕР»РЅРёРј Р±Р°Р·РѕРІРѕРµ РґРѕР±Р°РІР»РµРЅРёРµ РІ РѕС‡РµСЂРµРґСЊ СЃРѕРѕР±С‰РµРЅРёР№ */
+    /* Выполним базовое добавление в очередь сообщений */
     MSG_BASE_INSERT(STP => SMSG_TYPE_REST_PRC, SMSG => SMSG, NRN => NRN);
   end;
 
-  /* Р”РѕР±Р°РІР»РµРЅРёРµ РІ РѕС‡РµСЂРµРґСЊ СЃРѕРѕР±С‰РµРЅРёСЏ С‚РёРїР° "РћС‡РµСЂРµРґСЊ РїРµС‡Р°С‚Рё" */
+  /* Добавление в очередь сообщения типа "Очередь печати" */
   procedure MSG_INSERT_PRINT
   (
-    SMSG                    varchar2                 -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ
+    SMSG                    varchar2                 -- Текст сообщения
   ) is
-    NRN                     UDO_T_STAND_MSG.RN%type; -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РґРѕР±Р°РІР»РµРЅРЅРѕРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ
+    NRN                     UDO_T_STAND_MSG.RN%type; -- Регистрационный номер добавленного сообщения
   begin
-    /* Р’С‹РїРѕР»РЅРёРј Р±Р°Р·РѕРІРѕРµ РґРѕР±Р°РІР»РµРЅРёРµ РІ РѕС‡РµСЂРµРґСЊ СЃРѕРѕР±С‰РµРЅРёР№ */
+    /* Выполним базовое добавление в очередь сообщений */
     MSG_BASE_INSERT(STP => SMSG_TYPE_PRINT, SMSG => SMSG, NRN => NRN);
   end;
-
-  /* Р”РѕР±Р°РІР»РµРЅРёРµ РІ РѕС‡РµСЂРµРґСЊ СЃРѕРѕР±С‰РµРЅРёСЏ */
+  
+  /* Добавление в очередь сообщения */
   procedure MSG_INSERT
   (
-    STP                     varchar2,                     -- РўРёРї СЃРѕРѕР±С‰РµРЅРёСЏ
-    SMSG                    varchar2,                     -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ
-    SNOTIFY_TYPE            varchar2 := SNOTIFY_TYPE_INFO -- РўРёРї РѕРїРѕРІРµС‰РµРЅРёСЏ (СЃРј. РєРѕРЅСЃС‚Р°РЅС‚С‹ SNOTIFY_TYPE_*)
+    STP                     varchar2,                     -- Тип сообщения
+    SMSG                    varchar2,                     -- Текст сообщения
+    SNOTIFY_TYPE            varchar2 := SNOTIFY_TYPE_INFO -- Тип оповещения (см. константы SNOTIFY_TYPE_*)    
   ) is
   begin
-    /* РџСЂРѕРІРµСЂРёРј РїР°СЂР°РјРµС‚СЂС‹ */
+    /* Проверим параметры */
     if (STP is null) then
-      P_EXCEPTION(0, 'РќРµ СѓРєР°Р·Р°РЅ С‚РёРї СЃРѕРѕР±С‰РµРЅРёСЏ!');
+      P_EXCEPTION(0, 'Не указан тип сообщения!');
     end if;
     if (SMSG is null) then
-      P_EXCEPTION(0, 'РќРµ СѓРєР°Р·Р°РЅ С‚РµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ!');
+      P_EXCEPTION(0, 'Не указан текст сообщения!');
     end if;
-    /* Р Р°Р±РѕС‚Р°РµРј РѕС‚ С‚РёРїР° СЃРѕРѕР±С‰РµРЅРёСЏ */
+    /* Работаем от типа сообщения */
     case STP
-      /* РўРёРї СЃРѕРѕР±С‰РµРЅРёСЏ - РћРїРѕРІРµС‰РµРЅРёРµ */
+      /* Тип сообщения - Оповещение */
       when SMSG_TYPE_NOTIFY then
         MSG_INSERT_NOTIFY(SMSG => SMSG, SNOTIFY_TYPE => SNOTIFY_TYPE);
-      /* РўРёРї СЃРѕРѕР±С‰РµРЅРёСЏ - РЎРІРµРґРµРЅРёСЏ РѕР± РѕСЃС‚Р°С‚РєР°С… */
+      /* Тип сообщения - Сведения об остатках */        
       when SMSG_TYPE_RESTS then
         MSG_INSERT_RESTS(SMSG => SMSG);
-      /* РўРёРї СЃРѕРѕР±С‰РµРЅРёСЏ - РЎРІРµРґРµРЅРёСЏ РѕР± РѕСЃС‚Р°С‚РєР°С… (% Р·Р°РіСЂСѓР¶РµРЅРЅРѕСЃС‚Рё) */
+      /* Тип сообщения - Сведения об остатках (% загруженности) */        
       when SMSG_TYPE_RESTS then
         MSG_INSERT_REST_PRC(SMSG => SMSG);
-      /* РўРёРї СЃРѕРѕР±С‰РµРЅРёСЏ - РћС‡РµСЂРµРґСЊ РїРµС‡Р°С‚Рё */
+      /* Тип сообщения - Очередь печати */        
       when SMSG_TYPE_PRINT then
         MSG_INSERT_PRINT(SMSG => SMSG);
-      /* РќРµРёР·РІРµСЃС‚РЅС‹Р№ С‚РёРї СЃРѕРѕР±С‰РµРЅРёСЏ */
+      /* Неизвестный тип сообщения */
       else
-        P_EXCEPTION(0, 'РўРёРї СЃРѕРѕР±С‰РµРЅРёСЏ "%s" РЅРµ РїРѕРґРґРµСЂР¶РёРІР°РµС‚СЃСЏ!', STP);
+        P_EXCEPTION(0, 'Тип сообщения "%s" не поддерживается!', STP);
     end case;
   end;
-
-  /* РЈРґР°Р»РµРЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ РёР· РѕС‡РµСЂРµРґРё */
+  
+  /* Удаление сообщения из очереди */
   procedure MSG_DELETE
   (
-    NRN                     number      -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃРѕРѕР±С‰РµРЅРёСЏ
+    NRN                     number      -- Регистрационный номер сообщения
   ) is
   begin
-    /* Р’С‹РїРѕР»РЅРёРј Р±Р°Р·РѕРІРѕРµ СѓРґР°Р»РµРЅРёРµ */
+    /* Выполним базовое удаление */
     MSG_BASE_DELETE(NRN => NRN);
   end;
-
-  /* РЈСЃС‚Р°РЅРѕРІРєР° СЃРѕСЃС‚РѕСЏРЅРёСЏ СЃРѕРѕР±С‰РµРЅРёСЏ РѕС‡РµСЂРµРґРё */
+  
+  /* Установка состояния сообщения очереди */
   procedure MSG_SET_STATE
   (
-    NRN                     number,     -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃРѕРѕР±С‰РµРЅРёСЏ
-    SSTS                    varchar2    -- РЎРѕСЃС‚РѕСЏРЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ (СЃРј. РєРѕРЅСЃС‚Р°РЅС‚С‹ SMSG_STATE_*)
+    NRN                     number,     -- Регистрационный номер сообщения
+    SSTS                    varchar2    -- Состояние сообщения (см. константы SMSG_STATE_*)
   ) is
   begin
-    /* Р’С‹РїРѕР»РЅРёРј Р±Р°Р·РѕРІСѓСЋ СѓСЃС‚Р°РЅРѕРІРєСѓ СЃРѕСЃС‚РѕСЏРЅРёСЏ */
+    /* Выполним базовую установку состояния */
     MSG_BASE_SET_STATE(NRN => NRN, SSTS => SSTS);
   end;
-
-  /* РЎС‡РёС‚С‹РІР°РЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ РёР· РѕС‡РµСЂРµРґРё */
+      
+  /* Считывание сообщения из очереди */
   function MSG_GET
   (
-    NRN                     number,                  -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃРѕРѕР±С‰РµРЅРёСЏ
-    NSMART                  number := 0              -- РџСЂРёР·РЅР°Рє РІС‹РґР°С‡Рё СЃРѕРѕР±С‰РµРЅРёСЏ РѕР± РѕС€РёР±РєРµ (0 - РІС‹РґР°РІР°С‚СЊ, 1 - РЅРµ РІС‹РґР°РІР°С‚СЊ)
+    NRN                     number,                  -- Регистрационный номер сообщения
+    NSMART                  number := 0              -- Признак выдачи сообщения об ошибке (0 - выдавать, 1 - не выдавать)
   ) return UDO_T_STAND_MSG%rowtype is
-    RES                     UDO_T_STAND_MSG%rowtype; -- Р РµР·СѓР»СЊС‚Р°С‚ СЂР°Р±РѕС‚С‹
+    RES                     UDO_T_STAND_MSG%rowtype; -- Результат работы
   begin
-    /* РЎС‡РёС‚Р°РµРј РґР°РЅРЅС‹Рµ */
+    /* Считаем данные */
     begin
       select T.* into RES from UDO_T_STAND_MSG T where T.RN = NRN;
     exception
@@ -772,29 +772,29 @@ create or replace package body UDO_PKG_STAND as
         RES.RN := null;
         PKG_MSG.RECORD_NOT_FOUND(NFLAG_SMART => NSMART, NDOCUMENT => NRN, SUNIT_TABLE => 'UDO_T_STAND_MSG');
     end;
-    /* Р’РµСЂРЅРµРј СЂРµР·СѓР»СЊС‚Р°С‚ */
+    /* Вернем результат */
     return RES;
   end;
-
-  /* РЎС‡РёС‚С‹РІР°РЅРёРµ РЅРѕРІС‹С… СЃРѕРѕР±С‰РµРЅРёР№ РёР· РѕС‡РµСЂРµРґРё */
+  
+  /* Считывание новых сообщений из очереди */
   function MSG_GET_LIST
   (
-    DFROM                   date := null,            -- Р”Р°С‚Р° СЃ РєРѕС‚РѕСЂРѕР№ РЅРµРѕР±С…РѕРґРёРјРѕ РЅР°С‡Р°С‚СЊ СЃРїРёСЃРѕРє (null - РЅРµ СѓС‡РёС‚С‹РІР°С‚СЊ)
-    STP                     varchar2 := null,        -- РўРёРї СЃРѕРѕР±С‰РµРЅРёР№ (null - РІСЃРµ, СЃРј. РєРѕРЅСЃС‚Р°РЅС‚С‹ SMSG_TYPE_*)
-    SSTS                    varchar2 := null,        -- РЎРѕСЃС‚РѕСЏРЅРёРµ СЃРѕРѕР±С‰РµРЅРёР№ (null - Р»СЋР±РѕРµ, СЃРј. РєРѕРЅСЃС‚Р°РЅС‚С‹ SMSG_STATE_*)
-    NLIMIT                  number := null,          -- РњР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ (null - РІСЃРµ)
-    NORDER                  number := NMSG_ORDER_ASC -- РџРѕСЂСЏРґРѕРє СЃРѕСЂС‚РёСЂРѕРІРєРё (СЃРј. РєРѕРЅСЃС‚РЅР°С‚С‹ SMSG_ORDER_*)
+    DFROM                   date := null,            -- Дата с которой необходимо начать список (null - не учитывать)
+    STP                     varchar2 := null,        -- Тип сообщений (null - все, см. константы SMSG_TYPE_*)
+    SSTS                    varchar2 := null,        -- Состояние сообщений (null - любое, см. константы SMSG_STATE_*)
+    NLIMIT                  number := null,          -- Максимальное количество (null - все)
+    NORDER                  number := NMSG_ORDER_ASC -- Порядок сортировки (см. констнаты SMSG_ORDER_*)
   ) return TMESSAGES is
-    RES                     TMESSAGES;               -- Р РµР·СѓР»СЊС‚Р°С‚ СЂР°Р±РѕС‚С‹
+    RES                     TMESSAGES;               -- Результат работы
   begin
-    /* РџСЂРѕРІРµСЂРёРј РєРѕСЂСЂРµРєС‚РЅРѕСЃС‚СЊ СѓРєР°Р·Р°РЅРёСЏ РїРѕСЂСЏРґРєР° СЃРѕСЂС‚РёСЂРѕРІРєРё */
+    /* Проверим корректность указания порядка сортировки */
     if (NORDER not in (NMSG_ORDER_ASC, NMSG_ORDER_DESC)) then
       P_EXCEPTION(0,
-                  'РќРµРєРѕСЂСЂРµРєС‚РЅРѕ СѓРєР°Р·Р°РЅ РїРѕСЂСЏРґРѕРє СЃРѕСЂС‚РёСЂРѕРІРєРё РІРѕР·РІСЂР°С‰Р°РµРјС‹С… СЃРѕРѕР±С‰РµРЅРёР№!');
+                  'Некорректно указан порядок сортировки возвращаемых сообщений!');
     end if;
-    /* РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РІС‹С…РѕРґ */
+    /* Инициализируем выход */
     RES := TMESSAGES();
-    /* РЎС‚СЂРѕРёРј СЃРїРёСЃРѕРє СЃРѕРѕР±С‰РµРЅРёР№ РІ РѕР±СЂР°С‚РЅРѕРј С…СЂРѕРЅРѕР»РѕРіРёС‡РµСЃРєРѕРј РїРѕСЂСЏРґРєРµ */
+    /* Строим список сообщений в обратном хронологическом порядке */
     for M in (select *
                 from (select *
                         from (select T.*
@@ -805,9 +805,9 @@ create or replace package body UDO_PKG_STAND as
                                order by T.RN * NORDER) D
                        where ((NLIMIT is null) or (NLIMIT is not null) and (ROWNUM <= NLIMIT))) F)
     loop
-      /* Р”РѕР±Р°РІР»СЏРµРј СЃРѕРѕР±С‰РµРЅРёРµ РІ РѕС‚РІРµС‚ */
+      /* Добавляем сообщение в ответ */
       RES.EXTEND();
-      /* РћРїРёСЃС‹РІР°РµРј РµРіРѕ */
+      /* Описываем его */
       RES(RES.LAST).NRN := M.RN;
       RES(RES.LAST).DTS := M.TS;
       RES(RES.LAST).STS := TO_CHAR(M.TS, 'dd.mm.yyyy hh24:mi:ss');
@@ -815,96 +815,96 @@ create or replace package body UDO_PKG_STAND as
       RES(RES.LAST).SMSG := M.MSG;
       RES(RES.LAST).SSTS := M.STS;
     end loop;
-    /* РћС‚РґР°С‘Рј СЂРµР·СѓР»СЊС‚Р°С‚ */
+    /* Отдаём результат */
     return RES;
   end;
-
-  /* Р¤РѕСЂРјРёСЂРѕРІР°РЅРёРµ РЅР°РёРјРµРЅРѕРІР°РЅРёСЏ СЃС‚РµР»Р»Р°Р¶Р° (РїСЂРµС„РёРєСЃ-РЅРѕРјРµСЂ) */
-  function RACK_BUILD_NAME
+  
+  /* Формирование наименования стеллажа (префикс-номер) */
+  function RACK_BUILD_NAME 
   (
-    SPREF                   varchar2,   -- РџСЂРµС„РёРєСЃ СЃС‚РµР»Р»Р°Р¶Р°
-    SNUMB                   varchar2    -- РќРѕРјРµСЂ СЃС‚РµР»Р»Р°Р¶Р°
+    SPREF                   varchar2,   -- Префикс стеллажа
+    SNUMB                   varchar2    -- Номер стеллажа
   ) return varchar2 is
   begin
     return trim(SPREF) || '-' || trim(SNUMB);
   end;
-
-  /* Р¤РѕСЂРјРёСЂРѕРІР°РЅРёРµ РїСЂРµС„РёРєСЃР° СЏС‡РµР№РєРё СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° СЃРєР»Р°РґР° */
+  
+  /* Формирование префикса ячейки яруса стеллажа склада */
   function RACK_LINE_CELL_BUILD_PREF
   (
-    NRACK_LINE              number,     -- РќРѕРјРµСЂ СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° РІ РєРѕС‚РѕСЂРѕРј РЅР°С…РѕРґРёС‚СЃСЏ СЏС‡РµР№РєР°
-    SPREF_TMPL              varchar2    -- РЁР°Р±Р»РѕРЅ РїСЂРµС„РёРєСЃР°
+    NRACK_LINE              number,     -- Номер яруса стеллажа в котором находится ячейка               
+    SPREF_TMPL              varchar2    -- Шаблон префикса
   ) return varchar2 is
   begin
     return SPREF_TMPL || NRACK_LINE;
   end;
 
-  /* Р¤РѕСЂРјРёСЂРѕРІР°РЅРёРµ РЅРѕРјРµСЂР° СЏС‡РµР№РєРё СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° СЃРєР»Р°РґР° */
+  /* Формирование номера ячейки яруса стеллажа склада */
   function RACK_LINE_CELL_BUILD_NUMB
   (
-    NRACK_LINE_CELL         number,     -- РќРѕРјРµСЂ СЏС‡РµР№РєРё РІ СЏСЂСѓСЃРµ СЃС‚РµР»Р»Р°Р¶Р°
-    SNUMB_TMPL              varchar2    -- РЁР°Р±Р»РѕРЅ РЅРѕРјРµСЂР°
+    NRACK_LINE_CELL         number,     -- Номер ячейки в ярусе стеллажа
+    SNUMB_TMPL              varchar2    -- Шаблон номера
   ) return varchar2 is
   begin
     return SNUMB_TMPL || NRACK_LINE_CELL;
   end;
-
-  /* Р¤РѕСЂРјРёСЂРѕРІР°РЅРёСЏ РїРѕР»РЅРѕРіРѕ РёРјРµРЅРё (РїСЂРµС„РёРєСЃ-РЅРѕРјРµСЂ) СЏС‡РµР№РєРё СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° СЃРєР»Р°РґР° (РїРѕ РїСЂРµС„РёРєСЃСѓ Рё РЅРѕРјРµСЂСѓ)*/
+  
+  /* Формирования полного имени (префикс-номер) ячейки яруса стеллажа склада (по префиксу и номеру)*/
   function RACK_LINE_CELL_BUILD_NAME
   (
-    SPREF                   varchar2,   -- РџСЂРµС„РёРєСЃ СЏС‡РµР№РєРё
-    SNUMB                   varchar2    -- РќРѕРјРµСЂ СЏС‡РµР№РєРё
+    SPREF                   varchar2,   -- Префикс ячейки
+    SNUMB                   varchar2    -- Номер ячейки
   ) return varchar2 is
   begin
     return trim(SPREF) || '-' || trim(SNUMB);
-  end;
-
-  /* Р¤РѕСЂРјРёСЂРѕРІР°РЅРёСЏ РїРѕР»РЅРѕРіРѕ РёРјРµРЅРё (РїСЂРµС„РёРєСЃ-РЅРѕРјРµСЂ) СЏС‡РµР№РєРё СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° СЃРєР»Р°РґР° (РїРѕ РєРѕРѕСЂРґРёРЅР°С‚Р°Рј)*/
+  end;  
+  
+  /* Формирования полного имени (префикс-номер) ячейки яруса стеллажа склада (по координатам)*/
   function RACK_LINE_CELL_BUILD_NAME
   (
-    NRACK_LINE              number,     -- РќРѕРјРµСЂ СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° РІ РєРѕС‚РѕСЂРѕРј РЅР°С…РѕРґРёС‚СЃСЏ СЏС‡РµР№РєР°
-    NRACK_LINE_CELL         number,     -- РќРѕРјРµСЂ СЏС‡РµР№РєРё РІ СЏСЂСѓСЃРµ СЃС‚РµР»Р»Р°Р¶Р°
-    SPREF_TMPL              varchar2,   -- РЁР°Р±Р»РѕРЅ РїСЂРµС„РёРєСЃР°
-    SNUMB_TMPL              varchar2    -- РЁР°Р±Р»РѕРЅ РЅРѕРјРµСЂР°
+    NRACK_LINE              number,     -- Номер яруса стеллажа в котором находится ячейка
+    NRACK_LINE_CELL         number,     -- Номер ячейки в ярусе стеллажа
+    SPREF_TMPL              varchar2,   -- Шаблон префикса    
+    SNUMB_TMPL              varchar2    -- Шаблон номера
   ) return varchar2 is
   begin
     return RACK_LINE_CELL_BUILD_NAME(SPREF => RACK_LINE_CELL_BUILD_PREF(NRACK_LINE => NRACK_LINE,
                                                                         SPREF_TMPL => SPREF_TMPL),
                                      SNUMB => RACK_LINE_CELL_BUILD_NUMB(NRACK_LINE_CELL => NRACK_LINE_CELL,
                                                                         SNUMB_TMPL      => SNUMB_TMPL));
-  end;
-
-  /* РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РєРѕРЅС„РёРіСѓСЂР°С†РёРё СЏС‡РµРµРє СЃС‚РµРЅРґР° */
-  procedure STAND_INIT_RACK_LINE_CELL_CONF
+  end;  
+  
+  /* Инициализация конфигурации ячеек стенда */
+  procedure STAND_INIT_RACK_LINE_CELL_CONF 
   (
-    NCOMPANY                number,             -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    SSTORE                  varchar2            -- РњРЅРµРјРѕРєРѕРґ СЃРєР»Р°РґР° СЃС‚РµРЅРґР°
+    NCOMPANY                number,             -- Регистрационный номер организации 
+    SSTORE                  varchar2            -- Мнемокод склада стенда
   ) is
-    NDEF_NOMEN_1              DICNOMNS.RN%type; -- РќРѕРјРµРЅРєР»Р°С‚СѓСЂР° РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (1)
-    NDEF_NOMEN_MODIF_1        NOMMODIF.RN%type; -- РњРѕРґРёС„РёРєР°С†РёСЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (1)
-    NDEF_NOMEN_2              DICNOMNS.RN%type; -- РќРѕРјРµРЅРєР»Р°С‚СѓСЂР° РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (2)
-    NDEF_NOMEN_MODIF_2        NOMMODIF.RN%type; -- РњРѕРґРёС„РёРєР°С†РёСЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (2)
-    NDEF_NOMEN_3              DICNOMNS.RN%type; -- РќРѕРјРµРЅРєР»Р°С‚СѓСЂР° РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (3)
-    NDEF_NOMEN_MODIF_3        NOMMODIF.RN%type; -- РњРѕРґРёС„РёРєР°С†РёСЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (3)
+    NDEF_NOMEN_1              DICNOMNS.RN%type; -- Номенклатура по умолчанию (1)
+    NDEF_NOMEN_MODIF_1        NOMMODIF.RN%type; -- Модификация номенклатуры по умолчанию (1)
+    NDEF_NOMEN_2              DICNOMNS.RN%type; -- Номенклатура по умолчанию (2)
+    NDEF_NOMEN_MODIF_2        NOMMODIF.RN%type; -- Модификация номенклатуры по умолчанию (2)
+    NDEF_NOMEN_3              DICNOMNS.RN%type; -- Номенклатура по умолчанию (3)
+    NDEF_NOMEN_MODIF_3        NOMMODIF.RN%type; -- Модификация номенклатуры по умолчанию (3)
   begin
-    /* РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РєРѕР»Р»РµРєС†РёСЋ */
+    /* Инициализируем коллекцию */
     RACK_LINE_CELL_CONFS := TRACK_LINE_CELL_CONFS();
-    /* Р Р°Р·С‹РјРµРЅСѓРµРј РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ */
+    /* Разыменуем номенклатуры по умолчанию */
     FIND_DICNOMNS_BY_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SNOMEN_CODE => SDEF_NOMEN_1, NRN => NDEF_NOMEN_1);
     FIND_NOMMODIF_BY_CODE(NPRN => NDEF_NOMEN_1, SCODE => SDEF_NOMEN_MODIF_1, NFRN => NDEF_NOMEN_MODIF_1);
     FIND_DICNOMNS_BY_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SNOMEN_CODE => SDEF_NOMEN_2, NRN => NDEF_NOMEN_2);
     FIND_NOMMODIF_BY_CODE(NPRN => NDEF_NOMEN_2, SCODE => SDEF_NOMEN_MODIF_2, NFRN => NDEF_NOMEN_MODIF_2);
     FIND_DICNOMNS_BY_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SNOMEN_CODE => SDEF_NOMEN_3, NRN => NDEF_NOMEN_3);
     FIND_NOMMODIF_BY_CODE(NPRN => NDEF_NOMEN_3, SCODE => SDEF_NOMEN_MODIF_3, NFRN => NDEF_NOMEN_MODIF_3);
-    /* РћР±С…РѕРґСЏРј СЏСЂСѓСЃС‹ */
+    /* Обходям ярусы */
     for I in 1 .. NRACK_LINES
     loop
-      /* РћР±С…РѕРґРёРј СЏС‡РµР№РєРё СЏСЂСѓСЃР° */
+      /* Обходим ячейки яруса */
       for J in 1 .. NRACK_LINE_CELLS
       loop
-        /* Р”РѕР±Р°РІРёРј СЏС‡РµР№РєСѓ РІ РєРѕР»Р»РµРєС†РёСЋ */
+        /* Добавим ячейку в коллекцию */
         RACK_LINE_CELL_CONFS.EXTEND();
-        /* РљРѕРЅС„РёРіСѓСЂРёСЂСѓРµРј СЏС‡РµР№РєСѓ РѕР±С‰РёРјРё РІС‹С‡РёСЃР»СЏРµРјС‹РјРё РїР°СЂР°РјРµС‚СЂР°РјРё */
+        /* Конфигурируем ячейку общими вычисляемыми параметрами */
         RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NRACK_LINE := I;
         RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NRACK_LINE_CELL := J;
         RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SPREF := RACK_LINE_CELL_BUILD_PREF(NRACK_LINE => I,
@@ -924,7 +924,7 @@ create or replace package body UDO_PKG_STAND as
                             SSTORE       => SSTORE,
                             SCELL        => RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNAME,
                             NRN          => RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NRACK_CELL);
-        /* РљРѕРЅС„РёРіСѓСЂРёСЂСѓРµРј СЏС‡РµР№РєСѓ РёРЅРґРёРІРёРґСѓР°Р»СЊРЅС‹РјРё РїР°СЂР°РјРµС‚СЂР°РјРё С…СЂР°РЅРµРЅРёСЏ */
+        /* Конфигурируем ячейку индивидуальными параметрами хранения */
         case
           /* 1 - 1 */
           when (I = 1) and (J = 1) then
@@ -950,45 +950,45 @@ create or replace package body UDO_PKG_STAND as
               RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).NNOMMODIF := NDEF_NOMEN_MODIF_3;
               RACK_LINE_CELL_CONFS(RACK_LINE_CELL_CONFS.LAST).SNOMMODIF := SDEF_NOMEN_MODIF_3;
             end;
-          /* РќРµРёР·РІРµСЃС‚РЅР°СЏ СЏС‡РµР№РєР° */
+          /* Неизвестная ячейка */
           else
             P_EXCEPTION(0,
-                        'РќРµРёР·РІРµСЃС‚РЅР°СЏ СЏС‡РµР№РєР° в„–%s РІ СЏСЂСѓСЃРµ в„–%s - РЅРµ РјРѕРіСѓ Р·Р°РґР°С‚СЊ РєРѕРЅС„РёРіСѓСЂР°С†РёСЋ!',
+                        'Неизвестная ячейка №%s в ярусе №%s - не могу задать конфигурацию!',
                         TO_CHAR(J),
                         TO_CHAR(I));
         end case;
       end loop;
     end loop;
   end;
-
-  /* РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РєРѕРЅС„РёРіСѓСЂР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ СЃС‚РµРЅРґР° */
+  
+  /* Инициализация конфигурации номенклатур стенда */
   procedure STAND_INIT_RACK_NOMEN_CONF is
   begin
-    /* РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРёРј РєРѕР»Р»РµРєС†РёСЋ С…СЂР°РЅРёРјС‹С… РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ */
+    /* Инициализируеим коллекцию хранимых номенклатур */
     RACK_NOMEN_CONFS := TRACK_NOMEN_CONFS();
-    /* РћР±С…РѕРґРёРј РєРѕРЅС„РёРіСѓСЂР°С†РёСЋ СЏС‡РµРµРє СЃС‚РµРЅРґР° РґР»СЏ С‚РѕРіРѕ С‡С‚Рѕ Р±С‹ СЃС„РѕСЂРјРёСЂРѕРІР°С‚СЊ РєРѕР»Р»РµРєС†РёСЋ С…СЂР°РЅРёРјС‹С… РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ */
+    /* Обходим конфигурацию ячеек стенда для того что бы сформировать коллекцию хранимых номенклатур */
     if ((RACK_LINE_CELL_CONFS is not null) and (RACK_LINE_CELL_CONFS.COUNT > 0)) then
-      /* РќР°РїРѕР»РЅРёРј РєРѕР»Р»РµРєС†РёСЋ С…СЂР°РЅРёРјС‹С… РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ С‚РµРјРё, РєРѕС‚РѕСЂС‹Рµ СѓРєР°Р·Р°РЅС‹ РІ СЏС‡РµР№РєР°С… */
+      /* Наполним коллекцию хранимых номенклатур теми, которые указаны в ячейках */
       declare
         BADD boolean := false;
       begin
-        /* РРґРµРј РїРѕ РёР· СЃРєРѕРЅС„РёРіСѓСЂРёСЂРѕРІР°РЅРЅС‹С… СЏС‡РµРµРє СЃС‚РµРЅРµРґР° */
+        /* Идем по из сконфигурированных ячеек стенеда */
         for I in RACK_LINE_CELL_CONFS.FIRST .. RACK_LINE_CELL_CONFS.LAST
         loop
           BADD := true;
           if (RACK_NOMEN_CONFS.COUNT > 0) then
-            /* РС‰РµРј РІ РєРѕР»Р»РµРєС†РёРё С…СЂР°РЅРёРјС‹С… РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ... */
+            /* Ищем в коллекции хранимых номенклатур... */
             for J in RACK_NOMEN_CONFS.FIRST .. RACK_NOMEN_CONFS.LAST
             loop
-              /* ...С‚Р°РєСѓСЋ Р¶Рµ, РєР°Рє РІ СЏС‡РµР№РєРµ */
+              /* ...такую же, как в ячейке */
               if (RACK_NOMEN_CONFS(J).NNOMMODIF = RACK_LINE_CELL_CONFS(I).NNOMMODIF) then
-                /* РўР°РєР°СЏ РµСЃС‚СЊ - СѓРІРµР»РёС‡РёРј С…СЂР°РЅРёРјРѕРµ РЅР° СЃС‚РµРЅРґРµ РєРѕР»РёС‡РµСЃС‚РІРѕ (РѕРЅ РІСЃРµРіРґР° Р·Р°РіСЂСѓР¶Р°РµС‚СЃСЏ РїРѕР»РЅРѕСЃС‚СЊСЋ) */
+                /* Такая есть - увеличим хранимое на стенде количество (он всегда загружается полностью) */
                 BADD := false;
                 RACK_NOMEN_CONFS(J).NMAX_QUANT := RACK_NOMEN_CONFS(J).NMAX_QUANT + RACK_LINE_CELL_CONFS(I).NCAPACITY;
               end if;
             end loop;
           end if;
-          /* РќРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РєР°Рє РІ СЏС‡РµР№РєРµ РµС‰С‘ РЅРµС‚ РІ РєРѕР»Р»РµРєС†РёРё С…СЂР°РЅРёСЏРјС… - Р·РЅР°С‡РёС‚ РґРѕР±Р°РІРёРј РµС‘ */
+          /* Номенклатуры как в ячейке ещё нет в коллекции храниямх - значит добавим её */
           if (BADD) then
             RACK_NOMEN_CONFS.EXTEND();
             RACK_NOMEN_CONFS(RACK_NOMEN_CONFS.LAST).SNOMEN := RACK_LINE_CELL_CONFS(I).SNOMEN;
@@ -1008,153 +1008,153 @@ create or replace package body UDO_PKG_STAND as
             exception
               when others then
                 P_EXCEPTION(0,
-                            'РќРµ СѓРґР°Р»РѕСЃСЊ РѕРїСЂРµРґРµР»РёС‚СЊ РѕСЃРЅРѕРІРЅСѓСЋ Р•Р РґР»СЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ "%s" (RN: %s)!',
+                            'Не удалось определить основную ЕИ для номенклатуры "%s" (RN: %s)!',
                             RACK_LINE_CELL_CONFS(I).SNOMEN,
                             TO_CHAR(RACK_LINE_CELL_CONFS(I).NNOMEN));
-            end;
+            end;          
           end if;
         end loop;
       end;
-      /* РЈР±РµРґРёРјСЃСЏ, С‡С‚Рѕ РµСЃС‚СЊ С…РѕС‚СЊ С‡С‚Рѕ-С‚Рѕ РІ РЅР°С€РµР№ РєРѕРЅС„РёРіСѓСЂР°С†РёРё */
+      /* Убедимся, что есть хоть что-то в нашей конфигурации */
       if (RACK_NOMEN_CONFS.COUNT = 0) then
         P_EXCEPTION(0,
-                    'РќРµ СѓРґР°Р»РѕСЃСЊ РѕРїСЂРµРґРµР»РёС‚СЊ РєРѕРЅС„РёРіСѓСЂР°С†РёСЋ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ СЃС‚РµРЅРґР°!');
+                    'Не удалось определить конфигурацию номенклатур стенда!');
       end if;
-    /* РќРµС‚ РЅР°СЃС‚СЂРѕРµРє РјРµСЃС‚ С…СЂР°РЅРµРЅРёСЏ СЃС‚РµРЅРґР° */
+    /* Нет настроек мест хранения стенда */
     else
-      P_EXCEPTION(0, 'РњРµСЃС‚Р° С…СЂР°РЅРµРЅРёСЏ СЃС‚РµРЅРґР° РµС‰С‘ РЅРµ СЃРєРѕРЅС„РёРіСѓСЂРёСЂРѕРІР°РЅС‹!');
+      P_EXCEPTION(0, 'Места хранения стенда ещё не сконфигурированы!');
     end if;
   end;
-
-  /* РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РєРѕРЅС„РёРіСѓСЂР°С†РёРё СЃС‚РµРЅРґР° */
+  
+  /* Инициализация конфигурации стенда */
   procedure STAND_INIT_RACK_CONF
   (
-    NCOMPANY                number,     -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    SSTORE                  varchar2    -- РњРЅРµРјРѕРєРѕРґ СЃРєР»Р°РґР° СЃС‚РµРЅРґР°
+    NCOMPANY                number,     -- Регистрационный номер организации 
+    SSTORE                  varchar2    -- Мнемокод склада стенда
   ) is
   begin
-    /* РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РјРµСЃС‚Р° С…СЂР°РЅРµРЅРёСЏ */
+    /* Инициализируем места хранения */
     STAND_INIT_RACK_LINE_CELL_CONF(NCOMPANY => NCOMPANY, SSTORE => SSTORE);
-    /* РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ С…СЂР°РЅРµРЅРёСЏ */
+    /* Инициализируем номенклатуры хранения */
     STAND_INIT_RACK_NOMEN_CONF();
   end;
-
-  /* РџРѕР»СѓС‡РµРЅРёРµ РєРѕРЅС„РёРіСѓСЂР°С†РёРё СЏС‡РµР№РєРё СЃС‚РµРЅРґР° */
+  
+  /* Получение конфигурации ячейки стенда */
   function STAND_GET_RACK_LINE_CELL_CONF
   (
-    NRACK_LINE              number,     -- РќРѕРјРµСЂ СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
-    NRACK_LINE_CELL         number      -- РќРѕРјРµСЂ СЏС‡РµР№РєРё РІ СЏСЂСѓСЃРµ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
+    NRACK_LINE              number,     -- Номер яруса стеллажа стенда
+    NRACK_LINE_CELL         number      -- Номер ячейки в ярусе стеллажа стенда
   ) return TRACK_LINE_CELL_CONF is
   begin
-    /* РћР±С…РѕРґРёРј РєРѕРЅС„РёРіСѓСЂР°С†РёСЋ СЏС‡РµРµРє СЃС‚РµРЅРґР° Рё РЅР°С…РѕРґРёРј РЅСѓР¶РЅСѓСЋ */
+    /* Обходим конфигурацию ячеек стенда и находим нужную */
     if ((RACK_LINE_CELL_CONFS is not null) and (RACK_LINE_CELL_CONFS.COUNT > 0)) then
       for I in RACK_LINE_CELL_CONFS.FIRST .. RACK_LINE_CELL_CONFS.LAST
       loop
-        /* Р•СЃР»Рё РЅР°С€Р»Р°СЃСЊ РЅСѓР¶РЅР°СЏ СЏС‡РµР№РєР°... */
+        /* Если нашлась нужная ячейка... */
         if ((RACK_LINE_CELL_CONFS(I).NRACK_LINE = NRACK_LINE) and
            (RACK_LINE_CELL_CONFS(I).NRACK_LINE_CELL = NRACK_LINE_CELL)) then
-          /* ...РІРµСЂРЅС‘Рј РµС‘ */
+          /* ...вернём её */
           return RACK_LINE_CELL_CONFS(I);
         end if;
       end loop;
     else
-      P_EXCEPTION(0, 'РќРµ Р·Р°РґР°РЅР° РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ СЏС‡РµРµРє СЃС‚РµРЅРґР°!');
+      P_EXCEPTION(0, 'Не задана конфигурация ячеек стенда!');
     end if;
-    /* Р•СЃР»Рё РјС‹ Р·РґРµСЃСЊ - С‚Рѕ РѕС‡РµРІРёРґРЅРѕ РЅРёС‡РµРіРѕ РЅРµ РЅР°С€Р»Рё */
+    /* Если мы здесь - то очевидно ничего не нашли */
     P_EXCEPTION(0,
-                'Р”Р»СЏ С‡РµР№С‡РєРё в„–%s СЏСЂСѓСЃР° в„–%s СЃС‚РµРЅРґР° РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ РЅРµ РѕРїСЂРµРґРµР»РµРЅР°!',
+                'Для чейчки №%s яруса №%s стенда конфигурация не определена!',
                 TO_CHAR(NRACK_LINE_CELL),
                 TO_CHAR(NRACK_LINE));
   end;
-
-  /* РџРѕР»СѓС‡РµРЅРёРµ РєРѕРЅС„РёРіСѓСЂР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ СЃС‚РµРЅРґР° (РїРѕ СЂРµРі. РЅРѕРјРµСЂСѓ РјРѕРґРёС„РёРєР°С†РёРё) */
+  
+  /* Получение конфигурации номенклатуры стенда (по рег. номеру модификации) */
   function STAND_GET_RACK_NOMEN_CONF
   (
-    NNOMMODIF               number      -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РјРѕРґРёС„РёРєР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹
+    NNOMMODIF               number      -- Регистрационный номер модификации номенклатуры
   ) return TRACK_NOMEN_CONF is
   begin
-    /* РћР±С…РѕРґРёРј РєРѕРЅС„РёРіСѓСЂР°С†РёСЋ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ СЃС‚РµРЅРґР° Рё РЅР°С…РѕРґРёРј РЅСѓР¶РЅСѓСЋ */
+    /* Обходим конфигурацию номенклатур стенда и находим нужную */
     if ((RACK_NOMEN_CONFS is not null) and (RACK_NOMEN_CONFS.COUNT > 0)) then
       for I in RACK_NOMEN_CONFS.FIRST .. RACK_NOMEN_CONFS.LAST
       loop
-        /* Р•СЃР»Рё РЅР°С€Р»Р°СЃСЊ РЅСѓР¶РЅР°СЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂР°... */
+        /* Если нашлась нужная номенклатура... */
         if (RACK_NOMEN_CONFS(I).NNOMMODIF = NNOMMODIF) then
-          /* ...РІРµСЂРЅС‘Рј РµС‘ */
+          /* ...вернём её */
           return RACK_NOMEN_CONFS(I);
         end if;
       end loop;
     else
-      P_EXCEPTION(0, 'РќРµ Р·Р°РґР°РЅР° РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ СЃС‚РµРЅРґР°!');
+      P_EXCEPTION(0, 'Не задана конфигурация номенклатуры стенда!');
     end if;
-    /* Р•СЃР»Рё РјС‹ Р·РґРµСЃСЊ - С‚Рѕ РѕС‡РµРІРёРґРЅРѕ РЅРёС‡РµРіРѕ РЅРµ РЅР°С€Р»Рё */
+    /* Если мы здесь - то очевидно ничего не нашли */
     P_EXCEPTION(0,
-                'Р”Р»СЏ РјРѕРґРёС„РёРєР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ (RN: %s) РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ РЅРµ РѕРїСЂРµРґРµР»РµРЅР°!',
+                'Для модификации номенклатуры (RN: %s) конфигурация не определена!',
                 TO_CHAR(NNOMMODIF));
   end;
 
-  /* РџРѕР»СѓС‡РµРЅРёРµ РєРѕРЅС„РёРіСѓСЂР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ СЃС‚РµРЅРґР° (РїРѕ РјРЅРµРјРѕРєРѕРґСѓ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ Рё РјРѕРґРёС„РёРєР°С†РёРё) */
+  /* Получение конфигурации номенклатуры стенда (по мнемокоду номенклатуры и модификации) */
   function STAND_GET_RACK_NOMEN_CONF
   (
-    SNOMEN                  varchar2,   -- РњРЅРµРјРѕРєРѕРґ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹
-    SNOMMODIF               varchar2    -- РњРЅРµРјРѕРєРѕРґ РјРѕРґРёС„РёРєР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹
+    SNOMEN                  varchar2,   -- Мнемокод номенклатуры
+    SNOMMODIF               varchar2    -- Мнемокод модификации номенклатуры
   ) return TRACK_NOMEN_CONF is
   begin
-    /* РћР±С…РѕРґРёРј РєРѕРЅС„РёРіСѓСЂР°С†РёСЋ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ СЃС‚РµРЅРґР° Рё РЅР°С…РѕРґРёРј РЅСѓР¶РЅСѓСЋ */
+    /* Обходим конфигурацию номенклатур стенда и находим нужную */
     if ((RACK_NOMEN_CONFS is not null) and (RACK_NOMEN_CONFS.COUNT > 0)) then
       for I in RACK_NOMEN_CONFS.FIRST .. RACK_NOMEN_CONFS.LAST
       loop
-        /* Р•СЃР»Рё РЅР°С€Р»Р°СЃСЊ РЅСѓР¶РЅР°СЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂР°... */
+        /* Если нашлась нужная номенклатура... */
         if ((RACK_NOMEN_CONFS(I).SNOMEN = SNOMEN) and (RACK_NOMEN_CONFS(I).SNOMMODIF = SNOMMODIF)) then
-          /* ...РІРµСЂРЅС‘Рј РµС‘ */
+          /* ...вернём её */
           return RACK_NOMEN_CONFS(I);
         end if;
       end loop;
     else
-      P_EXCEPTION(0, 'РќРµ Р·Р°РґР°РЅР° РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ СЃС‚РµРЅРґР°!');
+      P_EXCEPTION(0, 'Не задана конфигурация номенклатуры стенда!');
     end if;
-    /* Р•СЃР»Рё РјС‹ Р·РґРµСЃСЊ - С‚Рѕ РѕС‡РµРІРёРґРЅРѕ РЅРёС‡РµРіРѕ РЅРµ РЅР°С€Р»Рё */
+    /* Если мы здесь - то очевидно ничего не нашли */
     P_EXCEPTION(0,
-                'Р”Р»СЏ РјРѕРґРёС„РёРєР°С†РёРё "%s" РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ "%s" РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ РЅРµ РѕРїСЂРµРґРµР»РµРЅР°!',
+                'Для модификации "%s" номенклатуры "%s" конфигурация не определена!',
                 SNOMMODIF,
                 SNOMEN);
   end;
 
 
-  /* РџРѕР»СѓС‡РµРЅРёРµ РѕСЃС‚Р°С‚РєРѕРІ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР° РїРѕ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂР°Рј */
+  /* Получение остатков стеллажа стенда по номенклатурам */
   function STAND_GET_RACK_NOMEN_REST
   (
-    NCOMPANY                number,             -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    SSTORE                  varchar2,           -- РњРЅРµРјРѕРєРѕРґ СЃРєР»Р°РґР° СЃС‚РµРЅРґР°
-    SPREF                   varchar2,           -- РџСЂРµС„РёРєСЃ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
-    SNUMB                   varchar2,           -- РќРѕРјРµСЂ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
-    SCELL                   varchar2 := null,   -- РќР°РёРјРµРЅРѕРІР°РЅРёРµ (РїСЂРµС„РёРєСЃ-РЅРѕРјРµСЂ) СЏС‡РµР№РєРё СЃС‚РµР»Р»Р°Р¶Р° (null - РїРѕ РІСЃРµРј)
-    SNOMEN                  varchar2 := null,   -- РќРѕРјРµРЅРєР»Р°С‚СѓСЂР° (null - РїРѕ РІСЃРµРј)
-    SNOMEN_MODIF            varchar2 := null    -- РњРѕРґРёС„РёРєР°С†РёСЏ (null - РїРѕ РІСЃРµРј)
+    NCOMPANY                number,             -- Регистрационный номер организации
+    SSTORE                  varchar2,           -- Мнемокод склада стенда
+    SPREF                   varchar2,           -- Префикс стеллажа стенда
+    SNUMB                   varchar2,           -- Номер стеллажа стенда
+    SCELL                   varchar2 := null,   -- Наименование (префикс-номер) ячейки стеллажа (null - по всем)
+    SNOMEN                  varchar2 := null,   -- Номенклатура (null - по всем)
+    SNOMEN_MODIF            varchar2 := null    -- Модификация (null - по всем)
   ) return TNOMEN_RESTS is
-    NSTORE                  PKG_STD.TREF;       -- Р РµРі. РЅРѕРјРµСЂ СЃРєР»Р°РґР°
-    NRACK                   PKG_STD.TREF;       -- Р РµРі. РЅРѕРјРµСЂ СЃС‚РµР»Р»Р°Р¶Р°
-    NCELL                   PKG_STD.TREF;       -- Р РµРі. РЅРѕРјРµСЂ СЏС‡РµР№РєРё
-    BADD                    boolean;            -- Р¤Р»Р°Рі РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё РґРѕР±Р°РІР»РµРЅРёСЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РІ РєРѕР»Р»РµРєС†РёСЋ
-    N                       PKG_STD.TNUMBER;    -- РџРѕСЂСЏРґРєРѕРІС‹Р№ РЅРѕРјРµСЂ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РІ СЂРµР·СѓР»СЊС‚РёСЂСѓСЋС‰РµР№ РєРѕР»Р»РµРєС†РёРё
-    NREST                   PKG_STD.TLNUMBER;   -- РћСЃС‚Р°С‚РѕРє РїРѕ С‚РµРєСѓС‰РµР№ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂРµ РІ С‚РµРєСѓС‰РµРј РјРµСЃС‚Рµ С…СЂР°РЅРµРЅРёСЏ
-    NTMP                    PKG_STD.TLNUMBER;   -- Р‘СѓС„РµСЂ РґР»СЏ СЂР°СЃСЃС‡РµС‚РѕРІ
-    RES                     TNOMEN_RESTS;       -- Р РµР·СѓР»СЊС‚Р°С‚ СЂР°Р±РѕС‚С‹
-    /* Р”РѕР±Р°РІР»РµРЅРёРµ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РІ СЂРµР·СѓР»СЊС‚РёСЂСѓСЋС‰СѓСЋ РєРѕР»Р»РµРєС†РёСЋ */
+    NSTORE                  PKG_STD.TREF;       -- Рег. номер склада
+    NRACK                   PKG_STD.TREF;       -- Рег. номер стеллажа
+    NCELL                   PKG_STD.TREF;       -- Рег. номер ячейки
+    BADD                    boolean;            -- Флаг необходимости добавления номенклатуры в коллекцию
+    N                       PKG_STD.TNUMBER;    -- Порядковый номер номенклатуры в результирующей коллекции
+    NREST                   PKG_STD.TLNUMBER;   -- Остаток по текущей номенклатуре в текущем месте хранения
+    NTMP                    PKG_STD.TLNUMBER;   -- Буфер для рассчетов
+    RES                     TNOMEN_RESTS;       -- Результат работы
+    /* Добавление номенклатуры в результирующую коллекцию */
     procedure ADD_NOMEN
     (
-      SNOMEN                varchar2,           -- РњРЅРµРјРѕРєРѕРґ РґРѕР±Р°РІР»СЏРµРјРѕР№ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹
-      SNOMEN_MODIF          varchar2,           -- РњРЅРµРјРѕРєРѕРґ РґРѕР±Р°РІР»СЏРµРјРѕР№ РјРѕРґРёС„РёРєР°С†РёРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹
-      ARR                   in out TNOMEN_RESTS -- РљРѕР»Р»РµРєС†РёСЏ РґР»СЏ РґРѕР±Р°Р»РІРµРЅРёСЏ
+      SNOMEN                varchar2,           -- Мнемокод добавляемой номенклатуры
+      SNOMEN_MODIF          varchar2,           -- Мнемокод добавляемой модификации номенклатуры
+      ARR                   in out TNOMEN_RESTS -- Коллекция для добалвения
     ) is
-      NOMEN_CONF            TRACK_NOMEN_CONF;   -- РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ СЃС‚РµРЅРґР°
+      NOMEN_CONF            TRACK_NOMEN_CONF;   -- Конфигурация номенклатуры стенда
     begin
-      /* РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РєРѕР»Р»РµРєС†РёСЋ, РµСЃР»Рё РЅР°РґРѕ */
+      /* Инициализируем коллекцию, если надо */
       if (ARR is null) then
         ARR := TNOMEN_RESTS();
       end if;
-      /* РќР°Р№РґС‘Рј РЅРѕРјРµРЅРєР»Р°С‚СѓСЂСѓ РІ РєРѕРЅС„РёРіСѓСЂР°С†РёРё СЃС‚РµРЅРґР° */
+      /* Найдём номенклатуру в конфигурации стенда */
       NOMEN_CONF := STAND_GET_RACK_NOMEN_CONF(SNOMEN => SNOMEN, SNOMMODIF => SNOMEN_MODIF);
-      /* Р”РѕР±Р°РІРёРј СЌР»РµРјРµРЅС‚ РІ РєРѕР»Р»РµРєС†РёСЋ */
+      /* Добавим элемент в коллекцию */
       ARR.EXTEND();
       ARR(ARR.LAST).NNOMEN := NOMEN_CONF.NNOMEN;
       ARR(ARR.LAST).SNOMEN := NOMEN_CONF.SNOMEN;
@@ -1165,21 +1165,21 @@ create or replace package body UDO_PKG_STAND as
       ARR(ARR.LAST).SMEAS := NOMEN_CONF.SMEAS;
     end;
   begin
-    /* РџСЂРѕРІРµСЂРёРј РїР°СЂР°РјРµС‚СЂС‹ */
+    /* Проверим параметры */
     if (((SNOMEN is null) and (SNOMEN_MODIF is not null)) or ((SNOMEN is not null) and (SNOMEN_MODIF is null))) then
       P_EXCEPTION(0,
-                  'РћР±СЏР·Р°С‚РµР»СЊРЅРѕ РѕРґРЅРѕРІСЂРµРјРµРЅРЅРѕРµ СѓРєР°Р·Р°РЅРёРµ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ Рё РјРѕРґРёС„РёРєР°С†РёРё!');
+                  'Обязательно одновременное указание номенклатуры и модификации!');
     end if;
-    /* РќР°Р№РґС‘Рј СЂРµРі. РЅРѕРјРµСЂ СЃРєР»Р°РґР° */
+    /* Найдём рег. номер склада */
     FIND_DICSTORE_NUMB(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SNUMB => SSTORE, NRN => NSTORE);
-    /* РќР°Р№РґРµРј СЂРµРі. РЅРѕРјРµСЂ СЃС‚РµР»Р»Р°Р¶Р° */
+    /* Найдем рег. номер стеллажа */
     P_STPLRACKS_FIND(NFLAG_SMART => 0,
                      NCOMPANY    => NCOMPANY,
                      SSTORE      => SSTORE,
                      SPREF       => SPREF,
                      SNUMB       => SNUMB,
                      NRN         => NRACK);
-    /* РќР°Р№РґС‘Рј СЂРµРі. РЅРѕРјРµСЂ СЏС‡РµР№РєРё */
+    /* Найдём рег. номер ячейки */
     FIND_STPLCELLS_NUMB(NFLAG_SMART  => 0,
                         NFLAG_OPTION => 1,
                         NCOMPANY     => NCOMPANY,
@@ -1187,13 +1187,13 @@ create or replace package body UDO_PKG_STAND as
                         SSTORE       => SSTORE,
                         SCELL        => SCELL,
                         NRN          => NCELL);
-    /* РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РІС‹С…РѕРґ */
+    /* Инициализируем выход */
     RES := TNOMEN_RESTS();
-    /* Р•СЃР»Рё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂР° Р·Р°РґР°РЅР° - С‚Рѕ СЃСЂР°Р·Сѓ РґРѕР±Р°РІРёРј РµС‘ РІ РєРѕР»Р»РµРєС†РёСЋ (СЂРµР·СѓР»СЊС‚Р°С‚ РІСЃРµРіРґР° РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ РІ РєРѕР»Р»РµРєС†РёРё, РґР°Р¶Рµ РµСЃР»Рё РѕСЃС‚Р°С‚РєРѕРІ РЅРµС‚) */
+    /* Если номенклатура задана - то сразу добавим её в коллекцию (результат всегда должен быть в коллекции, даже если остатков нет) */
     if ((SNOMEN is not null) and (SNOMEN_MODIF is not null)) then
       ADD_NOMEN(SNOMEN => SNOMEN, SNOMEN_MODIF => SNOMEN_MODIF, ARR => RES);
     end if;
-    /* РћР±С…РѕРґРёРј РѕСЃС‚Р°С‚РєРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ РїРѕ РјРµСЃС‚Р°Рј С…СЂР°РЅРµРЅРёСЏ */
+    /* Обходим остатки номенклатур по местам хранения */
     for NMNS in (select DN.RN NNOMEN,
                         DN.NOMEN_CODE SNOMEN,
                         NM.RN NNOMMODIF,
@@ -1227,27 +1227,27 @@ create or replace package body UDO_PKG_STAND as
                            NM.MODIF_CODE,
                            RACK_LINE_CELL_BUILD_NAME(SPREF => C.PREF, SNUMB => C.NUMB))
     loop
-      /* РџРѕРїСЂРѕР±СѓРµРј РЅР°Р№С‚Рё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂСѓ РІ РєРѕР»Р»РµРєС†РёРё */
+      /* Попробуем найти номенклатуру в коллекции */
       BADD := true;
       if (RES.COUNT > 0) then
         for I in RES.FIRST .. RES.LAST
         loop
-          /* Р•СЃР»Рё С‚Р°РєР°СЏ СѓР¶Рµ РµСЃС‚СЊ... */
+          /* Если такая уже есть... */
           if (RES(I).NNOMMODIF = NMNS.NNOMMODIF) then
-            /* ...СЃРєР°Р¶РµРј С‡С‚Рѕ РЅРµ РЅР°РґРѕ РґРѕР±Р°РІР»СЏС‚СЊ Рё Р·Р°РїРѕРјРЅРёРј РµС‘ РЅРѕРјРµСЂ - С‚СѓРґР° Р±СѓРґРµРј РєРѕРїРёС‚СЊ РѕСЃС‚Р°С‚РєРё */
+            /* ...скажем что не надо добавлять и запомним её номер - туда будем копить остатки */
             BADD := false;
             N    := I;
             exit;
           end if;
         end loop;
       end if;
-      /* Р”РѕР±Р°РІРёРј РЅРѕРјРµРЅРєР»Р°С‚СѓСЂСѓ РІ РєРѕР»Р»РµРєС†РёСЋ, РµСЃР»Рё РЅР°РґРѕ */
+      /* Добавим номенклатуру в коллекцию, если надо */
       if (BADD) then
         ADD_NOMEN(SNOMEN => SNOMEN, SNOMEN_MODIF => SNOMEN_MODIF, ARR => RES);
-        /* Р—Р°РїРѕРјРЅРёРј РЅРѕРјРµСЂ РЅРѕРІРѕРіРѕ СЌР»РµРјРµРЅС‚Р° - С‚СѓРґР° РЅР°РєР°РїР»РёРІР°РµРј РѕСЃС‚Р°С‚РєРё */
+        /* Запомним номер нового элемента - туда накапливаем остатки */
         N := RES.LAST;
       end if;
-      /* Р’С‹С‡РёСЃР»РёРј РѕСЃС‚Р°С‚РѕРє РїРѕ РґР°РЅРЅРѕР№ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂРµ */
+      /* Вычислим остаток по данной номенклатуре */
       P_STPLGOODSSUPPLY_GETREST(NFLAG_SMART   => 0,
                                 NCOMPANY      => NCOMPANY,
                                 SSTORE        => SSTORE,
@@ -1262,25 +1262,25 @@ create or replace package body UDO_PKG_STAND as
                                 NQUANT        => NREST,
                                 NQUANTALT     => NTMP,
                                 NQUANTPACK    => NTMP);
-      /* РќР°РєРѕРїРёРј РѕСЃС‚Р°С‚РѕРє */
+      /* Накопим остаток */
       RES(N).NREST := NREST + RES(N).NREST;
     end loop;
-    /* Р’РµСЂРЅРµРј СЂРµР·СѓР»СЊС‚Р°С‚ */
+    /* Вернем результат */
     return RES;
   end;
 
-  /* РџРѕР»СѓС‡РµРЅРёРµ РѕСЃС‚Р°С‚РєРѕРІ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР° РїРѕ РјРµСЃС‚Р°Рј С…СЂР°РЅРµРЅРёСЏ */
+  /* Получение остатков стеллажа стенда по местам хранения */
   function STAND_GET_RACK_REST
   (
-    NCOMPANY                number,               -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    SSTORE                  varchar2,             -- РњРЅРµРјРѕРєРѕРґ СЃРєР»Р°РґР° СЃС‚РµРЅРґР°
-    SPREF                   varchar2,             -- РџСЂРµС„РёРєСЃ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
-    SNUMB                   varchar2              -- РќРѕРјРµСЂ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
+    NCOMPANY                number,               -- Регистрационный номер организации
+    SSTORE                  varchar2,             -- Мнемокод склада стенда
+    SPREF                   varchar2,             -- Префикс стеллажа стенда
+    SNUMB                   varchar2              -- Номер стеллажа стенда
   ) return TRACK_REST is
-    CELL_CONF               TRACK_LINE_CELL_CONF; -- РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ СЏС‡РµР№РєРё (РјРµСЃС‚Р° С…СЂР°РЅРµРЅРёСЏ) СЃС‚РµРЅРґР°
-    RES                     TRACK_REST;           -- Р РµР·СѓР»СЊС‚Р°С‚ СЂР°Р±РѕС‚С‹
+    CELL_CONF               TRACK_LINE_CELL_CONF; -- Конфигурация ячейки (места хранения) стенда
+    RES                     TRACK_REST;           -- Результат работы
   begin
-    /* РќР°С…РѕРґРёРј СЃС‚РµР»Р»Р°Р¶ Рё РёРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј СЂРµР·СѓР»СЊС‚Р°С‚ */
+    /* Находим стеллаж и инициализируем результат */
     begin
       select T.RN,
              T.STORE,
@@ -1306,43 +1306,43 @@ create or replace package body UDO_PKG_STAND as
     exception
       when NO_DATA_FOUND then
         P_EXCEPTION(0,
-                    'РЎС‚РµР»Р»Р°Р¶ "%s" РЅР° СЃРєР»Р°РґРµ "%s" РЅРµ РѕРїСЂРµРґРµР»С‘РЅ!',
+                    'Стеллаж "%s" на складе "%s" не определён!',
                     RACK_BUILD_NAME(SPREF => SPREF, SNUMB => SNUMB),
                     SSTORE);
     end;
-    /* РЎРєР°Р¶РµРј, С‡С‚Рѕ СЃС‚РµР»Р»Р°Р¶ РїСѓСЃС‚РѕР№ */
+    /* Скажем, что стеллаж пустой */
     RES.BEMPTY := true;
-    /* РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РєРѕР»Р»РµРєС†РёСЋ СЏСЂСѓСЃРѕРІ */
+    /* Инициализируем коллекцию ярусов */
     RES.RACK_LINE_RESTS := TRACK_LINE_RESTS();
-    /* РћР±С…РѕРґРёРј СЏСЂСѓСЃС‹ (СЃРѕРіР»Р°СЃРЅРѕ РєРѕРЅС„РёРіСѓСЂР°С†РёРё СЃС‚РµРЅРґР°) */
+    /* Обходим ярусы (согласно конфигурации стенда) */
     for L in 1 .. RES.NRACK_LINES_CNT
     loop
-      /* Р”РѕР±Р°РІРёРј РЅРѕРІС‹Р№ СЏСЂСѓСЃ */
+      /* Добавим новый ярус */
       RES.RACK_LINE_RESTS.EXTEND();
       RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS := TRACK_LINE_CELL_RESTS();
-      /* РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РµРіРѕ */
+      /* Инициализируем его */
       RES.RACK_LINE_RESTS(L).NRACK_LINE := L;
       RES.RACK_LINE_RESTS(L).NRACK_LINE_CELLS_CNT := NRACK_LINE_CELLS;
-      /* РЎРєР°Р¶РµРј С‡С‚Рѕ СЏСЂСѓСЃ РїСѓСЃС‚РѕР№ */
+      /* Скажем что ярус пустой */
       RES.RACK_LINE_RESTS(L).BEMPTY := true;
-      /* РћР±С…РѕРґРёРј СЏС‡РµР№РєРё СЏСЂСѓСЃР° (СЃРѕРіР»Р°СЃРЅРѕ РєРѕРЅС„РёРіСѓСЂР°С†РёРё СЃС‚РµРЅРґР°) */
+      /* Обходим ячейки яруса (согласно конфигурации стенда) */
       for C in 1 .. RES.RACK_LINE_RESTS(L).NRACK_LINE_CELLS_CNT
       loop
-        /* РЎС‡РёС‚Р°РµРј РєРѕРЅС„РёРіСѓСЂР°С†РёСЋ СЏС‡РµР№РєРё СЃС‚РµРЅРґР° */
+        /* Считаем конфигурацию ячейки стенда */
         CELL_CONF := STAND_GET_RACK_LINE_CELL_CONF(NRACK_LINE => L, NRACK_LINE_CELL => C);
-        /* Р”РѕР±Р°РІРёРј СЏС‡РµР№РєСѓ РІ СЏСЂСѓСЃ */
+        /* Добавим ячейку в ярус */
         RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS.EXTEND();
         RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS := TNOMEN_RESTS();
-        /* РџСЂРѕРёРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј СЏС‡РµР№РєСѓ */
+        /* Проинициализируем ячейку */
         RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NRACK_CELL := CELL_CONF.NRACK_CELL;
         RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).SRACK_CELL_PREF := CELL_CONF.SPREF;
         RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).SRACK_CELL_NUMB := CELL_CONF.SNUMB;
         RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).SRACK_CELL_NAME := CELL_CONF.SNAME;
         RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NRACK_LINE := CELL_CONF.NRACK_LINE;
         RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NRACK_LINE_CELL := CELL_CONF.NRACK_LINE_CELL;
-        /* РЎРєР°Р¶РµРј С‡С‚Рѕ СЏС‡РµР№РєР° РїСѓСЃС‚Р°СЏ */
+        /* Скажем что ячейка пустая */
         RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).BEMPTY := true;
-        /* РўРµРїРµСЂСЊ РЅР°РїРѕР»РЅРёРј СЏС‡РµР№РєСѓ РѕСЃС‚Р°С‚РєР°РјРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ (СЃС‚СЂРѕРіРѕ СЃРѕРіР»Р°СЃРЅРѕ РєРѕРЅС„РёРіСѓСЂР°С†РёРё СЏС‡РµР№РєРё) */
+        /* Теперь наполним ячейку остатками номенклатуры (строго согласно конфигурации ячейки) */
         RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS := STAND_GET_RACK_NOMEN_REST(NCOMPANY     => NCOMPANY,
                                                                                                 SSTORE       => RES.SSTORE,
                                                                                                 SPREF        => RES.SRACK_PREF,
@@ -1351,7 +1351,7 @@ create or replace package body UDO_PKG_STAND as
                                                                                                                 .SRACK_CELL_NAME,
                                                                                                 SNOMEN       => CELL_CONF.SNOMEN,
                                                                                                 SNOMEN_MODIF => CELL_CONF.SNOMMODIF);
-        /* Р•СЃР»Рё Р·Р°РїР°СЃ РїРѕ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂРµ РЅРµ РЅСѓР»РµРІРѕР№, С‚Рѕ РІС‹СЃС‚Р°РІРёРј СЏС‡РµР№РєРµ, СЏСЂСѓСЃСѓ Рё СЃС‚РµР»Р»Р°Р¶Сѓ С„Р»Р°Рі Р·Р°РїРѕР»РЅРµРЅРЅРѕСЃС‚Рё */
+        /* Если запас по номенклатуре не нулевой, то выставим ячейке, ярусу и стеллажу флаг заполненности */
         if (RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS.COUNT > 0) then
           for N in RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C).NOMEN_RESTS.FIRST .. RES.RACK_LINE_RESTS(L).RACK_LINE_CELL_RESTS(C)
                                                                                        .NOMEN_RESTS.LAST
@@ -1366,25 +1366,25 @@ create or replace package body UDO_PKG_STAND as
         end if;
       end loop;
     end loop;
-    /* Р’РµСЂРЅРµРј СЂРµР·СѓР»СЊС‚Р°С‚ */
+    /* Вернем результат */
     return RES;
   end;
-
-  /* РџРѕРёСЃРє РєРѕРЅС‚СЂР°РіРµРЅС‚Р°-РїРѕСЃРµС‚РёС‚РµР»СЏ СЃС‚РµРЅРґР° РїРѕ С€С‚СЂРёС…РєРѕРґСѓ */
+  
+  /* Поиск контрагента-посетителя стенда по штрихкоду */
   function STAND_GET_AGENT_BY_BARCODE
   (
-    NCOMPANY                number,             -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    SBARCODE                varchar2            -- РЁС‚СЂРёС…РєРѕРґ
+    NCOMPANY                number,             -- Регистрационный номер организации
+    SBARCODE                varchar2            -- Штрихкод
   ) return TSTAND_USER is
-    NVERSION                VERSIONS.RN%type;   -- Р’РµСЂСЃРёСЏ СЂР°Р·РґРµР»Р° "РљРѕРЅС‚СЂР°РіРµРЅС‚С‹"
-    NDP_BARCODE             DOCS_PROPS.RN%type; -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕРіРѕ СЃРІРѕР№СЃС‚РІР° РґР»СЏ С…СЂР°РЅРµРЅРёСЏ С€С‚СЂРёС…РєРѕРґР°
-    RES                     TSTAND_USER;        -- Р РµР·СѓР»СЊС‚Р°С‚ СЂР°Р±РѕС‚С‹
+    NVERSION                VERSIONS.RN%type;   -- Версия раздела "Контрагенты"
+    NDP_BARCODE             DOCS_PROPS.RN%type; -- Регистрационный номер дополнительного свойства для хранения штрихкода
+    RES                     TSTAND_USER;        -- Результат работы
   begin
-    /* РћРїСЂРµРґРµР»РёРј РІРµСЂСЃРёСЋ СЂР°Р·РґРµР»Р° "РљРѕРЅС‚СЂР°РіРµРЅС‚С‹" */
-    FIND_VERSION_BY_COMPANY(NCOMPANY => NCOMPANY, SUNITCODE => 'AGNLIST', NVERSION => NVERSION);
-    /* РћРїСЂРµРґРµР»РёРј СЂРµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕРіРѕ СЃРІРѕР№СЃС‚РІР° РґР»СЏ С…СЂР°РЅРµРЅРёСЏ С€С‚СЂРёС…РєРѕРґР° */
-    FIND_DOCS_PROPS_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SCODE => SDP_BARCODE, NRN => NDP_BARCODE);
-    /* РќР°Р№РґРµРј РєРѕРЅС‚СЂР°РіРµРЅС‚Р° СЃ СѓРєР°Р·Р°РЅРЅС‹Рј С€С‚СЂРёС…РєРѕРґРѕРј */
+    /* Определим версию раздела "Контрагенты" */
+    FIND_VERSION_BY_COMPANY(NCOMPANY => NCOMPANY, SUNITCODE => 'AGNLIST', NVERSION => NVERSION);  
+    /* Определим регистрационный номер дополнительного свойства для хранения штрихкода */
+    FIND_DOCS_PROPS_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SCODE => SDP_BARCODE, NRN => NDP_BARCODE);  
+    /* Найдем контрагента с указанным штрихкодом */
     begin
       select AG.RN,
              AG.AGNABBR,
@@ -1399,33 +1399,33 @@ create or replace package body UDO_PKG_STAND as
     exception
       when TOO_MANY_ROWS then
         P_EXCEPTION(0,
-                    'РќР°Р№РґРµРЅРѕ Р±РѕР»РµРµ РѕРґРЅРѕРіРѕ РєРѕРЅС‚СЂР°РіРµРЅС‚Р° СЃРѕ С€С‚СЂРёС…РєРѕРґРѕРј "%s"!',
+                    'Найдено более одного контрагента со штрихкодом "%s"!',
                     SBARCODE);
       when NO_DATA_FOUND then
-        P_EXCEPTION(0, 'РљРѕРЅС‚СЂР°РіРµРЅС‚ СЃРѕ С€С‚СЂРёС…РєРѕРґРѕРј "%s" РЅРµ РѕРїСЂРµРґРµР»С‘РЅ!', SBARCODE);
-    end;
-    /* Р’РµСЂРЅРµРј СЂРµР·СѓР»СЊС‚Р°С‚ */
+        P_EXCEPTION(0, 'Контрагент со штрихкодом "%s" не определён!', SBARCODE);
+    end;  
+    /* Вернем результат */
     return RES;
   end;
-
-  /* РџРѕР»СѓС‡РµРЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ СЃС‚РµРЅРґР° */
+  
+  /* Получение состояния стенда */
   procedure STAND_GET_STATE
   (
-    NCOMPANY                number,                -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    STAND_STATE             out TSTAND_STATE       -- РЎРѕСЃС‚РѕСЏРЅРёРµ СЃС‚РµРЅРґР°
+    NCOMPANY                number,                -- Регистрационный номер организации
+    STAND_STATE             out TSTAND_STATE       -- Состояние стенда
   ) is
-    RESTS_HIST_TMP          TMESSAGES;             -- Р‘СѓС„РµСЂ РґР»СЏ РёСЃС‚РѕСЂРёРё РѕСЃС‚Р°С‚РєРѕРІ
-    NREST_PRC_TOTAL         PKG_STD.TLNUMBER := 0; -- Р‘СѓС„РµСЂ РґР»СЏ % РѕСЃС‚Р°С‚РєРѕРІ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ
-    NR_TMP                  TNOMEN_RESTS;          -- Р‘СѓС„РµСЂ РґР»СЏ РѕСЃС‚Р°С‚РєРѕРІ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ СЃС‚РµРЅРґР°
-    N                       PKG_STD.TNUMBER;       -- РњР°СЂРєРµСЂ Р·Р°РїРёСЃРµР№ РёСЃС‚РѕСЂРёРё
+    RESTS_HIST_TMP          TMESSAGES;             -- Буфер для истории остатков
+    NREST_PRC_TOTAL         PKG_STD.TLNUMBER := 0; -- Буфер для % остатков номенклатур
+    NR_TMP                  TNOMEN_RESTS;          -- Буфер для остатков номенклатуры стенда
+    N                       PKG_STD.TNUMBER;       -- Маркер записей истории
   begin
-    /* РњРёРЅРёРјР°Р»СЊРЅС‹Р№ РєСЂРёС‚РёС‡РµСЃРєРёР№ РѕСЃС‚Р°С‚РѕРє РїРѕ СЃС‚РµРЅРґСѓ (РІ %) */
+    /* Минимальный критический остаток по стенду (в %) */
     STAND_STATE.NRESTS_LIMIT_PRC_MIN := NRESTS_LIMIT_PRC_MIN;
-    /* РЎСЂРµРґРЅРёР№ РєСЂРёС‚РёС‡РµСЃРєРёР№ РѕСЃС‚Р°С‚РѕРє РїРѕ СЃС‚РµРЅРґСѓ (РІ %) */
+    /* Средний критический остаток по стенду (в %) */
     STAND_STATE.NRESTS_LIMIT_PRC_MDL := NRESTS_LIMIT_PRC_MDL;
-    /* РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ СЃС‚РµРЅРґР° */
+    /* Конфигурация номенклатур стенда */
     STAND_STATE.NOMEN_CONFS := RACK_NOMEN_CONFS;
-    /* РћСЃС‚Р°С‚РєРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ СЃС‚РµРЅРґР° СЃСѓРјРјР° % РѕСЃС‚Р°С‚РєР° РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ РѕС‚ РјР°РєСЃРёРјР°Р»СЊРЅРѕРіРѕ РѕР±СЉРµРјР° С…СЂР°РЅРµРЅРёСЏ */
+    /* Остатки номенклатур стенда сумма % остатка номенклатур от максимального объема хранения */
     STAND_STATE.NOMEN_RESTS := TNOMEN_RESTS();
     if ((RACK_NOMEN_CONFS is not null) and (RACK_NOMEN_CONFS.COUNT > 0)) then
       for I in RACK_NOMEN_CONFS.FIRST .. RACK_NOMEN_CONFS.LAST
@@ -1439,23 +1439,23 @@ create or replace package body UDO_PKG_STAND as
         if (NR_TMP.COUNT > 0) then
           for J in NR_TMP.FIRST .. NR_TMP.LAST
           loop
-            /* РЎРѕС…СЂР°РЅРёРј РѕСЃС‚Р°С‚РєРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ */
+            /* Сохраним остатки номенклатуры */
             STAND_STATE.NOMEN_RESTS.EXTEND();
             STAND_STATE.NOMEN_RESTS(STAND_STATE.NOMEN_RESTS.LAST) := NR_TMP(J);
-            /* РўР°Рє Р¶Рµ СЂР°СЃСЃС‡РёС‚Р°РµРј СЃСѓРјРјСѓ % РѕСЃС‚Р°С‚РєР° РґР°РЅРЅРѕР№ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РѕС‚ РјР°РєСЃРёРјР°Р»СЊРЅРѕРіРѕ РѕР±СЉРµРјР° С…СЂР°РЅРµРЅРёСЏ */
+            /* Так же рассчитаем сумму % остатка данной номенклатуры от максимального объема хранения */
             NREST_PRC_TOTAL := NREST_PRC_TOTAL + NR_TMP(J).NREST / RACK_NOMEN_CONFS(I).NMAX_QUANT * 100;
           end loop;
         end if;
       end loop;
     else
-      P_EXCEPTION(0, 'РЎС‚РµРЅРґ РЅРµ СЃРєРѕРЅС„РёРіСѓСЂРёСЂРѕРІР°РЅ!');
+      P_EXCEPTION(0, 'Стенд не сконфигурирован!');
     end if;
-    /* РўРµРєСѓС‰Р°СЏ Р·Р°РіСЂСѓР¶РµРЅРЅРѕСЃС‚СЊ СЃС‚РµРЅРґР° (%) */
+    /* Текущая загруженность стенда (%) */
     STAND_STATE.NRESTS_PRC_CURR := ROUND(NREST_PRC_TOTAL / (RACK_NOMEN_CONFS.COUNT * 100) * 100, 0);
-    /* РСЃС‚РѕСЂРёСЏ РѕСЃС‚Р°С‚РєРѕРІ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ СЃС‚РµРЅРґР° */
+    /* История остатков номенклатур стенда */
     STAND_STATE.RACK_REST_PRC_HISTS := TRACK_REST_PRC_HISTS();
     RESTS_HIST_TMP                  := MSG_GET_LIST(DFROM  => null,
-                                                    STP    => SMSG_TYPE_REST_PRC,
+                                                    STP    => SMSG_TYPE_REST_PRC,                                                    
                                                     NLIMIT => 10,
                                                     NORDER => NMSG_ORDER_DESC);
     for I in 1 .. 10
@@ -1474,40 +1474,40 @@ create or replace package body UDO_PKG_STAND as
         exception
           when others then
             STAND_STATE.RACK_REST_PRC_HISTS(STAND_STATE.RACK_REST_PRC_HISTS.LAST).NREST_PRC := 0;
-        end;
+        end;      
       else
         STAND_STATE.RACK_REST_PRC_HISTS(STAND_STATE.RACK_REST_PRC_HISTS.LAST).DTS := null;
         STAND_STATE.RACK_REST_PRC_HISTS(STAND_STATE.RACK_REST_PRC_HISTS.LAST).STS := null;
         STAND_STATE.RACK_REST_PRC_HISTS(STAND_STATE.RACK_REST_PRC_HISTS.LAST).NREST_PRC := 0;
       end if;
     end loop;
-    /* РћСЃС‚Р°С‚РєРё РїРѕ РјРµСЃС‚Р°Рј С…СЂР°РЅРµРЅРёСЏ СЃС‚РµРЅРґР° */
+    /* Остатки по местам хранения стенда */
     STAND_STATE.RACK_REST := STAND_GET_RACK_REST(NCOMPANY => NCOMPANY,
                                                  SSTORE   => SSTORE_GOODS,
                                                  SPREF    => SRACK_PREF,
                                                  SNUMB    => SRACK_NUMB);
-    /* РЎРѕРѕР±С‰РµРЅРёСЏ СЃС‚РµРЅРґР° */
+    /* Сообщения стенда */
     STAND_STATE.MESSAGES := MSG_GET_LIST(DFROM  => null,
                                          STP    => SMSG_TYPE_NOTIFY,
                                          NLIMIT => 10,
                                          NORDER => NMSG_ORDER_DESC);
   end;
-
-  /* РЎРѕС…СЂР°РЅРµРЅРёРµ С‚РµРєСѓС‰РёС… РѕСЃС‚Р°С‚РєРѕРІ РїРѕ СЃС‚РµРЅРґСѓ */
+  
+  /* Сохранение текущих остатков по стенду */
   procedure STAND_SAVE_RACK_REST
   (
-    NCOMPANY                number,                -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР°Р·Р°С†РёРё
-    BNOTIFY_REST            boolean,               -- Р¤Р»Р°Рі РѕРїРѕРІРµС‰РµРЅРёСЏ Рѕ С‚РµРєСѓС‰РµРј РѕСЃС‚Р°С‚РєРµ
-    BNOTIFY_LIMIT           boolean                -- Р¤Р»Р°Рі РѕРїРѕРІРµС‰РµРЅРёСЏ Рѕ РєСЂРёС‚РёС‡РµСЃРєРѕРј СЃРЅРёР¶РµРЅРёРё РѕСЃС‚Р°С‚РєР°
+    NCOMPANY                number,                -- Регистрационный номер органиазации
+    BNOTIFY_REST            boolean,               -- Флаг оповещения о текущем остатке
+    BNOTIFY_LIMIT           boolean                -- Флаг оповещения о критическом снижении остатка
   ) is
-    NREST_PRC_TOTAL         PKG_STD.TLNUMBER := 0; -- Р‘СѓС„РµСЂ РґР»СЏ % РѕСЃС‚Р°С‚РєРѕРІ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ
-    SRESTS                  PKG_STD.TLSTRING;      -- РЎС‚СЂРѕРєР° РѕСЃС‚Р°С‚РєРѕРІ РґР»СЏ СЃРѕРѕР±С‰РµРЅРёСЏ
-    NR_TMP                  TNOMEN_RESTS;          -- Р‘СѓС„РµСЂ РґР»СЏ РѕСЃС‚Р°С‚РєРѕРІ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ СЃС‚РµРЅРґР°
-    NR                      TNOMEN_RESTS;          -- РўРµРєСѓС‰РёРµ РѕСЃС‚Р°С‚РєРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ СЃС‚РµРЅРґР°
+    NREST_PRC_TOTAL         PKG_STD.TLNUMBER := 0; -- Буфер для % остатков номенклатур
+    SRESTS                  PKG_STD.TLSTRING;      -- Строка остатков для сообщения
+    NR_TMP                  TNOMEN_RESTS;          -- Буфер для остатков номенклатуры стенда
+    NR                      TNOMEN_RESTS;          -- Текущие остатки номенклатуры стенда
   begin
-    /* РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РѕСЃРЅРѕРІРЅСѓСЋ РєРѕР»Р»РµРєС†РёСЋ РѕСЃС‚Р°С‚РєРѕРІ */
+    /* Инициализируем основную коллекцию остатков */
     NR := TNOMEN_RESTS();
-    /* РџРѕР»СѓС‡РёРј РѕСЃС‚Р°С‚РєРё РїРѕ СЃС‚РµРЅРґСѓ (РїРѕ РІСЃРµРј РЅРѕРјРµРЅРєР»Р°С‚СѓСЂР°Рј, РєРѕС‚РѕСЂС‹Рµ РІ РЅС‘Рј РґРѕР»Р¶РЅС‹ С…СЂР°РЅРёС‚СЊСЃСЏ) */
+    /* Получим остатки по стенду (по всем номенклатурам, которые в нём должны храниться) */
     if ((RACK_NOMEN_CONFS is not null) and (RACK_NOMEN_CONFS.COUNT > 0)) then
       for I in RACK_NOMEN_CONFS.FIRST .. RACK_NOMEN_CONFS.LAST
       loop
@@ -1520,63 +1520,63 @@ create or replace package body UDO_PKG_STAND as
         if (NR_TMP.COUNT > 0) then
           for J in NR_TMP.FIRST .. NR_TMP.LAST
           loop
-            /* Р”РѕР±Р°РІРёРј РѕСЃС‚Р°С‚РѕРє РІ РєРѕР»Р»РµРєС†РёСЋ */
+            /* Добавим остаток в коллекцию */
             NR.EXTEND();
             NR(NR.LAST) := NR_TMP(J);
-            /* Р’С‹С‡РёСЃР»СЏРµРј СЃСѓРјРјСѓ % РѕСЃС‚Р°С‚РєР° РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ РѕС‚ РѕР±С‰РµРіРѕ РѕР±СЉРµРјР° С…СЂР°РЅРµРЅРёСЏ Рё СЃРѕР±РёСЂР°РµРј СЃРѕРѕР±С‰РµРЅРёРµ РґР»СЏ РѕСЃС‚Р°С‚РєРѕРІ */
+            /* Вычисляем сумму % остатка номенклатур от общего объема хранения и собираем сообщение для остатков */
             NREST_PRC_TOTAL := NREST_PRC_TOTAL + NR(NR.LAST).NREST / RACK_NOMEN_CONFS(I).NMAX_QUANT * 100;
             SRESTS          := SRESTS || NR(NR.LAST).SNOMMODIF || ' - ' || NR(NR.LAST).NREST || '; ';
           end loop;
         end if;
       end loop;
     else
-      P_EXCEPTION(0, 'РЎС‚РµРЅРґ РЅРµ СЃРєРѕРЅС„РёРіСѓСЂРёСЂРѕРІР°РЅ!');
+      P_EXCEPTION(0, 'Стенд не сконфигурирован!');
     end if;
     if (NR.COUNT = 0) then
-      P_EXCEPTION(0, 'РќРµ СѓРґР°Р»РѕСЃСЊ РѕРїСЂРµРґРµР»РёС‚СЊ РѕСЃС‚Р°С‚РєРё РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ СЃС‚РµРЅРґР°!');
+      P_EXCEPTION(0, 'Не удалось определить остатки номенклатур стенда!');
     end if;
-    /* РљРѕСЂСЂРµРєС‚РёСЂСѓРµРј РѕСЃС‚Р°С‚РѕРє РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ РјР°РєСЃРёРјР°Р»СЊРЅРѕР№ РІРѕР·РјРѕР¶РЅРѕСЃС‚Рё Р·Р°РіСЂСѓР·РєРё */
+    /* Корректируем остаток относительно максимальной возможности загрузки */
     NREST_PRC_TOTAL := ROUND(NREST_PRC_TOTAL / (RACK_NOMEN_CONFS.COUNT * 100) * 100, 0);
-    /* Р—Р°РїРѕРјРЅРёРј РѕСЃС‚Р°С‚РєРё РїРѕ СЃС‚РµРЅРґСѓ */
+    /* Запомним остатки по стенду */
     MSG_INSERT_RESTS(SMSG => UDO_PKG_STAND_WEB.STAND_RACK_NOMEN_RESTS_TO_JSON(NR => NR).TO_CHAR());
     MSG_INSERT_REST_PRC(SMSG => NREST_PRC_TOTAL);
-    /* Р•СЃР»Рё РїСЂРѕСЃРёР»Рё РѕРїРѕРІРµСЃС‚РёС‚СЊ РѕР± РѕСЃС‚Р°С‚РєР°С… РІ РїСЂРёРЅС†РёРїРµ */
+    /* Если просили оповестить об остатках в принципе */
     if (BNOTIFY_REST) then
       if (NREST_PRC_TOTAL = 0) then
-        MSG_INSERT_NOTIFY(SMSG         => 'РќР° СЃС‚РµРЅРґРµ Р±РѕР»СЊС€Рµ РЅРµС‚ С‚РѕРІР°СЂР°',
+        MSG_INSERT_NOTIFY(SMSG         => 'На стенде больше нет товара',
                           SNOTIFY_TYPE => SNOTIFY_TYPE_ERROR);
       else
-        MSG_INSERT_NOTIFY(SMSG         => 'РЎС‚РµРЅРґ Р·Р°РіСЂСѓР¶РµРЅ РЅР° ' || TO_CHAR(NREST_PRC_TOTAL) ||
-                                          '%. РўРµРєСѓС‰РёР№ РѕСЃС‚Р°С‚РѕРє РїРѕ СЃС‚РµРЅРґСѓ: ' || SRESTS,
+        MSG_INSERT_NOTIFY(SMSG         => 'Стенд загружен на ' || TO_CHAR(NREST_PRC_TOTAL) ||
+                                          '%. Текущий остаток по стенду: ' || SRESTS,
                           SNOTIFY_TYPE => SNOTIFY_TYPE_INFO);
       end if;
     end if;
-    /* Р•СЃР»Рё РїСЂРѕСЃРёР»Рё РѕРїРѕРІРµСЃС‚РёС‚СЊ Рѕ РєСЂРёС‚РёС‡РµСЃРєРѕРј СЃРЅРёР¶РµРЅРёРё РѕСЃС‚Р°С‚РєР° */
+    /* Если просили оповестить о критическом снижении остатка */
     if (BNOTIFY_LIMIT) then
-      /* РћРїРѕРІРµС‰Р°РµРј, РµСЃР»Рё РѕРЅРё РЅРёР¶Рµ РєСЂРёС‚РёС‡РµСЃРєРѕРіРѕ Р»РёРјРёС‚Р° РёР»Рё РёС… РЅРµС‚ РІРѕРѕР±С‰Рµ */
+      /* Оповещаем, если они ниже критического лимита или их нет вообще */
       if (NREST_PRC_TOTAL = 0) then
-        MSG_INSERT_NOTIFY(SMSG         => 'РќР° СЃС‚РµРЅРґРµ Р±РѕР»СЊС€Рµ РЅРµС‚ С‚РѕРІР°СЂР°! Р—Р°РіСЂСѓР·РёС‚Рµ СЃС‚РµРЅРґ!',
+        MSG_INSERT_NOTIFY(SMSG         => 'На стенде больше нет товара! Загрузите стенд!',
                           SNOTIFY_TYPE => SNOTIFY_TYPE_ERROR);
       else
         if (NREST_PRC_TOTAL < NRESTS_LIMIT_PRC_MIN) then
-          MSG_INSERT_NOTIFY(SMSG         => 'РўРµРєСѓС‰Р°СЏ Р·Р°РіСЂСѓР¶РµРЅРЅРѕСЃС‚СЊ СЃС‚РµРЅРґР° ' || TO_CHAR(NREST_PRC_TOTAL) ||
-                                            '% РЅРёР¶Рµ РєСЂРёС‚РёС‡РµСЃРєРѕР№ РѕС‚РјРµС‚РєРё РІ ' || TO_CHAR(NRESTS_LIMIT_PRC_MIN) ||
-                                            '%! РџСЂРёРіРѕС‚РѕРІСЊС‚РµСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ СЃС‚РµРЅРґ!',
+          MSG_INSERT_NOTIFY(SMSG         => 'Текущая загруженность стенда ' || TO_CHAR(NREST_PRC_TOTAL) ||
+                                            '% ниже критической отметки в ' || TO_CHAR(NRESTS_LIMIT_PRC_MIN) ||
+                                            '%! Приготовьтесь загрузить стенд!',
                             SNOTIFY_TYPE => SNOTIFY_TYPE_WARN);
         end if;
       end if;
     end if;
   end;
-
-  /* РџСЂРѕРІРµСЂРєР° РѕСЃСѓС‰РµСЃС‚РІР»РµРЅРёСЏ РІС‹РґР°С‡Рё РєРѕРЅС‚СЂР°РіРµРЅС‚Сѓ-РїРѕСЃРµС‚РёС‚РµР»СЋ С‚РѕРІР°СЂР° СЃРѕ СЃС‚РµРЅРґР° (СЃРј. РєРѕРЅСЃС‚Р°РЅС‚С‹ NAGN_SUPPLY_*) */
+  
+  /* Проверка осуществления выдачи контрагенту-посетителю товара со стенда (см. константы NAGN_SUPPLY_*) */
   function STAND_CHECK_SUPPLY
   (
-    NCOMPANY                number,          -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    NAGENT                  number           -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РєРѕРЅС‚СЂР°РіРµРЅС‚Р°
+    NCOMPANY                number,          -- Регистрационный номер организации
+    NAGENT                  number           -- Регистрационный номер контрагента
   ) return number is
-    NRES                    PKG_STD.TNUMBER; -- Р РµР·СѓР»СЊС‚Р°С‚ СЂР°Р±РѕС‚С‹
+    NRES                    PKG_STD.TNUMBER; -- Результат работы
   begin
-    /* РџСЂРѕР±СѓРµРј РЅР°Р№С‚Рё Р РќРћРџРѕС‚СЂ СЃ РґР°РЅРЅС‹Рј РєРѕРЅС‚СЂР°РіРµРЅС‚РѕРј, РїРѕ СЃРєР»Р°РґСѓ СЃС‚РµРЅРґР°, СЃ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂРѕР№ СЃС‚РµРЅРґР°, СЃ С‚РёРїРѕРј Рё РїСЂРµС„РёРєСЃРѕРј РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РґР»СЏ СЃС‚РµРЅРґР° */
+    /* Пробуем найти РНОПотр с данным контрагентом, по складу стенда, с номенклатурой стенда, с типом и префиксом по умолчанию для стенда */
     begin
       select count(*)
         into NRES
@@ -1593,103 +1593,103 @@ create or replace package body UDO_PKG_STAND as
     exception
       when others then
         P_EXCEPTION(0,
-                    'РћС€РёР±РєР° РїРѕРёСЃРєР° СЂР°СЃС…РѕРґРЅС‹С… РЅР°РєР»Р°РґРЅС‹С… РЅР° РѕС‚РїСѓСЃРє РїРѕС‚СЂРµР±РёС‚РµР»СЏРј РґР»СЏ РєРѕРЅС‚СЂР°РіРµРЅС‚Р° (RN: %s)!',
+                    'Ошибка поиска расходных накладных на отпуск потребителям для контрагента (RN: %s)!',
                     TO_CHAR(NAGENT));
-    end;
-    /* РўР°РєРёС… РЅРµС‚... */
+    end;    
+    /* Таких нет... */
     if (NRES = 0) then
-      /* ...Р·РЅР°С‡РёС‚ РЅРµ РѕС‚РіСЂСѓР¶Р°Р»Рё РґР°РЅРЅРѕРјСѓ РєРѕРЅС‚СЂР°РіРµРЅС‚Сѓ */
+      /* ...значит не отгружали данному контрагенту */
       NRES := NAGN_SUPPLY_NOT_YET;
     else
-      /* ...РёР»Рё РµСЃС‚СЊ Рё С‚РѕРіРґР° - РѕС‚РіСЂСѓР¶Р°Р»Рё */
+      /* ...или есть и тогда - отгружали */
       NRES := NAGN_SUPPLY_ALREADY;
-    end if;
-    /* Р’РµСЂРЅРµРј СЂРµР·СѓР»СЊС‚Р°С‚ */
+    end if;  
+    /* Вернем результат */
     return NRES;
-  end;
-
-  /* РђСѓС‚РµРЅС‚РёС„РёРєР°С†РёСЏ РїРѕСЃРµС‚РёС‚РµР»СЏ СЃС‚РµРЅРґР° РїРѕ С€С‚СЂРёС…РєРѕРґСѓ */
+  end;  
+  
+  /* Аутентификация посетителя стенда по штрихкоду */
   procedure STAND_AUTH_BY_BARCODE
   (
-    NCOMPANY                number,          -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    SBARCODE                varchar2,        -- РЁС‚СЂРёС…РєРѕРґ
-    STAND_USER              out TSTAND_USER, -- РЎРІРµРґРµРЅРёСЏ Рѕ РїРѕР»СЊР·РѕРІР°С‚РµР»Рµ СЃС‚РµРЅРґР°
-    RACK_REST               out TRACK_REST   -- РЎРІРµРґРµРЅРёСЏ РѕР± РѕСЃС‚Р°С‚РєР°С… РЅР° СЃС‚РµРЅРґРµ
+    NCOMPANY                number,          -- Регистрационный номер организации
+    SBARCODE                varchar2,        -- Штрихкод    
+    STAND_USER              out TSTAND_USER, -- Сведения о пользователе стенда
+    RACK_REST               out TRACK_REST   -- Сведения об остатках на стенде
   ) is
   begin
-    /* РќР°Р№РґРµРј РєРѕРЅС‚СЂР°РіРµРЅС‚Р° РїРѕ С€С‚СЂРёС…РєРѕРґСѓ */
+    /* Найдем контрагента по штрихкоду */
     STAND_USER := STAND_GET_AGENT_BY_BARCODE(NCOMPANY => NCOMPANY, SBARCODE => SBARCODE);
-    /* РџСЂРѕРІРµСЂРёРј, С‡С‚Рѕ РѕС‚РіСЂСѓР·РєРё РґР°РЅРЅРѕРјСѓ РєРѕРЅС‚СЂР°РіРµРЅС‚Сѓ РµС‰С‘ РЅРµ Р±С‹Р»Рѕ (РµСЃР»Рё РЅР°РґРѕ, РєРѕРЅРµС‡РЅРѕ) */
+    /* Проверим, что отгрузки данному контрагенту ещё не было (если надо, конечно) */
     if ((NALLOW_MULTI_SUPPLY = NALLOW_MULTI_SUPPLY_NO) and (SBARCODE <> SGUEST_BASRCODE)) then
       if (STAND_CHECK_SUPPLY(NCOMPANY => NCOMPANY, NAGENT => STAND_USER.NAGENT) = NAGN_SUPPLY_ALREADY) then
         P_EXCEPTION(0,
-                    'РР·РІРёРЅРёС‚Рµ, РѕС‚РіСЂСѓР·РєР° РґР»СЏ РїРѕСЃРµС‚РёС‚РµР»СЏ "%s" СѓР¶Рµ РїСЂРѕРёР·РІРѕРґРёР»Р°СЃСЊ!',
+                    'Извините, отгрузка для посетителя "%s" уже производилась!',
                     STAND_USER.SAGENT_NAME);
       end if;
     end if;
-    /* РџРѕР»СѓС‡РёРј РѕСЃС‚Р°С‚РєРё РїРѕ СЃС‚РµР»Р»Р°Р¶Сѓ, РєРѕС‚РѕСЂС‹Р№ РѕР±СЃР»СѓР¶РёРІР°РµС‚ СЃС‚РµРЅРґ */
+    /* Получим остатки по стеллажу, который обслуживает стенд */
     RACK_REST := STAND_GET_RACK_REST(NCOMPANY => NCOMPANY,
                                      SSTORE   => SSTORE_GOODS,
                                      SPREF    => SRACK_PREF,
                                      SNUMB    => SRACK_NUMB);
   end;
-
-  /* Р”РѕР±Р°РІР»РµРЅРёРµ РЅРѕРІРѕРіРѕ РїРѕСЃРµС‚РёС‚РµР»СЏ */
-  procedure STAND_USER_CREATE
+  
+  /* Добавление нового посетителя */
+  procedure STAND_USER_CREATE  
   (
-    NCOMPANY                number,                  -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    SUSER_CODE              varchar2 := null,        -- РљСЂР°С‚РєРѕРµ РёРјСЏ РїРѕСЃС‚РµС‚РёР»РµСЏ РІ С„РѕСЂРјР°С‚Рµ "Р¤Р°РјРёР»РёСЏ Р.Рћ." (СЂР°Р·РґРµР»РёС‚РµР»СЊ - РїСЂРѕР±РµР»), РµСЃР»Рё РЅРµ Р·Р°РґР°РЅРѕ - Р°РІС‚РѕСЂР°СЃС‡РµС‚ РїРѕ РїРѕР»РЅРѕРјСѓ РёРјРµРЅРё
-    SUSER_NAME              varchar2,                -- РџРѕР»РЅРѕРµ РёРјСЏ РїРѕСЃРµС‚РёС‚РµР»СЏ РІ С„РѕСЂРјР°С‚Рµ "Р¤Р°РјРёР»РёСЏ РРјСЏ РћС‚С‡РµСЃС‚РІРѕ" (СЂР°Р·РґРµР»РёС‚РµР»СЊ - РїСЂРѕР±РµР»)
-    SUSER_COMPANY           varchar2,                -- РќР°РёРјРµРЅРѕРІР°РЅРёРµ РѕСЂРіР°РЅРёР·Р°С†РёРё РїРѕСЃРµС‚РёС‚РµР»СЏ
-    SCOLOR                  varchar2                 -- Р¦РІРµС‚ Р·Р°Р»РёРІРєРё Р·Р°РіРѕР»РѕРІРєР° Р±РµР№РґР¶Р°
+    NCOMPANY                number,                  -- Регистрационный номер организации
+    SUSER_CODE              varchar2 := null,        -- Краткое имя постетилея в формате "Фамилия И.О." (разделитель - пробел), если не задано - авторасчет по полному имени
+    SUSER_NAME              varchar2,                -- Полное имя посетителя в формате "Фамилия Имя Отчество" (разделитель - пробел)
+    SUSER_COMPANY           varchar2,                -- Наименование организации посетителя
+    SCOLOR                  varchar2                 -- Цвет заливки заголовка бейджа
   ) is
-    NVERSION                VERSIONS.RN%type;        -- Р’РµСЂСЃРёСЏ СЂР°Р·РґРµР»Р° "РљРѕРЅС‚СЂР°РіРµРЅС‚С‹"
-    NCRN                    ACATALOG.RN%type;        -- РљР°С‚Р°Р»РѕРі СЂР°Р·РґРµР»Р° "РљРѕРЅС‚СЂР°РіРµРЅС‚С‹"
-    NAGENT                  AGNLIST.RN%type;         -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РЅРѕРІРѕРіРѕ РїРѕСЃРµС‚РёС‚РµР»СЏ
-    NDP_BARCODE             DOCS_PROPS.RN%type;      -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕРіРѕ СЃРІРѕР№СЃС‚РІР° РґР»СЏ С…СЂР°РЅРµРЅРёСЏ С€С‚СЂРёС…РєРѕРґР°
-    NDPV_BARCODE            DOCS_PROPS_VALS.RN%type; -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ Р·РЅР°С‡РµРЅРёСЏ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕРіРѕ СЃРІРѕР№СЃС‚РІР° РґР»СЏ С…СЂР°РЅРµРЅРёСЏ С€С‚СЂРёС…РєРѕРґР°
-    NBARDCODE               PKG_STD.TNUMBER;         -- РЁС‚СЂРёС…-РєРѕРґ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
-    /* Р¤РѕСЂРјРёСЂРѕРІР°РЅРёРµ РјРЅРµРјРѕРєРѕРґР° РІ С„РѕСЂРјР°С‚Рµ "Р¤Р°РјРёР»РёСЏ Р.Рћ." РёР· "Р¤Р°РјРёР»РёРё РРјРµРЅРё РћС‚С‡РµСЃС‚РІР°" РїРѕСЃРµС‚РёС‚РµР»СЏ */
+    NVERSION                VERSIONS.RN%type;        -- Версия раздела "Контрагенты"
+    NCRN                    ACATALOG.RN%type;        -- Каталог раздела "Контрагенты"
+    NAGENT                  AGNLIST.RN%type;         -- Регистрационный номер нового посетителя
+    NDP_BARCODE             DOCS_PROPS.RN%type;      -- Регистрационный номер дополнительного свойства для хранения штрихкода
+    NDPV_BARCODE            DOCS_PROPS_VALS.RN%type; -- Регистрационный номер значения дополнительного свойства для хранения штрихкода
+    NBARDCODE               PKG_STD.TNUMBER;         -- Штрих-код пользователя
+    /* Формирование мнемокода в формате "Фамилия И.О." из "Фамилии Имени Отчества" посетителя */
     function GET_USER_CODE
     (
-      SUSER_NAME            varchar2                 -- Р¤Р°РјРёР»РёСЏ РРјСЏ РћС‚С‡РµСЃС‚РІРѕ РїРѕСЃРµС‚РёС‚РµР»СЏ (С‡РµСЂРµР· РїСЂРѕР±РµР»)
+      SUSER_NAME            varchar2                 -- Фамилия Имя Отчество посетителя (через пробел)
     ) return varchar2 is
-      SRES                  PKG_STD.TSTRING;         -- Р РµР·СѓР»СЊС‚Р°С‚ СЂР°Р±РѕС‚С‹
-      SLAST_NAME            PKG_STD.TSTRING;         -- Р‘СѓС„РµСЂ РґР»СЏ С„Р°РјРёР»РёРё
-      SFIRST_NAME           PKG_STD.TSTRING;         -- Р‘СѓС„РµСЂ РґР»СЏ РёРјРµРЅРё
-      SFAMILY_NAME          PKG_STD.TSTRING;         -- Р‘СѓС„РµСЂ РґР»СЏ РѕС‚С‡РµСЃС‚РІР°
-      SDELIM                char := ' ';             -- Р Р°Р·РґРµР»РёС‚РµР»СЊ СЃР»РѕРІ РІ РІС‹СЂР°Р¶РµРЅРёРё
+      SRES                  PKG_STD.TSTRING;         -- Результат работы
+      SLAST_NAME            PKG_STD.TSTRING;         -- Буфер для фамилии
+      SFIRST_NAME           PKG_STD.TSTRING;         -- Буфер для имени
+      SFAMILY_NAME          PKG_STD.TSTRING;         -- Буфер для отчества
+      SDELIM                char := ' ';             -- Разделитель слов в выражении
     begin
-      /* РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РѕС‚РІРµС‚ */
+      /* Инициализируем ответ */
       SRES := SUSER_NAME;
-      /* Р•СЃР»Рё РµСЃС‚СЊ СЂР°Р·РґРµР»РёС‚РµР»Рё - Р±СѓРґРµРј СЂР°Р·Р±РёСЂР°С‚СЊ */
+      /* Если есть разделители - будем разбирать */
       if ((INSTR(SUSER_NAME, SDELIM) > 1) and (INSTR(SUSER_NAME, SDELIM) <> LENGTH(SUSER_NAME))) then
-        /* Р’С‹РЅРёРјР°РµРј С„Р°РјРёР»РёСЋ */
+        /* Вынимаем фамилию */
         SLAST_NAME := STRTOK(source => SUSER_NAME, DELIMETER => SDELIM, ITEM => 1);
         SLAST_NAME := UPPER(SUBSTR(SLAST_NAME, 1, 1)) || SUBSTR(SLAST_NAME, 2);
         SRES       := SLAST_NAME;
-        /* Р’С‹РЅРёРјР°РµРј РёРјСЏ */
+        /* Вынимаем имя */
         SFIRST_NAME := UPPER(SUBSTR(STRTOK(source => SUSER_NAME, DELIMETER => SDELIM, ITEM => 2), 1, 1));
         if (SFIRST_NAME is not null) then
           SRES := SRES || SDELIM || SFIRST_NAME || '.';
         end if;
-        /* Р’С‹РЅРёРјР°РµРј РѕС‚С‡РµСЃС‚РІРѕ */
+        /* Вынимаем отчество */
         SFAMILY_NAME := UPPER(SUBSTR(STRTOK(source => SUSER_NAME, DELIMETER => SDELIM, ITEM => 3), 1, 1));
         if (SFAMILY_NAME is not null) then
           SRES := SRES || SFAMILY_NAME || '.';
-        end if;
+        end if;      
       end if;
-      /* РћС‚РґР°РµРј СЂРµР·СѓР»СЊС‚Р°С‚ */
+      /* Отдаем результат */
       return SRES;
     end;
   begin
-    /* РћРїСЂРµРґРµР»РёРј РІРµСЂСЃРёСЋ СЂР°Р·РґРµР»Р° "РљРѕРЅС‚СЂР°РіРµРЅС‚С‹" */
+    /* Определим версию раздела "Контрагенты" */
     FIND_VERSION_BY_COMPANY(NCOMPANY => NCOMPANY, SUNITCODE => 'AGNLIST', NVERSION => NVERSION);
-
-    /* РћРїСЂРµРґРµР»РёРј СЂРµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕРіРѕ СЃРІРѕР№СЃС‚РІР° РґР»СЏ С…СЂР°РЅРµРЅРёСЏ С€С‚СЂРёС…РєРѕРґР° */
+  
+    /* Определим регистрационный номер дополнительного свойства для хранения штрихкода */
     FIND_DOCS_PROPS_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SCODE => SDP_BARCODE, NRN => NDP_BARCODE);
-
-    /* РќР°Р№РґРµРј РјР°РєСЃРёРјР°Р»СЊРЅРѕРµ Р·РЅР°С‡РµРЅРёРµ С€С‚СЂРёС…РєРѕРґР° */
+  
+    /* Найдем максимальное значение штрихкода */
     begin
       select max(TO_NUMBER(F_DOCS_PROPS_GET_STR_VALUE(NPROPERTY => NDP_BARCODE,
                                                       SUNITCODE => 'AGNLIST',
@@ -1699,25 +1699,25 @@ create or replace package body UDO_PKG_STAND as
        where AG.VERSION = NVERSION
          and F_DOCS_PROPS_GET_STR_VALUE(NPROPERTY => NDP_BARCODE, SUNITCODE => 'AGNLIST', NDOCUMENT => AG.RN) is not null;
     end;
-
-    /* Р’С‹С‡РёСЃР»РёРј РЅРѕРІРѕРµ Р·РЅР°С‡РµРЅРёРµ С€С‚СЂРёС…РєРѕРґР°*/
+  
+    /* Вычислим новое значение штрихкода*/
     if ((NBARDCODE is null) or (NBARDCODE < 1000)) then
-      /* Р•СЃР»Рё РјРµРЅСЊС€Рµ 1000, С‚Рѕ РЅР°С‡РёРЅР°РµРј РѕС‚СЃС‡РµС‚ СЃ РЅР°С‡Р°Р»Р°*/
+      /* Если меньше 1000, то начинаем отсчет с начала*/
       NBARDCODE := 1000;
     else
-      /* Р•СЃР»Рё Р±РѕР»СЊС€Рµ 1000, С‚Рѕ Р±РµСЂРµРј СЃР»РµРґСѓСЋС‰РµРµ Р·РЅР°С‡РµРЅРёРµ*/
+      /* Если больше 1000, то берем следующее значение*/
       NBARDCODE := NBARDCODE + 1;
     end if;
-
-    /* РќР°РґР№РµРј РєР°С‚Р°Р»РѕРі РІ СЂР°Р·РґРµР»Рµ "РљРѕРЅС‚СЂР°РіРµРЅС‚С‹" */
+  
+    /* Надйем каталог в разделе "Контрагенты" */
     FIND_ACATALOG_NAME(NFLAG_SMART => 0,
                        NCOMPANY    => NCOMPANY,
                        NVERSION    => NVERSION,
                        SUNITCODE   => 'AGNLIST',
                        SNAME       => SCATALOG_STAND_USERS,
                        NRN         => NCRN);
-
-    /* Р”РѕР±Р°РІР»СЏРµРј РєРѕРЅС‚СЂР°РіРµРЅС‚Р° РґР»СЏ РїРѕСЃРµС‚РёС‚РµР»СЏ */
+  
+    /* Добавляем контрагента для посетителя */
     P_AGNLIST_BASE_INSERT(NCOMPANY     => NCOMPANY,
                           NCRN         => NCRN,
                           SAGNABBR     => NVL(SUSER_CODE, GET_USER_CODE(SUSER_NAME => SUSER_NAME)),
@@ -1725,8 +1725,8 @@ create or replace package body UDO_PKG_STAND as
                           SFULLNAME    => SUSER_COMPANY,
                           SAGN_COMMENT => SCOLOR,
                           NRN          => NAGENT);
-
-    /* Р”РѕР±Р°РІР»СЏРµРј С€С‚СЂРёС…РєРѕРґР° РїРѕСЃРµС‚РёС‚РµР»СЏ */
+  
+    /* Добавляем штрихкода посетителя */
     PKG_DOCS_PROPS_VALS.MODIFY(SPROPERTY   => SDP_BARCODE,
                                SUNITCODE   => 'AGNLIST',
                                NDOCUMENT   => NAGENT,
@@ -1736,69 +1736,69 @@ create or replace package body UDO_PKG_STAND as
                                NRN         => NDPV_BARCODE);
   end;
 
-  /* Р—Р°РіСЂСѓР·РєР° СЃС‚РµРЅРґР° С‚РѕРІР°СЂРѕРј */
+  /* Загрузка стенда товаром */
   procedure LOAD
   (
-    NCOMPANY                number,                       -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    NRACK_LINE              number := null,               -- РќРѕРјРµСЂ СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР° РґР»СЏ Р·Р°РіСЂСѓР·РєРё (null - РіСЂСѓР·РёС‚СЊ РІСЃРµ)
-    NRACK_LINE_CELL         number := null,               -- РќРѕРјРµСЂ СЏС‡РµР№РєРё РІ СЏСЂСѓСЃРµ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР° РґР»СЏ Р·Р°РіСЂСѓР·РєРё (null - РіСЂСѓР·РёС‚СЊ РІСЃРµ)
-    NINCOMEFROMDEPS         out number                    -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃС„РѕСЂРјРёСЂРѕРІР°РЅРЅРѕРіРѕ "РџСЂРёС…РѕРґР° РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёСЏ"
+    NCOMPANY                number,                       -- Регистрационный номер организации 
+    NRACK_LINE              number := null,               -- Номер яруса стеллажа стенда для загрузки (null - грузить все)
+    NRACK_LINE_CELL         number := null,               -- Номер ячейки в ярусе стеллажа стенда для загрузки (null - грузить все)
+    NINCOMEFROMDEPS         out number                    -- Регистрационный номер сформированного "Прихода из подразделения"
   ) is
-    /* РўРёРїС‹ РґР°РЅРЅС‹С… */
-    type TNOMEN is record                                 -- РќРѕРјРµРЅРєР»Р°С‚СѓСЂР° Р·Р°РіСЂСѓР·РєРё
+    /* Типы данных */
+    type TNOMEN is record                                 -- Номенклатура загрузки
     (
-      RACK_NOMEN_CONF       TRACK_NOMEN_CONF,             -- РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ СЃС‚РµРЅРґР°
-      NINCOMEFROMDEPSSPEC   INCOMEFROMDEPSSPEC.RN%type    -- Р РµРі. РЅРѕРјРµСЂ СЃС„РѕСЂРјРёСЂРѕРІР°РЅРЅРѕР№ РїРѕР·РёС†РёРё СЃРїРµС†РёС„РёРєР°С†РёРё "РџСЂРёС…РѕРґРµ РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёСЏ" РґР»СЏ СЌС‚РѕР№ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹
+      RACK_NOMEN_CONF       TRACK_NOMEN_CONF,             -- Конфигурация номенклатуры стенда
+      NINCOMEFROMDEPSSPEC   INCOMEFROMDEPSSPEC.RN%type    -- Рег. номер сформированной позиции спецификации "Приходе из подразделения" для этой номенклатуры
     );
-    type TNOMENS is table of TNOMEN;                      -- РљРѕР»Р»РµРєС†РёСЏ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ Р·Р°РіСЂСѓР·РєРё
-    /* РџРµСЂРµРјРµРЅРЅС‹Рµ */
-    NCRN                    INCOMEFROMDEPS.RN%type;       -- РљР°С‚Р°Р»РѕРі СЂР°Р·РјРµС‰РµРЅРёСЏ РґРѕРєСѓРјРµРЅС‚РѕРІ "РџСЂРёС…РѕРґ РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёСЏ"
-    NJUR_PERS               JURPERSONS.RN%type;           -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЋСЂРёРґРёС‡РµСЃРєРѕРіРѕ Р»РёС†Р° "РџСЂРёС…РѕРґР° РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёСЏ" (РѕСЃРЅРѕРІРЅРѕРµ Р®Р› РѕСЂРіР°РЅРёР·Р°С†РёРё)
-    SJUR_PERS               JURPERSONS.CODE%type;         -- РњРЅРµРјРѕРєРѕРґ РЅРѕРјРµСЂ СЋСЂРёРґРёС‡РµСЃРєРѕРіРѕ Р»РёС†Р° "РџСЂРёС…РѕРґР° РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёСЏ" (РѕСЃРЅРѕРІРЅРѕРµ Р®Р› РѕСЂРіР°РЅРёР·Р°С†РёРё)
-    SDOC_NUMB               INCOMEFROMDEPS.DOC_NUMB%type; -- РќРѕРјРµСЂ С„РѕСЂРјРёСЂСѓРµРјРѕРіРѕ "РџСЂРёС…РѕРґР° РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёСЏ"
-    SOUT_DEPARTMENT         INS_DEPARTMENT.CODE%type;     -- РџРѕРґСЂР°Р·РґРµР»РµРЅРёРµ-РѕС‚РїСЂР°РІРёС‚РµР»СЊ С„РѕСЂРјРёСЂСѓРµРјРѕРіРѕ "РџСЂРёС…РѕРґР° РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёСЏ"
-    SAGENT                  AGNLIST.AGNABBR%type;         -- РњРћР› С„РѕСЂРјРёСЂСѓРµРјРѕРіРѕ "РџСЂРёС…РѕРґР° РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёСЏ"
-    SCURRENCY               CURNAMES.CURCODE%type;        -- Р’Р°Р»СЋС‚Р° С„РѕСЂРјРёСЂСѓРµРјРѕРіРѕ "РџСЂРёС…РѕРґР° РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёСЏ" (Р±Р°Р·РѕРІР°СЏ РІР°Р»СЋС‚Р° РѕСЂРіР°РЅРёР·Р°С†РёРё)
-    NINCOMEFROMDEPSSPEC     INCOMEFROMDEPSSPEC.RN%type;   -- Р РµРі. РЅРѕРјРµСЂ СЃС„РѕСЂРјРёСЂРѕРІР°РЅРЅРѕР№ РїРѕР·РёС†РёРё СЃРїРµС†РёС„РёРєР°С†РёРё "РџСЂРёС…РѕРґР° РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёСЏ"
-    NSTRPLRESJRNL           STRPLRESJRNL.RN%type;         -- Р РµРі. РЅРѕРјРµСЂ СЃС„РѕСЂРјРёСЂРѕРІР°РЅРЅРѕР№ Р·Р°РїРёСЃРё СЂРµР·РµСЂРІРёСЂРѕРІР°РЅРёСЏ РїРѕ РјРµСЃС‚Р°Рј С…СЂР°РЅРµРЅРёСЏ
-    CELL_CONF               TRACK_LINE_CELL_CONF;         -- РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ СЏС‡РµР№РєРё (РјРµСЃС‚Р° С…СЂР°РЅРµРЅРёСЏ) СЃС‚РµРЅРґР°
-    NWARNING                PKG_STD.TREF;                 -- Р¤Р»Р°Рі РїСЂРµРґСѓРїСЂРµР¶РґРµРЅРёСЏ РїСЂРѕС†РµРґСѓСЂС‹ РѕС‚СЂР°Р±РѕС‚РєРё РїСЂРёС…РѕРґР°
-    SMSG                    PKG_STD.TSTRING;              -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ РїСЂРѕС†РµРґСѓСЂС‹ РѕС‚СЂР°Р±РѕС‚РєРё РїСЂРёС…РѕРґР°
-    NOMENS                  TNOMENS;                      -- РљРѕР»Р»РµРєС†РёСЏ Р·Р°РіСЂСѓР¶Р°РµРјС‹С… РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ
+    type TNOMENS is table of TNOMEN;                      -- Коллекция номенклатур загрузки   
+    /* Переменные */
+    NCRN                    INCOMEFROMDEPS.RN%type;       -- Каталог размещения документов "Приход из подразделения"
+    NJUR_PERS               JURPERSONS.RN%type;           -- Регистрационный номер юридического лица "Прихода из подразделения" (основное ЮЛ организации)
+    SJUR_PERS               JURPERSONS.CODE%type;         -- Мнемокод номер юридического лица "Прихода из подразделения" (основное ЮЛ организации)
+    SDOC_NUMB               INCOMEFROMDEPS.DOC_NUMB%type; -- Номер формируемого "Прихода из подразделения"
+    SOUT_DEPARTMENT         INS_DEPARTMENT.CODE%type;     -- Подразделение-отправитель формируемого "Прихода из подразделения"
+    SAGENT                  AGNLIST.AGNABBR%type;         -- МОЛ формируемого "Прихода из подразделения"
+    SCURRENCY               CURNAMES.CURCODE%type;        -- Валюта формируемого "Прихода из подразделения" (базовая валюта организации)
+    NINCOMEFROMDEPSSPEC     INCOMEFROMDEPSSPEC.RN%type;   -- Рег. номер сформированной позиции спецификации "Прихода из подразделения"
+    NSTRPLRESJRNL           STRPLRESJRNL.RN%type;         -- Рег. номер сформированной записи резервирования по местам хранения
+    CELL_CONF               TRACK_LINE_CELL_CONF;         -- Конфигурация ячейки (места хранения) стенда
+    NWARNING                PKG_STD.TREF;                 -- Флаг предупреждения процедуры отработки прихода
+    SMSG                    PKG_STD.TSTRING;              -- Текст сообщения процедуры отработки прихода
+    NOMENS                  TNOMENS;                      -- Коллекция загружаемых номенклатур
   begin
-    /* РЈР±РµРґРёРјСЃСЏ, С‡С‚Рѕ СЃС‚РµРЅРґ СЃРєРѕРЅС„РёРіСѓСЂРёСЂРѕРІР°РЅ */
+    /* Убедимся, что стенд сконфигурирован */
     if ((RACK_NOMEN_CONFS is null) or (RACK_NOMEN_CONFS.COUNT <= 0)) then
-      P_EXCEPTION(0, 'РЎС‚РµРЅРґ РЅРµ СЃРєРѕРЅС„РёРіСѓСЂРёСЂРѕРІР°РЅ!');
+      P_EXCEPTION(0, 'Стенд не сконфигурирован!');
     end if;
-
-    /* РџСЂРѕРІРµСЂРёРј РїР°СЂР°РјРµС‚СЂС‹ - СѓРєР°Р·С‹РІР°С‚СЊ СЏС‡РµР№РєСѓ РјРѕР¶РЅРѕ С‚РѕР»СЊРєРѕ СѓРєР°Р·Р°РІ СЏСЂСѓСЃ */
+  
+    /* Проверим параметры - указывать ячейку можно только указав ярус */
     if ((NRACK_LINE is null) and (NRACK_LINE_CELL is not null)) then
       P_EXCEPTION(0,
-                  'РџСЂРё СѓРєР°Р·Р°РЅРёРё РЅРѕРјРµСЂР° СЏС‡РµР№РєРё РІ СЏСЂСѓСЃРµ СЃС‚РµР»Р»Р°Р¶Р° РѕР±СЏР·Р°С‚РµР»СЊРЅРѕ СѓРєР°Р·С‹РІР°С‚СЊ Рё СЏСЂСѓСЃ СЃС‚РµР»Р»Р°Р¶Р°!');
+                  'При указании номера ячейки в ярусе стеллажа обязательно указывать и ярус стеллажа!');
     end if;
-
-    /* РџСЂРѕРІРµСЂРёРј, С‡С‚Рѕ СѓРєР°Р·Р°РЅРЅС‹Р№ СЏСЂСѓСЃ СЃС‚РµР»Р»Р°Р¶Р° СЃСѓС‰РµСЃС‚РІСѓРµС‚ */
+  
+    /* Проверим, что указанный ярус стеллажа существует */
     if (NRACK_LINE is not null) then
       if (NRACK_LINE <> TRUNC(NRACK_LINE) or (NRACK_LINE not between 1 and NRACK_LINES)) then
-        P_EXCEPTION(0, 'РќРѕРјРµСЂ СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР° СѓРєР°Р·Р°РЅР° РЅРµРєРѕСЂСЂРµРєС‚РЅРѕ!');
+        P_EXCEPTION(0, 'Номер яруса стеллажа стенда указана некорректно!');
       end if;
     end if;
-
-    /* РџСЂРѕРІРµСЂРёРј, С‡С‚Рѕ СѓРєР°Р·Р°РЅРЅР°СЏ СЏС‡РµР№РєР° СЏСЂСѓСЃР° СЃСѓС‰РµСЃС‚РІСѓРµС‚ Рё СЃРєРѕРЅС„РёРіСѓСЂРёСЂРѕРІР°РЅР° */
+  
+    /* Проверим, что указанная ячейка яруса существует и сконфигурирована */
     if ((NRACK_LINE is not null) and (NRACK_LINE_CELL is not null)) then
       CELL_CONF := STAND_GET_RACK_LINE_CELL_CONF(NRACK_LINE => NRACK_LINE, NRACK_LINE_CELL => NRACK_LINE_CELL);
     end if;
-
-    /* РћРїСЂРµРґРµР»РёРј СЂРµРі. РЅРѕРјРµСЂ РєР°С‚Р°Р»РѕРіР° */
+  
+    /* Определим рег. номер каталога */
     FIND_ROOT_CATALOG(NCOMPANY => NCOMPANY, SCODE => 'IncomFromDeps', NCRN => NCRN);
-
-    /* РћРїСЂРµРґРµР»РёРј РѕСЃРЅРѕРІРЅРѕРµ СЋСЂРёРґРёС‡РµСЃРєРѕРµ Р»РёС†Рѕ РѕСЂРіР°РЅРёР·Р°С†РёРё */
+  
+    /* Определим основное юридическое лицо организации */
     FIND_JURPERSONS_MAIN(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SJUR_PERS => SJUR_PERS, NJUR_PERS => NJUR_PERS);
-
-    /* РћРїСЂРµРґРµР»РёРј Р±Р°Р·РѕРІСѓСЋ РІР°Р»СЋС‚Сѓ */
+  
+    /* Определим базовую валюту */
     FIND_CURRENCY_BASE_NAME(NCOMPANY => NCOMPANY, SCODE => SCURRENCY, SISO => SCURRENCY);
-
-    /* РћРїСЂРµРґРµР»РёРј РїРѕРґСЂР°Р·РґРµР»РµРЅРёСЏ СЃРєР»Р°РґР°, СЃ РєРѕС‚РѕСЂРѕРіРѕ РїСЂРѕРёР·РІРѕРґРёС‚СЃСЏ РѕС‚РіСѓР·РєР° */
+  
+    /* Определим подразделения склада, с которого производится отгузка */
     begin
       select D.CODE
         into SOUT_DEPARTMENT
@@ -1809,10 +1809,10 @@ create or replace package body UDO_PKG_STAND as
          and S.DEPARTMENT = D.RN;
     exception
       when NO_DATA_FOUND then
-        P_EXCEPTION(0, 'Р”Р»СЏ СЃРєР»Р°РґР° "%s" РЅРµ СѓРєР°Р·Р°РЅРѕ РїРѕРґСЂР°Р·РґРµР»РµРЅРёРµ!', SSTORE_PRODUCE);
+        P_EXCEPTION(0, 'Для склада "%s" не указано подразделение!', SSTORE_PRODUCE);
     end;
-
-    /* РћРїСЂРµРґРµР»РёРј РњРћР› СЃРєР»Р°РґР°-РїРѕР»СѓС‡Р°С‚РµР»СЏ */
+  
+    /* Определим МОЛ склада-получателя */
     begin
       select AG.AGNABBR
         into SAGENT
@@ -1824,14 +1824,14 @@ create or replace package body UDO_PKG_STAND as
     exception
       when NO_DATA_FOUND then
         P_EXCEPTION(0,
-                    'Р”Р»СЏ СЃРєР»Р°РґР° "%s" РЅРµ СѓРєР°Р·Р°РЅРѕ РјР°С‚РµСЂРёР°Р»СЊРЅРѕ РѕС‚РІРµС‚СЃС‚РІРµРЅРЅРѕРµ Р»РёС†Рѕ!',
+                    'Для склада "%s" не указано материально ответственное лицо!',
                     SSTORE_PRODUCE);
     end;
-
-    /* РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРёРј РєРѕР»Р»РµРєС†РёСЋ Р·Р°РіСЂСѓР¶Р°РµРјС‹С… РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ */
+  
+    /* Инициализируеим коллекцию загружаемых номенклатур */
     NOMENS := TNOMENS();
-
-    /* РћР±С…РѕРґРёРј РєРѕРЅС„РёРіСѓСЂР°С†РёСЋ РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ СЃС‚РµРЅРґР° РґР»СЏ С‚РѕРіРѕ С‡С‚Рѕ Р±С‹ СЃС„РѕСЂРјРёСЂРѕРІР°С‚СЊ РєРѕР»Р»РµРєС†РёСЋ Р·Р°РіСЂСѓР¶Р°РµРјС‹С… РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ */
+  
+    /* Обходим конфигурацию номенклатур стенда для того что бы сформировать коллекцию загружаемых номенклатур */
     for I in 1 .. NRACK_LINES
     loop
       if ((NRACK_LINE is null) or (((NRACK_LINE is not null)) and (NRACK_LINE = I))) then
@@ -1841,22 +1841,22 @@ create or replace package body UDO_PKG_STAND as
             declare
               BADD boolean := false;
             begin
-              /* РЎС‡РёС‚Р°РµРј РєРѕРЅС„РёРіСѓСЂР°С†РёСЋ СЏС‡РµР№РєРё РёР· РєРѕС‚РѕСЂРѕР№ РїСЂРѕРёСЃС…РѕРґРёС‚ РѕС‚РіСЂСѓР·РєР° */
+              /* Считаем конфигурацию ячейки из которой происходит отгрузка */
               CELL_CONF := STAND_GET_RACK_LINE_CELL_CONF(NRACK_LINE => I, NRACK_LINE_CELL => J);
-              /* Р‘СѓРґРµРј РґРѕР±Р°РІР»СЏС‚СЊ РІ РєРѕР»Р»РµРєС†РёСЋ Р·Р°РіСЂСѓР¶Р°РµРјС‹С… РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ */
+              /* Будем добавлять в коллекцию загружаемых номенклатур */
               BADD := true;
               if (NOMENS.COUNT > 0) then
-                /* РС‰РµРј РІ СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёС… РІ РєРѕР»Р»РµРєС†РёРё Р·Р°РіСЂСѓР¶Р°РµРјС‹С… РЅРѕРјРµРЅРєР»Р°С‚СѓСЂР°С…... */
+                /* Ищем в уже существующих в коллекции загружаемых номенклатурах... */
                 for N in NOMENS.FIRST .. NOMENS.LAST
                 loop
-                  /* ...С‚Р°РєСѓСЋ Р¶Рµ, РєР°Рє РІ СЏС‡РµР№РєРµ */
+                  /* ...такую же, как в ячейке */
                   if (NOMENS(N).RACK_NOMEN_CONF.NNOMMODIF = CELL_CONF.NNOMMODIF) then
-                    /* РўР°РєР°СЏ РµСЃС‚СЊ - РґРѕР±Р°РІР»СЏС‚СЊ РЅРµ РЅР°РґРѕ */
+                    /* Такая есть - добавлять не надо */
                     BADD := false;
                   end if;
                 end loop;
               end if;
-              /* РќРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РєР°Рє РІ СЏС‡РµР№РєРµ РµС‰С‘ РЅРµС‚ РІ РєРѕР»Р»РµРєС†РёРё Р·Р°РіСЂСѓР¶Р°РµРјС‹С… - Р·РЅР°С‡РёС‚ РґРѕР±Р°РІРёРј РµС‘ */
+              /* Номенклатуры как в ячейке ещё нет в коллекции загружаемых - значит добавим её */
               if (BADD) then
                 NOMENS.EXTEND();
                 NOMENS(NOMENS.LAST).RACK_NOMEN_CONF := STAND_GET_RACK_NOMEN_CONF(NNOMMODIF => CELL_CONF.NNOMMODIF);
@@ -1867,14 +1867,14 @@ create or replace package body UDO_PKG_STAND as
         end loop;
       end if;
     end loop;
-
-    /* Р Р°СЃС‡РёС‚Р°РµРј РѕС‡РµСЂРµРґРЅРѕР№ РЅРѕРјРµСЂ РґРѕРєСѓРјРµРЅС‚Р° */
+  
+    /* Расчитаем очередной номер документа */
     P_INCOMEFROMDEPS_GETNEXTNUMB(NCOMPANY => NCOMPANY,
                                  STYPE    => SINCDEPS_TYPE,
                                  SPREF    => SINCDEPS_PREF,
                                  SNUMB    => SDOC_NUMB);
-
-    /* Р“РµРЅРµСЂР°С†РёСЏ Р·Р°РіРѕР»РѕРІРєР° РїСЂРёС…РѕРґР° РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёР№ */
+  
+    /* Генерация заголовка прихода из подразделений */
     P_INCOMEFROMDEPS_INSERT(NCOMPANY          => NCOMPANY,
                             NCRN              => NCRN,
                             SJUR_PERS         => SJUR_PERS,
@@ -1903,8 +1903,8 @@ create or replace package body UDO_PKG_STAND as
                             SBARCODE          => null,
                             NDUP_RN           => null,
                             NRN               => NINCOMEFROMDEPS);
-
-    /* Р“РµРЅРµСЂР°С†РёСЏ СЃРїРµС†РёС„РёРєР°С†РёРё РїСЂРёС…РѕРґР° РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёР№ */
+  
+    /* Генерация спецификации прихода из подразделений */
     for I in NOMENS.FIRST .. NOMENS.LAST
     loop
       P_INCOMEFROMDEPSSPEC_INSERT(NCOMPANY        => NCOMPANY,
@@ -1937,17 +1937,17 @@ create or replace package body UDO_PKG_STAND as
                                   SUMEAS_STORAGE  => null,
                                   NRN             => NOMENS(I).NINCOMEFROMDEPSSPEC);
     end loop;
-
-    /* РЈСЃС‚Р°РЅРѕРІРєР° РјРµСЃС‚ С…СЂР°РЅРµРЅРёСЏ РґР»СЏ СЃРїРµС†РёС„РёРєР°С†РёРё */
+  
+    /* Установка мест хранения для спецификации */
     for I in 1 .. NRACK_LINES
     loop
       if ((NRACK_LINE is null) or (((NRACK_LINE is not null)) and (NRACK_LINE = I))) then
         for J in 1 .. NRACK_LINE_CELLS
         loop
           if ((NRACK_LINE_CELL is null) or (((NRACK_LINE_CELL is not null)) and (NRACK_LINE_CELL = J))) then
-            /* РЎС‡РёС‚Р°РµРј РєРѕРЅС„РёРіСѓСЂР°С†РёСЋ СЏС‡РµР№РєРё */
+            /* Считаем конфигурацию ячейки */
             CELL_CONF := STAND_GET_RACK_LINE_CELL_CONF(NRACK_LINE => I, NRACK_LINE_CELL => J);
-            /* РќР°Р№РґРµРј РїРѕР·РёС†РёСЋ СЃРїРµС†РёС„РёРєР°С†РёРё РєРѕС‚РѕСЂРѕР№ РѕРЅР° Р±С‹Р»Р° Р·Р°РіСЂСѓР¶РµРЅР° */
+            /* Найдем позицию спецификации которой она была загружена */
             NINCOMEFROMDEPSSPEC := null;
             for N in NOMENS.FIRST .. NOMENS.LAST
             loop
@@ -1957,11 +1957,11 @@ create or replace package body UDO_PKG_STAND as
             end loop;
             if (NINCOMEFROMDEPSSPEC is null) then
               P_EXCEPTION(0,
-                          'Р”Р»СЏ РјРѕРґРёС„РёРєР°С†РёРё "%s" РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ "%s" РЅРµ СѓРґР°Р»РѕСЃСЊ РѕРїСЂРµРґРµР»РёС‚СЊ РїРѕР·РёС†РёСЋ РїСЂРёС…РѕРґР° РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёСЏ!',
+                          'Для модификации "%s" номенклатуры "%s" не удалось определить позицию прихода из подразделения!',
                           CELL_CONF.SNOMMODIF,
                           CELL_CONF.SNOMEN);
             end if;
-            /* РЈСЃС‚Р°РЅРѕРІРёРј РјРµСЃС‚Рѕ С…СЂР°РЅРµРЅРёСЏ */
+            /* Установим место хранения */
             P_STRPLRESJRNL_INSERT(NCOMPANY        => NCOMPANY,
                                   SMASTERUNITCODE => 'IncomFromDeps',
                                   SSLAVEUNITCODE  => 'IncomFromDepsSpecs',
@@ -1996,8 +1996,8 @@ create or replace package body UDO_PKG_STAND as
         end loop;
       end if;
     end loop;
-
-    /* РћС‚СЂР°Р±РѕС‚РєР° РґРѕРєСѓРјРµРЅС‚Р° РєР°Рє "Р¤Р°РєС‚" */
+  
+    /* Отработка документа как "Факт" */
     P_INCOMEFROMDEPS_SET_STATUS(NCOMPANY  => NCOMPANY,
                                 NRN       => NINCOMEFROMDEPS,
                                 NSTATUS   => 2,
@@ -2005,29 +2005,29 @@ create or replace package body UDO_PKG_STAND as
                                 NWARNING  => NWARNING,
                                 SMSG      => SMSG);
     if ((NWARNING is not null) or (SMSG is not null)) then
-      P_EXCEPTION(0, NVL(SMSG, 'РћС€РёР±РєР° РѕС‚СЂР°Р±РѕС‚РєРё РґРѕРєСѓРјРµРЅС‚Р°!'));
+      P_EXCEPTION(0, NVL(SMSG, 'Ошибка отработки документа!'));
     end if;
-
-    /* Р Р°СЃРїСЂРµРґРµР»РµРЅРёРµ СЃРїРµС†РёС„РёРєР°С†РёРё РїРѕ РјРµСЃС‚Р°Рј С…СЂР°РЅРµРЅРёСЏ */
+  
+    /* Распределение спецификации по местам хранения */
     P_STRPLRESJRNL_INDEPTS_PROCESS(NCOMPANY => NCOMPANY, NRN => NINCOMEFROMDEPS);
-
-    /* РћРїРѕРІРµСЃС‚РёРј Рѕ Р·Р°РіСѓР·РєРµ СЃС‚РµРЅРґР° */
-    MSG_INSERT_NOTIFY(SMSG => 'РЎС‚РЅРµРґ СѓСЃРїРµС€РЅРѕ Р·Р°РіСЂСѓР¶РµРЅ...', SNOTIFY_TYPE => SNOTIFY_TYPE_INFO);
-
-    /* Р—Р°РїРѕРјРЅРёРј РѕСЃС‚Р°С‚РєРё РїРѕ СЃС‚РµРЅРґСѓ */
+  
+    /* Оповестим о загузке стенда */
+    MSG_INSERT_NOTIFY(SMSG => 'Стнед успешно загружен...', SNOTIFY_TYPE => SNOTIFY_TYPE_INFO);
+  
+    /* Запомним остатки по стенду */
     STAND_SAVE_RACK_REST(NCOMPANY => NCOMPANY, BNOTIFY_REST => true, BNOTIFY_LIMIT => false);
   end;
 
-  /* РћС‚РєР°С‚ РїРѕСЃР»РµРґРЅРµР№ Р·Р°РіСЂСѓР·РєРё СЃС‚РµРЅРґР° */
+  /* Откат последней загрузки стенда */
   procedure LOAD_ROLLBACK
   (
-    NCOMPANY                number,                 -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    NINCOMEFROMDEPS         out number              -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЂР°СЃС„РѕСЂРјРёСЂРѕРІР°РЅРЅРѕРіРѕ "РџСЂРёС…РѕРґР° РёР· РїРѕРґСЂР°Р·РґРµР»РµРЅРёСЏ"
-  ) is
-    NWARNING                PKG_STD.TREF;           -- Р¤Р»Р°Рі РїСЂРµРґСѓРїСЂРµР¶РґРµРЅРёСЏ РїСЂРѕС†РµРґСѓСЂС‹ РѕС‚СЂР°Р±РѕС‚РєРё РїСЂРёС…РѕРґР°
-    SMSG                    PKG_STD.TSTRING;        -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ РїСЂРѕС†РµРґСѓСЂС‹ РѕС‚СЂР°Р±РѕС‚РєРё РїСЂРёС…РѕРґР°
+    NCOMPANY                number,                 -- Регистрационный номер организации
+    NINCOMEFROMDEPS         out number              -- Регистрационный номер расформированного "Прихода из подразделения"    
+  ) is    
+    NWARNING                PKG_STD.TREF;           -- Флаг предупреждения процедуры отработки прихода
+    SMSG                    PKG_STD.TSTRING;        -- Текст сообщения процедуры отработки прихода
   begin
-    /* РќР°С…РѕРґРёРј РїРѕСЃР»РµРґРЅСЋСЋ Р·Р°РіСЂСѓР·РєСѓ */
+    /* Находим последнюю загрузку */
     begin
       select max(T.RN)
         into NINCOMEFROMDEPS
@@ -2047,16 +2047,16 @@ create or replace package body UDO_PKG_STAND as
       when others then
         NINCOMEFROMDEPS := null;
     end;
-
-    /* РџСЂРѕРІРµСЂРёРј, С‡С‚Рѕ РµСЃС‚СЊ Р·Р°РіСЂСѓР·РєРё СЃС‚РµРЅРґР° */
+  
+    /* Проверим, что есть загрузки стенда */
     if (NINCOMEFROMDEPS is null) then
-      P_EXCEPTION(0, 'РќРµ РЅР°Р№РґРµРЅРѕ РЅРё РѕРґРЅРѕР№ Р·Р°РіСЂСѓР·РєРё СЃС‚РµРЅРґР°!');
+      P_EXCEPTION(0, 'Не найдено ни одной загрузки стенда!');
     end if;
-
-    /* РћС‚РјРµРЅСЏРµРј СЂР°Р·РјРµС‰РµРЅРёРµ РЅР° РјРµСЃС‚Р°С… С…СЂР°РЅРµРЅРёСЏ */
+  
+    /* Отменяем размещение на местах хранения */
     P_STRPLRESJRNL_INDEPTS_RLLBACK(NCOMPANY => NCOMPANY, NRN => NINCOMEFROMDEPS);
-
-    /* РЎРЅРёРјР°РµРј РѕС‚СЂР°Р±РѕС‚РєСѓ */
+  
+    /* Снимаем отработку */
     P_INCOMEFROMDEPS_SET_STATUS(NCOMPANY  => NCOMPANY,
                                 NRN       => NINCOMEFROMDEPS,
                                 NSTATUS   => 0,
@@ -2064,10 +2064,10 @@ create or replace package body UDO_PKG_STAND as
                                 NWARNING  => NWARNING,
                                 SMSG      => SMSG);
     if ((NWARNING is not null) or (SMSG is not null)) then
-      P_EXCEPTION(0, NVL(SMSG, 'РћС€РёР±РєР° СЃРЅСЏС‚РёСЏ РѕС‚СЂР°Р±РѕС‚РєРё РґРѕРєСѓРјРµРЅС‚Р°!'));
+      P_EXCEPTION(0, NVL(SMSG, 'Ошибка снятия отработки документа!'));
     end if;
-
-    /* РЈРґР°Р»СЏРµРј СЂРµР·РµСЂРІРёСЂРѕРІР°РЅРёРµ РїРѕ РјРµСЃС‚Р°Рј С…СЂР°РЅРµРЅРёСЏ */
+  
+    /* Удаляем резервирование по местам хранения */
     for C in (select T.COMPANY,
                      T.RN
                 from STRPLRESJRNL       T,
@@ -2082,49 +2082,49 @@ create or replace package body UDO_PKG_STAND as
     loop
       P_STRPLRESJRNL_DELETE(NCOMPANY => C.COMPANY, NRN => C.RN);
     end loop;
-
-    /* РЈРґР°Р»СЏРµРј РґРѕРєСѓРјРµРЅС‚ */
+  
+    /* Удаляем документ */
     P_INCOMEFROMDEPS_DELETE(NCOMPANY => NCOMPANY, NRN => NINCOMEFROMDEPS);
-
-    /* Р—Р°РїРѕРјРЅРёРј РѕСЃС‚Р°С‚РєРё РїРѕ СЃС‚РµРЅРґСѓ */
+  
+    /* Запомним остатки по стенду */
     STAND_SAVE_RACK_REST(NCOMPANY => NCOMPANY, BNOTIFY_REST => false, BNOTIFY_LIMIT => true);
   end;
 
-  /* РћС‚РіСЂСѓР·РєР° СЃРѕ СЃС‚РµРЅРґР° РїРѕСЃРµС‚РёС‚РµР»СЋ */
+  /* Отгрузка со стенда посетителю */
   procedure SHIPMENT
   (
-    NCOMPANY                number,                    -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    SCUSTOMER               varchar2,                  -- РњРЅРµРјРѕРєРѕРґ РєРѕРЅС‚СЂР°РіРµРЅС‚Р°-РїРѕРєСѓРїР°С‚РµР»СЏ
-    NRACK_LINE              number,                    -- РќРѕРјРµСЂ СЏСЂСѓСЃР° СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
-    NRACK_LINE_CELL         number,                    -- РќРѕРјРµСЂ СЏС‡РµР№РєРё РІ СЏСЂСѓСЃРµ СЃС‚РµР»Р»Р°Р¶Р° СЃС‚РµРЅРґР°
-    NTRANSINVCUST           out number                 -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃС„РѕСЂРјРёСЂРѕРІР°РЅРЅРѕР№ Р РќРћРџ
+    NCOMPANY                number,                    -- Регистрационный номер организации
+    SCUSTOMER               varchar2,                  -- Мнемокод контрагента-покупателя
+    NRACK_LINE              number,                    -- Номер яруса стеллажа стенда
+    NRACK_LINE_CELL         number,                    -- Номер ячейки в ярусе стеллажа стенда
+    NTRANSINVCUST           out number                 -- Регистрационный номер сформированной РНОП
   ) is
-    NCRN                    INCOMEFROMDEPS.RN%type;    -- РљР°С‚Р°Р»РѕРі СЂР°Р·РјРµС‰РµРЅРёСЏ Р РќРћРџ
-    NJUR_PERS               JURPERSONS.RN%type;        -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЋСЂРёРґРёС‡РµСЃРєРѕРіРѕ Р»РёС†Р° Р РќРћРџ (РѕСЃРЅРѕРІРЅРѕРµ Р®Р› РѕСЂРіР°РЅРёР·Р°С†РёРё)
-    SJUR_PERS               JURPERSONS.CODE%type;      -- РњРЅРµРјРѕРєРѕРґ РЅРѕРјРµСЂ СЋСЂРёРґРёС‡РµСЃРєРѕРіРѕ Р»РёС†Р° Р РќРћРџ (РѕСЃРЅРѕРІРЅРѕРµ Р®Р› РѕСЂРіР°РЅРёР·Р°С†РёРё)
-    SCURRENCY               CURNAMES.CURCODE%type;     -- Р’Р°Р»СЋС‚Р° С„РѕСЂРјРёСЂСѓРµРјРѕРіРѕ Р РќРћРџ (Р±Р°Р·РѕРІР°СЏ РІР°Р»СЋС‚Р° РѕСЂРіР°РЅРёР·Р°С†РёРё)
-    SNUMB                   TRANSINVCUST.NUMB%type;    -- РќРѕРјРµСЂ С„РѕСЂРјРёСЂСѓРµРјРѕРіРѕ Р РќРћРџ
-    SMOL                    AGNLIST.AGNABBR%type;      -- РњРћР› СЃРєР»Р°РґР° РѕС‚РіСЂСѓР·РєРё Р РќРћРџ
-    SMSG                    PKG_STD.TSTRING;           -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ РїСЂРѕС†РµРґСѓСЂС‹ РґРѕР±Р°РІР»РµРЅРёСЏ Р РќРћРџ/СЃРїРµС†РёС„РёРєР°С†РёРё Р РќРћРџ/РѕС‚СЂР°Р±РѕС‚РєРё Р РќРћРџ
-    NTRANSINVCUSTSPECS      TRANSINVCUSTSPECS.RN%type; -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃС„РѕСЂРјРёСЂРѕРІР°РЅРЅРѕР№ СЃРїРµС†РёС„РёРєР°С†РёРё Р РќРћРџ
-    NGOODSSUPPLY            GOODSSUPPLY.RN%type;       -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ С‚РѕРІР°СЂРЅРѕРіРѕ Р·Р°РїР°СЃР° РґР»СЏ СЂРµР·РµСЂРІРёСЂРѕРІР°РЅРёСЏ
-    NSTRPLRESJRNL           STRPLRESJRNL.RN%type;      -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ СЃС„РѕСЂРјРёСЂРѕРІР°РЅРЅРѕР№ Р·Р°РїРёСЃРё СЂРµР·РµСЂРІРёСЂРѕРІР°РЅРёСЏ РїРѕ РјРµСЃС‚Р°Рј С…СЂР°РЅРµРЅРёСЏ
-    NTMP_QUANT              PKG_STD.TQUANT;            -- Р‘СѓС„РµСЂ РґР»СЏ РєРѕР»РёС‡РµСЃС‚РІР° РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ РІ С‚РѕРІР°СЂРЅРѕРј Р·Р°РїР°СЃРµ
-    CELL_CONF               TRACK_LINE_CELL_CONF;      -- РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ СЏС‡РµР№РєРё (РјРµСЃС‚Р° С…СЂР°РЅРµРЅРёСЏ) СЃС‚РµРЅРґР°
+    NCRN                    INCOMEFROMDEPS.RN%type;    -- Каталог размещения РНОП
+    NJUR_PERS               JURPERSONS.RN%type;        -- Регистрационный номер юридического лица РНОП (основное ЮЛ организации)
+    SJUR_PERS               JURPERSONS.CODE%type;      -- Мнемокод номер юридического лица РНОП (основное ЮЛ организации)
+    SCURRENCY               CURNAMES.CURCODE%type;     -- Валюта формируемого РНОП (базовая валюта организации)
+    SNUMB                   TRANSINVCUST.NUMB%type;    -- Номер формируемого РНОП
+    SMOL                    AGNLIST.AGNABBR%type;      -- МОЛ склада отгрузки РНОП
+    SMSG                    PKG_STD.TSTRING;           -- Текст сообщения процедуры добавления РНОП/спецификации РНОП/отработки РНОП    
+    NTRANSINVCUSTSPECS      TRANSINVCUSTSPECS.RN%type; -- Регистрационный номер сформированной спецификации РНОП
+    NGOODSSUPPLY            GOODSSUPPLY.RN%type;       -- Регистрационный номер товарного запаса для резервирования
+    NSTRPLRESJRNL           STRPLRESJRNL.RN%type;      -- Регистрационный номер сформированной записи резервирования по местам хранения
+    NTMP_QUANT              PKG_STD.TQUANT;            -- Буфер для количества номенклатуры в товарном запасе
+    CELL_CONF               TRACK_LINE_CELL_CONF;      -- Конфигурация ячейки (места хранения) стенда    
   begin
-    /* РћРїСЂРµРґРµР»РёРј СЂРµРі. РЅРѕРјРµСЂ РєР°С‚Р°Р»РѕРіР° */
+    /* Определим рег. номер каталога */
     FIND_ROOT_CATALOG(NCOMPANY => NCOMPANY, SCODE => 'GoodsTransInvoicesToConsumers', NCRN => NCRN);
-
-    /* РћРїСЂРµРґРµР»РёРј РѕСЃРЅРѕРІРЅРѕРµ СЋСЂРёРґРёС‡РµСЃРєРѕРµ Р»РёС†Рѕ РѕСЂРіР°РЅРёР·Р°С†РёРё */
+  
+    /* Определим основное юридическое лицо организации */
     FIND_JURPERSONS_MAIN(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SJUR_PERS => SJUR_PERS, NJUR_PERS => NJUR_PERS);
-
-    /* РћРїСЂРµРґРµР»РёРј Р±Р°Р·РѕРІСѓСЋ РІР°Р»СЋС‚Сѓ */
+  
+    /* Определим базовую валюту */
     FIND_CURRENCY_BASE_NAME(NCOMPANY => NCOMPANY, SCODE => SCURRENCY, SISO => SCURRENCY);
-
-    /* РЎС‡РёС‚Р°РµРј РєРѕРЅС„РёРіСѓСЂР°С†РёСЋ СЏС‡РµР№РєРё РёР· РєРѕС‚РѕСЂРѕР№ РїСЂРѕРёСЃС…РѕРґРёС‚ РѕС‚РіСЂСѓР·РєР° */
+  
+    /* Считаем конфигурацию ячейки из которой происходит отгрузка */
     CELL_CONF := STAND_GET_RACK_LINE_CELL_CONF(NRACK_LINE => NRACK_LINE, NRACK_LINE_CELL => NRACK_LINE_CELL);
-
-    /* РћРїСЂРµРґРµР»РёРј РњРћР› СЃРєР»Р°РґР° РѕС‚РіСЂСѓР·РєРё */
+  
+    /* Определим МОЛ склада отгрузки */
     begin
       select AG.AGNABBR
         into SMOL
@@ -2136,19 +2136,19 @@ create or replace package body UDO_PKG_STAND as
     exception
       when NO_DATA_FOUND then
         P_EXCEPTION(0,
-                    'Р”Р»СЏ СЃРєР»Р°РґР° "%s" РЅРµ СѓРєР°Р·Р°РЅРѕ РјР°С‚РµСЂРёР°Р»СЊРЅРѕ РѕС‚РІРµС‚СЃС‚РІРµРЅРЅРѕРµ Р»РёС†Рѕ!',
+                    'Для склада "%s" не указано материально ответственное лицо!',
                     SSTORE_PRODUCE);
     end;
-
-    /* Р Р°СЃС‡РёС‚Р°РµРј РѕС‡РµСЂРµРґРЅРѕР№ РЅРѕРјРµСЂ Р РќРћРџ */
+  
+    /* Расчитаем очередной номер РНОП */
     P_TRANSINVCUST_GETNEXTNUMB(NCOMPANY  => NCOMPANY,
                                SJUR_PERS => SJUR_PERS,
                                DDOCDATE  => TRUNC(sysdate),
                                STYPE     => STRINVCUST_TYPE,
                                SPREF     => STRINVCUST_PREF,
                                SNUMB     => SNUMB);
-
-    /* Р”РѕР±Р°РІР»СЏРµРј Р·Р°РіРѕР»РѕРІРѕРє Р РќРћРџ */
+  
+    /* Добавляем заголовок РНОП */
     P_TRANSINVCUST_INSERT(NCOMPANY       => NCOMPANY,
                           NCRN           => NCRN,
                           SJUR_PERS      => SJUR_PERS,
@@ -2205,8 +2205,8 @@ create or replace package body UDO_PKG_STAND as
                           SREG_AGENT     => null,
                           NRN            => NTRANSINVCUST,
                           SMSG           => SMSG);
-
-    /* Р”РѕР±Р°РІРёРј СЃРїРµС†РёС„РёРєР°С†РёСЋ Р РќРћРџ */
+  
+    /* Добавим спецификацию РНОП */
     P_TRANSINVCUSTSPECS_INSERT(NCOMPANY         => NCOMPANY,
                                NPRN             => NTRANSINVCUST,
                                STAXGR           => SDEF_TAX_GROUP,
@@ -2239,8 +2239,8 @@ create or replace package body UDO_PKG_STAND as
                                NDUP_RN          => null,
                                NRN              => NTRANSINVCUSTSPECS,
                                SMSG             => SMSG);
-
-    /* РќР°Р№РґРµРј С‚РѕРІР°СЂРЅС‹Р№ Р·Р°РїР°СЃ */
+  
+    /* Найдем товарный запас */
     FIND_STPLGOODSSUPPLY_BY_PARTY(NFLAG_SMART   => 1,
                                   NCOMPANY      => NCOMPANY,
                                   SSTORE        => SSTORE_GOODS,
@@ -2261,15 +2261,15 @@ create or replace package body UDO_PKG_STAND as
                                   NQUANTPACK    => NTMP_QUANT);
     if (NGOODSSUPPLY is null) then
       P_EXCEPTION(0,
-                  'РќРµ СѓРґР°Р»РѕСЃСЊ РѕРїСЂРµРґРµР»РёС‚СЊ С‚РѕРІР°СЂРЅС‹Р№ Р·Р°РїР°СЃ РјРѕРґРёС„РёРєР°С†РёРё "%s" РЅРѕРјРµРЅРєР»Р°С‚СѓСЂС‹ "%s" РЅР° РјРµСЃС‚Рµ С…СЂР°РЅРµРЅРёСЏ "%s" СЃС‚РµР»Р»Р°Р¶Р° "%s" СЃРєР»Р°РґР° "%s"!',
+                  'Не удалось определить товарный запас модификации "%s" номенклатуры "%s" на месте хранения "%s" стеллажа "%s" склада "%s"!',
                   CELL_CONF.SNOMMODIF,
                   CELL_CONF.SNOMEN,
                   CELL_CONF.SNAME,
                   RACK_BUILD_NAME(SPREF => SRACK_PREF, SNUMB => SRACK_NUMB),
                   SSTORE_GOODS);
     end if;
-
-    /* Р РµР·РµСЂРІРёСЂСѓРµРј С‚РѕРІР°СЂ РЅР° РјРµСЃС‚Р°С… С…СЂР°РЅРµРЅРёСЏ */
+  
+    /* Резервируем товар на местах хранения */
     P_STRPLRESJRNL_INSERT(NCOMPANY        => NCOMPANY,
                           SMASTERUNITCODE => 'GoodsTransInvoicesToConsumers',
                           SSLAVEUNITCODE  => 'GoodsTransInvoicesToConsumersSpecs',
@@ -2300,38 +2300,38 @@ create or replace package body UDO_PKG_STAND as
                           NQUANTALT       => 0,
                           NQUANTPACK      => null,
                           NRN             => NSTRPLRESJRNL);
-
-    /* РћС‚СЂР°Р±РѕС‚Р°РµРј СЃС„РѕСЂРјРёСЂРѕРІР°РЅРЅС‹Р№ Р РќРћРџ РєР°Рє С„Р°РєС‚ */
+  
+    /* Отработаем сформированный РНОП как факт */
     P_TRANSINVCUST_SET_STATUS(NCOMPANY   => NCOMPANY,
                               NRN        => NTRANSINVCUST,
                               NSTATUS    => 2,
                               DWORK_DATE => TRUNC(sysdate),
                               SMSG       => SMSG);
-
-    /* РЎРїРёС€РµРј СЂРµР·РµСЂРІ СЃ РјРµСЃС‚ С…СЂР°РЅРµРЅРёСЏ */
+  
+    /* Спишем резерв с мест хранения */
     P_STRPLRESJRNL_GTINV2C_PROCESS(NCOMPANY => NCOMPANY, NRN => NTRANSINVCUST, NRES_TYPE => 1);
-
-    /* РЎРѕРѕР±С‰РёРј, С‡С‚Рѕ РїСЂРѕРёР·РѕС€Р»Рѕ СЃРїРёСЃР°РЅРёРµ */
-    MSG_INSERT_NOTIFY(SMSG         => 'РџСЂРѕРёР·РѕС€Р»Р° РѕС‚РіСЂСѓР·РєР° "' || CELL_CONF.SNOMEN || ' - ' || CELL_CONF.SNOMMODIF ||
-                                      '"  РїРѕСЃРµС‚РёС‚РµР»СЋ "' || SCUSTOMER || '", РґРѕРєСѓРјРµРЅС‚-РїРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ: ' ||
-                                      STRINVCUST_TYPE || ' в„–' || STRINVCUST_PREF || '-' || SNUMB || ' РѕС‚ ' ||
+  
+    /* Сообщим, что произошло списание */
+    MSG_INSERT_NOTIFY(SMSG         => 'Произошла отгрузка "' || CELL_CONF.SNOMEN || ' - ' || CELL_CONF.SNOMMODIF ||
+                                      '"  посетителю "' || SCUSTOMER || '", документ-подтверждение: ' ||
+                                      STRINVCUST_TYPE || ' №' || STRINVCUST_PREF || '-' || SNUMB || ' от ' ||
                                       TO_CHAR(sysdate, 'dd.mm.yyyy'),
                       SNOTIFY_TYPE => SNOTIFY_TYPE_INFO);
-
-    /* Р—Р°РїРѕРјРЅРёРј РѕСЃС‚Р°С‚РєРё РїРѕ СЃС‚РµРЅРґСѓ */
+  
+    /* Запомним остатки по стенду */
     STAND_SAVE_RACK_REST(NCOMPANY => NCOMPANY, BNOTIFY_REST => false, BNOTIFY_LIMIT => true);
   end;
 
-  /* РћС‚РєР°С‚ РѕС‚РіСЂСѓР·РєРё СЃРѕ СЃС‚РµРЅРґР° */
+  /* Откат отгрузки со стенда */
   procedure SHIPMENT_ROLLBACK
   (
-    NCOMPANY                number,               -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР·Р°С†РёРё
-    NTRANSINVCUST           number                -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕС‚РіСЂСѓР·РѕС‡РЅРѕР№ Р РќРћРџ
+    NCOMPANY                number,               -- Регистрационный номер организации
+    NTRANSINVCUST           number                -- Регистрационный номер отгрузочной РНОП
   ) is
-    SCUSTOMER               AGNLIST.AGNABBR%type; -- РњРЅРµРјРѕРєРѕРґ РєРѕРЅС‚СЂР°РіРµРЅС‚Р° РѕС‚РіСЂСѓР·РєРё
-    SMSG                    PKG_STD.TSTRING;      -- РўРµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ РїСЂРѕС†РµРґСѓСЂС‹ РѕС‚СЂР°Р±РѕС‚РєРё РїСЂРёС…РѕРґР°
+    SCUSTOMER               AGNLIST.AGNABBR%type; -- Мнемокод контрагента отгрузки
+    SMSG                    PKG_STD.TSTRING;      -- Текст сообщения процедуры отработки прихода
   begin
-    /* РЎС‡РёС‚Р°РµРј РјРЅРµРјРѕРєРѕРґ РєРѕРЅС‚СЂР°РіРµРЅС‚Р° РѕС‚РіСЂСѓР·РѕС‡РЅРѕРіРѕ РґРѕРєСѓРјРµРЅС‚Р° */
+    /* Считаем мнемокод контрагента отгрузочного документа */
     begin
       select A.AGNABBR
         into SCUSTOMER
@@ -2343,11 +2343,11 @@ create or replace package body UDO_PKG_STAND as
       when NO_DATA_FOUND then
         PKG_MSG.RECORD_NOT_FOUND(NFLAG_SMART => 0, NDOCUMENT => NTRANSINVCUST, SUNIT_TABLE => 'TRANSINVCUST');
     end;
-
-    /* РћС‚РјРµРЅСЏРµРј СЂР°Р·РјРµС‰РµРЅРёРµ РЅР° РјРµСЃС‚Р°С… С…СЂР°РЅРµРЅРёСЏ */
+  
+    /* Отменяем размещение на местах хранения */
     P_STRPLRESJRNL_GTINV2C_RLLBACK(NCOMPANY => NCOMPANY, NRN => NTRANSINVCUST, NRES_TYPE => 1);
-
-    /* РЎРЅРёРјР°РµРј РѕС‚СЂР°Р±РѕС‚РєСѓ */
+  
+    /* Снимаем отработку */
     P_TRANSINVCUST_SET_STATUS(NCOMPANY   => NCOMPANY,
                               NRN        => NTRANSINVCUST,
                               NSTATUS    => 0,
@@ -2356,8 +2356,8 @@ create or replace package body UDO_PKG_STAND as
     if (SMSG is not null) then
       P_EXCEPTION(0, SMSG);
     end if;
-
-    /* РЈРґР°Р»СЏРµРј СЂРµР·РµСЂРІРёСЂРѕРІР°РЅРёРµ РїРѕ РјРµСЃС‚Р°Рј С…СЂР°РЅРµРЅРёСЏ */
+  
+    /* Удаляем резервирование по местам хранения */
     for C in (select T.COMPANY,
                      T.RN
                 from STRPLRESJRNL      T,
@@ -2372,30 +2372,30 @@ create or replace package body UDO_PKG_STAND as
     loop
       P_STRPLRESJRNL_DELETE(NCOMPANY => C.COMPANY, NRN => C.RN);
     end loop;
-
-    /* РЈРґР°Р»СЏРµРј РґРѕРєСѓРјРµРЅС‚ */
+  
+    /* Удаляем документ */
     P_TRANSINVCUST_DELETE(NCOMPANY => NCOMPANY, NRN => NTRANSINVCUST);
-
-    /* РЎРєР°Р¶РµРј С‡С‚Рѕ РѕС‚РєР°С‚РёР»Рё РѕС‚РіСЂСѓР·РєСѓ */
-    MSG_INSERT_NOTIFY(SMSG         => 'РћС‚РіСЂСѓР·РєР° РїРѕСЃРµС‚РёС‚РµР»СЋ "' || SCUSTOMER || '" Р±С‹Р»Р° РѕС‚РјРµРЅРµРЅР°...',
+  
+    /* Скажем что откатили отгрузку */
+    MSG_INSERT_NOTIFY(SMSG         => 'Отгрузка посетителю "' || SCUSTOMER || '" была отменена...',
                       SNOTIFY_TYPE => SNOTIFY_TYPE_INFO);
-
-    /* Р—Р°РїРѕРјРЅРёРј РѕСЃС‚Р°С‚РєРё РїРѕ СЃС‚РµРЅРґСѓ */
+  
+    /* Запомним остатки по стенду */
     STAND_SAVE_RACK_REST(NCOMPANY => NCOMPANY, BNOTIFY_REST => true, BNOTIFY_LIMIT => false);
   end;
-
-  /* РЎС‡РёС‚С‹РІР°РЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ Р·Р°РїРёСЃРё РѕС‡РµСЂРµРґРё РїРµС‡Р°С‚Рё */
+  
+  /* Считывание состояния записи очереди печати */
   procedure PRINT_GET_STATE
   (
-    SSESSION                varchar2,                       -- РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ СЃРµСЃСЃРёРё
-    NRPTPRTQUEUE            number,                         -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ Р·Р°РїРёСЃРё РѕС‡РµСЂРµРґРё РїРµС‡Р°С‚Рё
-    RPT_QUEUE_STATE         out TRPT_QUEUE_STATE            -- РЎРѕСЃС‚РѕСЏРЅРёРµ РїРѕР·РёС†РёРё РѕС‡РµСЂРµРґРё РїРµС‡Р°С‚Рё
-  ) is
-    SMSG                    UDO_T_STAND_MSG.MSG%type;       -- РўРµРєСЃС‚ С„РѕСЂРјРёСЂСѓРµРјРѕРіРѕ СѓРІРµРґРѕРјР»РµРЅРёСЏ
-    SNOTIFY_TYPE            PKG_STD.TSTRING;                -- РўРёРї С„РѕСЂРјРёСЂСѓРµРјРѕРіРѕ СѓРІРµРґРѕРјР»РµРЅРёСЏ
-    SRECEIVER               RPTPRTQUEUE_PRM.STR_VALUE%type; -- Р—РЅР°С‡РµРЅРёРµ РїР°СЂР°РјРµС‚СЂР° РѕС‚С‡РµС‚Р° "РљРѕРЅС‚СЂР°РіРµРЅС‚-РїРѕР»СѓС‡Р°С‚РµР»СЊ"
+    SSESSION                varchar2,                       -- Идентификатор сессии
+    NRPTPRTQUEUE            number,                         -- Регистрационный номер записи очереди печати
+    RPT_QUEUE_STATE         out TRPT_QUEUE_STATE            -- Состояние позиции очереди печати    
+  ) is    
+    SMSG                    UDO_T_STAND_MSG.MSG%type;       -- Текст формируемого уведомления
+    SNOTIFY_TYPE            PKG_STD.TSTRING;                -- Тип формируемого уведомления
+    SRECEIVER               RPTPRTQUEUE_PRM.STR_VALUE%type; -- Значение параметра отчета "Контрагент-получатель"
   begin
-    /* РЎС‡РёС‚Р°РµРј Р·Р°РїРёСЃСЊ РѕС‡РµСЂРµРґРё Рё РёРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РІС‹С…РѕРґРЅСѓСЋ РєРѕР»Р»РµРєС†РёСЋ */
+    /* Считаем запись очереди и инициализируем выходную коллекцию */
     begin
       select T.RN,
              DECODE(T.STATUS,
@@ -2426,9 +2426,9 @@ create or replace package body UDO_PKG_STAND as
       when NO_DATA_FOUND then
         PKG_MSG.RECORD_NOT_FOUND(NFLAG_SMART => 0, NDOCUMENT => NRPTPRTQUEUE, SUNIT_TABLE => 'RPTPRTQUEUE');
     end;
-    /* Р•СЃР»Рё РѕС‚С‡РµС‚ РїРѕРґРіРѕС‚РѕРІР»РµРЅ (СЃ РѕС€РёР±РєРѕР№ РёР»Рё РЅРµС‚ - РЅРµ РІР°Р¶РЅРѕ) */
+    /* Если отчет подготовлен (с ошибкой или нет - не важно) */
     if (RPT_QUEUE_STATE.SSTATE in (SRPT_QUEUE_STATE_OK, SRPT_QUEUE_STATE_ERR)) then
-      /* РќР°РґРѕ РІС‹СЃС‚Р°РІРёС‚СЊ РІ РѕС‡РµСЂРµРґРё СЃС‚РµРЅРґР° СЃРІРµРґРµРЅРёСЏ РѕР± СЌС‚РѕРј */
+      /* Надо выставить в очереди стенда сведения об этом */
       for MSG in (select RN
                     from UDO_T_STAND_MSG T
                    where T.TP = SMSG_TYPE_PRINT
@@ -2437,7 +2437,7 @@ create or replace package body UDO_PKG_STAND as
       loop
         MSG_SET_STATE(NRN => MSG.RN, SSTS => SMSG_STATE_PRINTED);
       end loop;
-      /* РЎС‡РёС‚Р°РµРј РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ РЅР°РєР»Р°РґРЅРѕР№ */
+      /* Считаем информацию о накладной */
       begin
         select P.STR_VALUE
           into SRECEIVER
@@ -2448,38 +2448,38 @@ create or replace package body UDO_PKG_STAND as
         when NO_DATA_FOUND then
           SRECEIVER := null;
       end;
-      /* РЎС„РѕСЂРјРёСЂСѓРµРј СЃРѕРѕР±С‰РµРЅРёРµ */
+      /* Сформируем сообщение */
       if (RPT_QUEUE_STATE.SSTATE = SRPT_QUEUE_STATE_OK) then
         if (SRECEIVER is null) then
-          SMSG := 'РЎРµСЂРІРµСЂ РѕС‚Р»РѕР¶РµРЅРЅРѕР№ РїРµС‡Р°С‚Рё СѓСЃРїРµС€РЅРѕ РїРѕРґРіРѕС‚РѕРІРёР» РѕС‡РµСЂРµРґРЅСѓСЋ РЅР°РєР»Р°РґРЅСѓСЋ.';
+          SMSG := 'Сервер отложенной печати успешно подготовил очередную накладную.';
         else
-          SMSG := 'РќР°РєР»Р°РґРЅР°СЏ РґР»СЏ ' || SRECEIVER || ' СѓСЃРїРµС€РЅРѕ РїРѕРґРіРѕС‚РѕРІР»РµРЅР° СЃРµСЂРІРµСЂРѕРј РѕС‚Р»РѕР¶РµРЅРЅРѕР№ РїРµС‡Р°С‚Рё.';
+          SMSG := 'Накладная для ' || SRECEIVER || ' успешно подготовлена сервером отложенной печати.';
         end if;
         SNOTIFY_TYPE := SNOTIFY_TYPE_INFO;
       else
         if (SRECEIVER is null) then
-          SMSG := 'РћС€РёР±РєР° РїРѕРґРіРѕС‚РѕРІРєРё РЅР°РєР»Р°РґРЅРѕР№ СЃРµСЂРІРµСЂРѕРј РѕС‚Р»РѕР¶РµРЅРЅРѕР№ РїРµС‡Р°С‚Рё: ' || RPT_QUEUE_STATE.SERR;
+          SMSG := 'Ошибка подготовки накладной сервером отложенной печати: ' || RPT_QUEUE_STATE.SERR;
         else
-          SMSG := 'РћС€РёР±РєР° РїРѕРґРіРѕС‚РѕРІРєРё РЅР°РєР»Р°РґРЅРѕР№ РґР»СЏ ' || SRECEIVER || ': ' || RPT_QUEUE_STATE.SERR;
+          SMSG := 'Ошибка подготовки накладной для ' || SRECEIVER || ': ' || RPT_QUEUE_STATE.SERR;
         end if;
         SNOTIFY_TYPE := SNOTIFY_TYPE_ERROR;
       end if;
-      /* Р”РѕР±Р°РІРёРј СЃРѕРѕР±С‰РµРЅРёРµ РІ РѕС‡РµСЂРµРґСЊ */
+      /* Добавим сообщение в очередь */
       MSG_INSERT_NOTIFY(SMSG => SMSG, SNOTIFY_TYPE => SNOTIFY_TYPE);
     end if;
   end;
-
-  /* Р—Р°РїРѕР»РЅРµРЅРёРµ СЃРїРёСЃРєР° РѕС‚РјРµС‡РµРЅРЅС‹С… РґР»СЏ РїРµС‡Р°С‚Рё РґРѕРєСѓРјРµРЅС‚РѕРІ (Р°РІС‚РѕРЅРѕРјРЅР°СЏ С‚СЂР°РЅР·Р°РєС†РёСЏ) */
+  
+  /* Заполнение списка отмеченных для печати документов (автономная транзакция) */
   procedure PRINT_SET_SELECTLIST
   (
-    NIDENT                  number,       -- РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ Р±СѓС„РµСЂР°
-    NDOCUMENT               number,       -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РґРѕРєСѓРјРµРЅС‚Р°
-    SUNITCODE               varchar2      -- РљРѕРґ СЂР°Р·РґРµР»Р° РґРѕРєСѓРјРµРЅС‚Р°
+    NIDENT                  number,       -- Идентификатор буфера
+    NDOCUMENT               number,       -- Регистрационный номер документа
+    SUNITCODE               varchar2      -- Код раздела документа
   ) is
-    NSLRN                   PKG_STD.TREF; -- Р РµРі. РЅРѕРјРµСЂ РїРѕР·РёС†РёРё Р±СѓС„РµСЂР° РІС‹Р±СЂР°РЅРЅС‹С… РґРѕРєСѓРјРµРЅС‚РѕРІ
+    NSLRN                   PKG_STD.TREF; -- Рег. номер позиции буфера выбранных документов
     pragma AUTONOMOUS_TRANSACTION;
   begin
-    /* Р”РѕР±Р°РІР»СЏРµРј Р РќРћРџ РІ СЃРїРёСЃРѕРє РІС‹Р±СЂР°РЅРЅС‹С… РґРѕРєСѓРјРµРЅС‚РѕРІ */
+    /* Добавляем РНОП в список выбранных документов */
     P_SELECTLIST_INSERT_EXT(NIDENT     => NIDENT,
                             NDOCUMENT  => NDOCUMENT,
                             SUNITCODE  => SUNITCODE,
@@ -2487,38 +2487,38 @@ create or replace package body UDO_PKG_STAND as
                             SUNITCODE1 => null,
                             NCRN       => null,
                             NRN        => NSLRN);
-    /* РџРѕРґС‚РІРµСЂР¶РґР°РµРј Р°РІС‚РѕРЅРѕРјРЅСѓСЋ С‚СЂР°РЅР·Р°РєС†РёСЋ */
-    commit;
+    /* Подтверждаем автономную транзакцию */
+    commit;                            
   end;
-
-  /* РћС‡РёСЃС‚РєР° СЃРїРёСЃРєР° РѕС‚РјРµС‡РµРЅРЅС‹С… РґР»СЏ РїРµС‡Р°С‚Рё РґРѕРєСѓРјРµРЅС‚РѕРІ (Р°РІС‚РѕРЅРѕРјРЅР°СЏ С‚СЂР°РЅР·Р°РєС†РёСЏ) */
+  
+  /* Очистка списка отмеченных для печати документов (автономная транзакция) */
   procedure PRINT_CLEAR_SELECTLIST
   (
-    NIDENT                  number      -- РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ Р±СѓС„РµСЂР°
+    NIDENT                  number      -- Идентификатор буфера
   ) is
     pragma AUTONOMOUS_TRANSACTION;
   begin
-    /* Р—Р°С‡РёС‰Р°РµРј Р±СѓС„РµСЂ */
+    /* Зачищаем буфер */
     P_SELECTLIST_CLEAR(NIDENT => NIDENT);
-    /* РџРѕРґС‚РІРµСЂР¶РґР°РµРј Р°РІС‚РѕРЅРѕРјРЅСѓСЋ С‚СЂР°РЅР·Р°РєС†РёСЋ */
-    commit;
+    /* Подтверждаем автономную транзакцию */
+    commit;                            
   end;
-
-  /* РџРµС‡Р°С‚СЊ Р РќРћРџ С‡РµСЂРµР· СЃРµСЂРІРµСЂ РїРµС‡Р°С‚Рё */
+  
+  /* Печать РНОП через сервер печати */
   procedure PRINT
   (
-    NCOMPANY                number,          -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕСЂРіР°РЅРёР°Р·Р°С†РёРё
-    NTRANSINVCUST           number           -- Р РµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ Р РќРћРџ
+    NCOMPANY                number,          -- Регистрационный номер органиазации
+    NTRANSINVCUST           number           -- Регистрационный номер РНОП
   ) is
-    NIDENT                  PKG_STD.TREF;    -- РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ РѕС‚РјРµС‡РµРЅРЅС‹С… Р·Р°РїРёСЃРµР№ РґР»СЏ РґРѕРєСѓРјРµРЅС‚Р° РѕС‚РіСЂСѓР·РєРё
-    NTRINVCUST_REPORT       PKG_STD.TREF;    -- Р РµРі. РЅРѕРјРµСЂ С„РѕСЂРјРёСЂСѓРµРјРѕРіРѕ РѕС‚С‡РµС‚Р°
-    STRANSINVCUST           PKG_STD.TSTRING; -- РћРїРёСЃР°РЅРёРµ РґРѕРєСѓРјРµРЅС‚Р° РѕС‚РіСЂСѓР·РєРё
-    SAGENT                  PKG_STD.TSTRING; -- РљРѕРЅС‚СЂР°РіРµРЅС‚ РґРѕРєСѓРјРµРЅС‚Р° РѕС‚РіСЂСѓР·РєРё
-    NPQ                     PKG_STD.TREF;    -- Р РµРі. РЅРѕРјРµСЂ РїРѕР·РёС†РёРё РѕС‡РµСЂРµРґРё РѕС‚С‡РµС‚Р°
+    NIDENT                  PKG_STD.TREF;    -- Идентификатор отмеченных записей для документа отгрузки    
+    NTRINVCUST_REPORT       PKG_STD.TREF;    -- Рег. номер формируемого отчета
+    STRANSINVCUST           PKG_STD.TSTRING; -- Описание документа отгрузки
+    SAGENT                  PKG_STD.TSTRING; -- Контрагент документа отгрузки
+    NPQ                     PKG_STD.TREF;    -- Рег. номер позиции очереди отчета
   begin
-    /* РЎС‡РёС‚Р°РµРј РґР°РЅРЅС‹Рµ РґРѕРєСѓРјРµРЅС‚Р° РѕС‚РіСЂСѓР·РєРё */
+    /* Считаем данные документа отгрузки */
     begin
-      select trim(T.PREF) || '-' || trim(T.NUMB) || ' РѕС‚ ' || TO_CHAR(T.DOCDATE, 'dd.mm.yyyy'),
+      select trim(T.PREF) || '-' || trim(T.NUMB) || ' от ' || TO_CHAR(T.DOCDATE, 'dd.mm.yyyy'),
              AG.AGNABBR
         into STRANSINVCUST,
              SAGENT
@@ -2531,13 +2531,13 @@ create or replace package body UDO_PKG_STAND as
       when NO_DATA_FOUND then
         PKG_MSG.RECORD_NOT_FOUND(NFLAG_SMART => 0, NDOCUMENT => NTRANSINVCUST, SUNIT_TABLE => 'TRANSINVCUST');
     end;
-    /* РќР°Р№РґРµРј СЂРµРіРёСЃС‚СЂР°С†РёРѕРЅРЅС‹Р№ РЅРѕРјРµСЂ РѕС‚С‡РµС‚Р° */
+    /* Найдем регистрационный номер отчета */
     FIND_USERREP_CODE(NFLAG_SMART => 0, NCOMPANY => NCOMPANY, SCODE => STRINVCUST_REPORT, NRN => NTRINVCUST_REPORT);
-    /* Р“РµРЅРµСЂРёСЂСѓРµРј РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ РѕС‚РјРµС‡РµРЅРЅС‹С… Р·Р°РїРёСЃРµР№ */
+    /* Генерируем идентификатор отмеченных записей */
     P_SELECTLIST_GENIDENT(NIDENT => NIDENT);
-    /* РљР»Р°РґС‘Рј РґРѕРєСѓРјРµРЅС‚ РІ Р±СѓС„РµСЂ (Р°РІС‚РѕРЅРѕРјРЅР°СЏ С‚СЂР°РЅР·Р°РєС†РёСЏ) */
+    /* Кладём документ в буфер (автономная транзакция) */
     PRINT_SET_SELECTLIST(NIDENT => NIDENT, NDOCUMENT => NTRANSINVCUST, SUNITCODE => 'GoodsTransInvoicesToConsumers');
-    /* РџРµСЂРµРґР°РґРёРј РѕС‚С‡РµС‚ СЃРµСЂРІРµСЂСѓ РїРµС‡Р°С‚Рё */
+    /* Передадим отчет серверу печати */
     PKG_RPTPRTQUEUE.RESET_PARAMETER();
     PKG_RPTPRTQUEUE.SET_PARAMETER(SNAME       => 'NCOMPANY',
                                   NDATA_TYPE  => 1,
@@ -2621,23 +2621,24 @@ create or replace package body UDO_PKG_STAND as
                                     SCALC_TABLE_URL  => null,
                                     SCALC_TABLE_DB   => null,
                                     NQUEUE           => NPQ);
-    /* Р—Р°С‡РёС‰Р°РµРј Р±СѓС„РµСЂ РѕС‚РјРµС‡РµРЅРЅС‹С… РґРѕРєСѓРјРµРЅС‚РѕРІ (Р°РІС‚РѕРЅРѕРјРЅР°СЏ С‚СЂР°РЅР·Р°РєС†РёСЏ) */
+    /* Зачищаем буфер отмеченных документов (автономная транзакция) */
     PRINT_CLEAR_SELECTLIST(NIDENT => NIDENT);
-    /* РћРїРѕРІРµСЃС‚РёРј РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ Рѕ С‚РѕРј, С‡С‚Рѕ РѕС‚С‡РµС‚ РїРѕСЃС‚Р°РІР»РµРЅ РІ РѕС‡РµСЂРµРґСЊ */
-    MSG_INSERT_NOTIFY(SMSG         => 'РќР°РєР»Р°РґРЅР°СЏ "' || STRANSINVCUST || '" РґР»СЏ РїРѕСЃРµС‚РёС‚РµР»СЏ "' || SAGENT ||
-                                      '" РїРѕСЃС‚Р°РІР»РµРЅР° РІ РѕС‡РµСЂРµРґСЊ РїРµС‡Р°С‚Рё',
+    /* Оповестим пользователей о том, что отчет поставлен в очередь */
+    MSG_INSERT_NOTIFY(SMSG         => 'Накладная "' || STRANSINVCUST || '" для посетителя "' || SAGENT ||
+                                      '" поставлена в очередь печати',
                       SNOTIFY_TYPE => SNOTIFY_TYPE_INFO);
-    /* РћРїРѕРІРµСЃС‚РёРј СЃР»СѓР¶Р±Сѓ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕР№ РїРµС‡Р°С‚Рё, Рѕ С‚РѕРј, С‡С‚Рѕ РЅР°РґРѕ СЃР»РµРґРёС‚СЊ Р·Р° РѕС‚С‡РµС‚РѕРј */
+    /* Оповестим службу автоматической печати, о том, что надо следить за отчетом */
     MSG_INSERT_PRINT(SMSG => NPQ);
   exception
-    /* Р’ СЃР»СѓС‡Р°Рµ Р»СЋР±С‹С… РѕС€РёР±РѕРє - Р·Р°С‡РёСЃС‚РёРј РІСЃС‘ С‡С‚Рѕ СЃРѕС…СЂР°РЅРёР»Рё Р°РІС‚РѕРЅРѕРјРЅРѕР№ С‚СЂР°РЅР·Р°РєС†РёРµР№ РІ Р±СѓС„РµСЂРµ */
+    /* В случае любых ошибок - зачистим всё что сохранили автономной транзакцией в буфере */
     when others then
-      /* Р—Р°С‡РёС‰Р°РµРј Р±СѓС„РµСЂ РѕС‚РјРµС‡РµРЅРЅС‹С… РґРѕРєСѓРјРµРЅС‚РѕРІ (Р°РІС‚РѕРЅРѕРјРЅР°СЏ С‚СЂР°РЅР·Р°РєС†РёСЏ) */
+      /* Зачищаем буфер отмеченных документов (автономная транзакция) */
       PRINT_CLEAR_SELECTLIST(NIDENT => NIDENT);
       raise;
   end;
 
 begin
-  /* РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РЅР°СЃС‚СЂРѕРµРє СЃС‚РµРЅРґР° */
+  /* Инициализация настроек стенда */
   STAND_INIT_RACK_CONF(NCOMPANY => GET_SESSION_COMPANY(), SSTORE => SSTORE_GOODS);
 end;
+/
