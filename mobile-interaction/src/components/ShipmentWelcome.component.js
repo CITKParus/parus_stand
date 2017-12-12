@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
 export const ShipmentWelcome = props => (
     <View style={styles.welcomeContainer}>
         <Text style={styles.welcome}>{"Здравствуйте,"}</Text>
-        <Text style={styles.welcome}>{props.user},</Text>
+        <Text style={styles.welcome}>{props.user.trim()},</Text>
         <Text style={styles.welcome}>{"укажите желаемый товар"}</Text>
     </View>
 );

@@ -16,7 +16,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
         height: 250,
         width: 200,
-        justifyContent: "center",
+        justifyContent: "space-between",
         alignItems: "center",
         shadowColor: "rgba(0, 0, 0, 0.5)",
         shadowOpacity: 1,
@@ -29,10 +29,12 @@ const styles = StyleSheet.create({
     cellText: {
         color: "black",
         fontSize: 24,
-        marginVertical: 5
+        marginVertical: 10
     },
     cellImage: {
-        width: 198
+        marginVertical: 15,
+        width: 198,
+        height: 99
     },
     restContainer: {},
     line: {
@@ -44,11 +46,11 @@ const styles = StyleSheet.create({
 const renderCellImage = index => {
     switch (index) {
         case 1:
-            return <Image source={require("../assets/1.jpeg")} resizeMode="contain" style={styles.cellImage} />;
+            return <Image source={require("../assets/1.jpg")} resizeMode="contain" style={styles.cellImage} />;
         case 2:
-            return <Image source={require("../assets/2.jpeg")} resizeMode="contain" style={styles.cellImage} />;
+            return <Image source={require("../assets/2.jpg")} resizeMode="contain" style={styles.cellImage} />;
         case 3:
-            return <Image source={require("../assets/3.png")} resizeMode="contain" style={styles.cellImage} />;
+            return <Image source={require("../assets/3.jpg")} resizeMode="contain" style={styles.cellImage} />;
         default:
             return null;
     }
