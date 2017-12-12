@@ -362,10 +362,12 @@ const shipment = prms => {
                                 utils.log({
                                     msg: "Shipment document created successfully. Sending command to vending machine..."
                                 });
-                                let transInvCustID = resp.message;
+                                let transInvCustID = resp.message.NTRANSINVCUST;
+                                let restsPrc = resp.message.NRESTS_PRC_CURR;
                                 //завершение удалась - отдадим команду вендинговому аппарату
                                 vm.vendingMachineAction({
                                     line: prms.rack_line_cell,
+                                    loadPrc: restsPrc,
                                     callBack: r => {
                                         //если с вендинговым автоматом всё прошло успешно
                                         if (r.state != utils.SERVER_STATE_ERR) {
@@ -394,7 +396,8 @@ const shipment = prms => {
                                                             resolve(
                                                                 utils.buildOkResp({
                                                                     SMSG: utils.SERVER_RE_MSG_SHIPED_NO_PRINT,
-                                                                    NTRANSINVCUST: transInvCustID
+                                                                    NTRANSINVCUST: transInvCustID,
+                                                                    NRESTS_PRC_CURR: restsPrc
                                                                 })
                                                             );
                                                         } else {
@@ -406,7 +409,8 @@ const shipment = prms => {
                                                             resolve(
                                                                 utils.buildOkResp({
                                                                     SMSG: utils.SERVER_RE_MSG_SHIPED,
-                                                                    NTRANSINVCUST: transInvCustID
+                                                                    NTRANSINVCUST: transInvCustID,
+                                                                    NRESTS_PRC_CURR: restsPrc
                                                                 })
                                                             );
                                                         }
@@ -420,7 +424,8 @@ const shipment = prms => {
                                                 resolve(
                                                     utils.buildOkResp({
                                                         SMSG: utils.SERVER_RE_MSG_SHIPED_NO_PRINT,
-                                                        NTRANSINVCUST: transInvCustID
+                                                        NTRANSINVCUST: transInvCustID,
+                                                        NRESTS_PRC_CURR: restsPrc
                                                     })
                                                 );
                                             }

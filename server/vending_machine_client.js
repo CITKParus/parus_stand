@@ -24,6 +24,7 @@ const VENDING_MACHINE_REQ_HEADERS = {
 //параметры отправки HTTP-запросов к вендинговому автомату
 const VENDING_MACHINE_REQ_METHOD = utils.REQUEST_METHOD_GET; //способ отправки параметров
 const VENDING_MACHINE_SHIPMENT_COMMAND = "line"; //код команды отгрузки
+const VENDING_MACHINE_LOADPRC_COMMAND = "loadPrc"; //код команды установки цвета загрузки стенда
 
 //типовые ответы вендингового автомата
 const VENDING_MACHINE_RESP_STATE_ERR = "ERR"; //от автомата пришла ошибка
@@ -40,7 +41,13 @@ const vendingMachineAction = data => {
         utils.log({ msg: "Vending machine enabled - requesting..." });
         //настроим запрос
         let options = {
-            url: conf.VENDING_MACHINE_HTTP_ADDRESS + "?" + VENDING_MACHINE_SHIPMENT_COMMAND + "=" + data.line,
+            url:
+                conf.VENDING_MACHINE_HTTP_ADDRESS +
+                "?" +
+                VENDING_MACHINE_SHIPMENT_COMMAND +
+                "=" +
+                data.line +
+                (data.loadPrc || data.loadPrc === 0 ? "&" + VENDING_MACHINE_LOADPRC_COMMAND + "=" + data.loadPrc : ""),
             method: VENDING_MACHINE_REQ_METHOD,
             headers: VENDING_MACHINE_REQ_HEADERS
         };
