@@ -235,10 +235,13 @@ function processRequest(data, callBack) {
         lineShipment(data.query.line, function() {
             log("Shiping from line " + data.query.line + " finished");
             //выставим подсветку
-            if (data.query.loadPrc)
+            if (data.query.loadPrc) {
+                log("Stend load percent recivied: " + data.query.loadPrc + "%... Setting up load color!");
                 setColorByLoadPrc(LEDSTRIP_MAIN, LEDSTRIP_MAIN_LENGTH, LEDSTRIP_MAIN_STEP, data.query.loadPrc, FULL_LOAD_PRC);
-            else
+            } else {
+                log("No stend load percent recivied. Reseting to default color!");
                 setColorWhite(LEDSTRIP_MAIN, LEDSTRIP_MAIN_LENGTH, LEDSTRIP_MAIN_STEP);
+            }
             //вернем ответ
             callBack(buildOkResp("Shiped from line " + data.query.line));
         });
