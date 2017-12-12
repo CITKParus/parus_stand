@@ -23,7 +23,7 @@
 
 ### Состав:
 
-!(https://citkparus.github.io/parus_stand/stand_schema.png)
+![stand_schema](https://citkparus.github.io/parus_stand/stand_schema.png)
 
 #### 1. /db/ - серверные расширения Парус 8 (PL/SQL)
 
