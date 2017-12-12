@@ -38,21 +38,10 @@ class NotifyList extends React.Component {
             items: []
         };
     }
-    //отрисовка списка
-    drawList(listData) {
-        if (listData) {
-            if (!_.isEqual(this.state.items, listData.items)) {
-            }
-        }
-    }
     //после подключения компонента
-    componentDidMount() {
-        this.drawList(this.props.listData);
-    }
+    componentDidMount() {}
     //после обновления данных
-    componentWillReceiveProps(newProps) {
-        this.drawList(newProps.listData);
-    }
+    componentWillReceiveProps(newProps) {}
     //генерация содержимого
     render() {
         let listItems;
