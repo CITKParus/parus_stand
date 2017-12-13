@@ -9,7 +9,6 @@
 
 var servo = require("@amperka/servo"); //работа с сервоприводами
 var wifi = require("@amperka/wifi"); //работа с модулем WiFi
-var led = require('@amperka/led-strip'); //работа с RGB-лентой
 var http = require("http"); //работа с HTTP
 
 //--------------------------------
@@ -19,8 +18,8 @@ var http = require("http"); //работа с HTTP
 //подключение к сети и параметры WEB-сервера
 var WIFI_PORT = PrimarySerial; //порт (URAT) подключения WiFi-модуля
 var SERVER_PORT = 8080; //порт WEB-сервера
-var WIFI_SSID = "ASUS"; // имя WiFi-сети
-var WIFI_PSWD = "ParUs2013"; // ключ WiFi-сети
+var WIFI_SSID = "STAND"; // имя WiFi-сети
+var WIFI_PSWD = "ok2017sana"; // ключ WiFi-сети
 
 //состояния ответа WEB-сервера
 var SERVER_RESP_OK = "OK"; //успех
@@ -34,15 +33,6 @@ var LINES = [
     { name: HARD_LINES[1], pin: P9 },
     { name: HARD_LINES[2], pin: P10 }
 ];
-
-//доступные адресуемые светодиодные RGB-ленты
-var LEDSTRIP_MAIN = null; //основная лента подсветки
-var LEDSTRIP_MAIN_LENGTH = 50; //длина основной ленты подсветки (кол-во диодов)
-var LEDSTRIP_MAIN_BRIGHTNESS = 10; //яркость % от 0 - 100 основной ленты подсветки
-var LEDSTRIP_MAIN_STEP = 2; //шаг включения светодиодов (1 - каждый, 2 - каждый второй и т.п.)
-
-//конфигурация индикатора загруженности стенда
-var FULL_LOAD_PRC = 60; //% загруженности стенда, до которого он считается нормально загруженным
 
 //------------------------------
 // Функции
@@ -66,65 +56,6 @@ function buildOkResp(message) {
 //отправка положительного ответа WEB-сервера
 function buildErrResp(message) {
     return buildResp(SERVER_RESP_ERR, message);
-}
-
-//установка цвета лены
-function setColor(ledStrip, length, step, color) {
-    //выставим шаг (1 - по умолчанию)
-    var stepTmp = 1;
-    if(step) stepTmp = step;
-    //обходим указанное количество светодиодов в переданной ленте и устанавливаем нужный цвет
-    for (var i = 0; i < length; i += stepTmp) ledStrip.putColor(i, color);
-    // применяем изменения
-    ledStrip.apply();
-}
-
-//установка белого цвета ленты
-function setColorWhite(ledStrip, length, step) {
-    setColor(ledStrip, length, step, [1, 1, 1]);
-}
-
-//установка зеленого цвета ленты
-function setColorGreen(ledStrip, length, step) {
-    setColor(ledStrip, length, step, [1, 0, 0]);
-}
-
-//установка желтого цвета ленты
-function setColorYellow(ledStrip, length, step) {
-    setColor(ledStrip, length, step, [0.8, 1, 0]);
-}
-
-//установка оранжевого цвета ленты
-function setColorOrange(ledStrip, length, step) {
-    setColor(ledStrip, length, step, [0.5, 1, 0]);
-}
-
-//установка красного цвета ленты
-function setColorRed(ledStrip, length, step) {
-    setColor(ledStrip, length, step, [0, 1, 0]);
-}
-
-//установка цвета стенда в зависимости от % его загруженности
-function setColorByLoadPrc(ledStrip, length, step, loadPrc, fullPrc) {
-    //выставим шаг (1 - по умолчанию)
-    var stepTmp = 1;
-    if(step) stepTmp = step;
-    //вычислим цвета
-    var green= loadPrc/100;
-    var red = 0;
-    if (loadPrc < fullPrc) red = 1;
-    //обходим указанное количество светодиодов в переданной ленте и устанавливаем нужный цвет
-    for (var i = 0; i < length; i += stepTmp) ledStrip.putColor(i, [green, red, 0]);
-    //применяем изменения
-    ledStrip.apply();
-}
-
-//установка яркости диодов ленты
-function setBrightness(ledStrip, brightnessPrc) {
-    //выставим яркость
-    ledStrip.brightness(brightnessPrc/100);
-    //применяем изменения
-    ledStrip.apply();
 }
 
 //отгрузка с линии
@@ -156,13 +87,6 @@ function init() {
         line.pin.mode("output");
         line.pin.write(false);
     });
-    //настраиваем SPI-интерфейс для светодиодов и подключаем ленту
-    SPI2.setup({baud:3200000, mosi:B15, sck:B13, miso:B14});
-    LEDSTRIP_MAIN = led.connect(SPI2, LEDSTRIP_MAIN_LENGTH, 'RGB');
-    LEDSTRIP_MAIN.clear();
-    LEDSTRIP_MAIN.apply();
-    setBrightness(LEDSTRIP_MAIN, LEDSTRIP_MAIN_BRIGHTNESS);
-    setColorWhite(LEDSTRIP_MAIN, LEDSTRIP_MAIN_LENGTH, LEDSTRIP_MAIN_STEP);
     log("Done!");
 }
 
@@ -234,14 +158,6 @@ function processRequest(data, callBack) {
         //отгрузим товар
         lineShipment(data.query.line, function() {
             log("Shiping from line " + data.query.line + " finished");
-            //выставим подсветку
-            if (data.query.loadPrc) {
-                log("Stend load percent recivied: " + data.query.loadPrc + "%... Setting up load color!");
-                setColorByLoadPrc(LEDSTRIP_MAIN, LEDSTRIP_MAIN_LENGTH, LEDSTRIP_MAIN_STEP, data.query.loadPrc, FULL_LOAD_PRC);
-            } else {
-                log("No stend load percent recivied. Reseting to default color!");
-                setColorWhite(LEDSTRIP_MAIN, LEDSTRIP_MAIN_LENGTH, LEDSTRIP_MAIN_STEP);
-            }
             //вернем ответ
             callBack(buildOkResp("Shiped from line " + data.query.line));
         });
