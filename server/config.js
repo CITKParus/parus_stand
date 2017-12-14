@@ -17,14 +17,14 @@ exports.SERVER_VERIFY_PARUS_SESSION = false; //флаг принудительн
 exports.SERVER_USER_RESET_EMERGENCY_CODE = "-321"; //ключ аварийного сброса текущего пользователя вендингового автомата
 
 //параметры подключения к HTTP-серверу ПП Парус 8
-exports.PARUS_HTTP_ADDRESS = "http://212.5.81.211:7777/stand/PARUS.UDO_PKG_WEB_API.PROCESS"; //адрес HTTP-сервера
+exports.PARUS_HTTP_ADDRESS = "http://192.168.1.146:7777/stand/PARUS.UDO_PKG_WEB_API.PROCESS"; //адрес HTTP-сервера
 exports.PARUS_USER_NAME = "stand"; //имя пользователя
 exports.PARUS_USER_PASSWORD = "stand"; //пароль пользователя
 exports.PARUS_COMPANY = "Организация"; //регистрационный номер организации
 
 //параметры подключения к HTTP-серверу вендингового автомата
-exports.VENDING_MACHINE_HTTP_ADDRESS = "http://192.168.1.75:8080"; //адрес HTTP-сервера
+exports.VENDING_MACHINE_HTTP_ADDRESS = "http://192.168.1.212:8080"; //адрес HTTP-сервера
 exports.VENDING_MACHINE_ENABLED = true; //флаг доступности вендингового автомата
 
 //параметры использования сервиса печати
-exports.PRINT_SERVICE_ENABLED = false; //флаг доступности сервиса печати
+exports.PRINT_SERVICE_ENABLED = true; //флаг доступности сервиса печати

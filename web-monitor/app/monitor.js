@@ -1,4 +1,4 @@
-/*
+﻿/*
     WEB-монитор стенда
     Страница мониторинга
 */
@@ -15,6 +15,7 @@ import RestsDynamic from "./rests_dynamic"; //диаграмма динамик�
 import NotifyList from "./notify_list"; //список уведомлений стенда
 import StandState from "./stand_state"; //состояние стенда
 import client from "./client"; //клиент для доступа к серверу стенда
+import config from "./config"; //настройки приложения
 
 //----------------
 //описание классов
@@ -40,7 +41,7 @@ class Monitor extends React.Component {
     //отображение ошибки стенда и перезапрос данных
     showErrorAndRefresh(message) {
         this.setState({ error: message, restsNomen: {}, restsDynamic: {}, notifyList: [], totalRests: -1 }, () => {
-            setTimeout(this.refreshStandState, 1000);
+            setTimeout(this.refreshStandState, config.REFRESH_RATE);
         });
     }
     //отображение данных стенда и перезапрос
@@ -55,7 +56,7 @@ class Monitor extends React.Component {
                 standState
             },
             () => {
-                setTimeout(this.refreshStandState, 1000);
+                setTimeout(this.refreshStandState, config.REFRESH_RATE);
             }
         );
     }

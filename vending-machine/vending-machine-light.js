@@ -18,7 +18,8 @@ var http = require("http"); //работа с HTTP
 var WIFI_PORT = PrimarySerial; //порт (URAT) подключения WiFi-модуля
 var WIFI_SSID = "STAND"; // имя WiFi-сети
 var WIFI_PSWD = "ok2017sana"; // ключ WiFi-сети
-var SERVER_URL = "http://192.168.1.70:3030/?token=50fdd530-b44a-4151-a9d7-15662f41c000&action=STAND_GET_STATE";
+var SERVER_URL = "http://192.168.1.228:3030/?token=50fdd530-b44a-4151-a9d7-15662f41c000&action=STAND_GET_STATE";
+var SERVER_LOOP_TIMEOUT = 5000; //период опроса сервера (мс)
 
 //состояния ответа WEB-сервера
 var SERVER_RESP_OK = "OK"; //успех
@@ -164,7 +165,7 @@ function getServerData(callBack) {
 function startServerLoop() {
     log("Calling server...");
     getServerData(function() {
-        setTimeout(startServerLoop, 2000);
+        setTimeout(startServerLoop, SERVER_LOOP_TIMEOUT);
     });
 }
 
