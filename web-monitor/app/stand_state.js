@@ -95,7 +95,12 @@ class StandState extends React.Component {
     //генерация содержимого
     render() {
         const items = this.state.stateItems.map((item, i) => (
-            <ListItem key={item.text} disabled={true} primaryText={item.text} style={{ color: item.color }} />
+            <ListItem
+                key={item.text}
+                disabled={true}
+                primaryText={item.text}
+                style={{ color: item.color, fontSize: "25px" }}
+            />
         ));
         return (
             <Paper className="monitor-stand-state-paper" zDepth={3}>
