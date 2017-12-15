@@ -4,6 +4,7 @@
     "description": "WEB-API for stand communications",
     "main": "stand.js",
     "scripts": {
+        "start": "node stand.js",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "author": "Mikhail Chechnev",

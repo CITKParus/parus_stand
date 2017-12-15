@@ -4,6 +4,7 @@
     "description": "Node application for printing stand documents",
     "main": "print.js",
     "scripts": {
+        "start": "node print.js",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "author": "Mikhail Chechnev",

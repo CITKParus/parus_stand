@@ -4,6 +4,7 @@
   "description": "Node application for notifying about stand events (Telegram)",
   "main": "notify.js",
   "scripts": {
+    "start": "node notify.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Mikhail Chechnev",
