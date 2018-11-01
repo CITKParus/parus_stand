@@ -62,6 +62,21 @@
     vertical-align: middle;
 }
 
+.monitor-add-agent {
+    height: 100%;
+    width: 90%;
+    display: table;
+    padding: 20px;
+}
+
+.monitor-add-agent-paper {
+    height: 80%;
+    width: 80%;    
+    text-align: center;
+    display: table-cell;
+    vertical-align: middle;
+}
+
 .monitor-stand-state-info-enter {
     opacity: 0.01;
 }

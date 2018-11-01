@@ -14,6 +14,7 @@ import RestsNomen from "./rests_nomen"; //диаграмма остатков н
 import RestsDynamic from "./rests_dynamic"; //диаграмма динамики общих остатков стенда
 import NotifyList from "./notify_list"; //список уведомлений стенда
 import StandState from "./stand_state"; //состояние стенда
+import AddAgent from "./add_agent"; //компонент для добавления контрагента
 import client from "./client"; //клиент для доступа к серверу стенда
 import config from "./config"; //настройки приложения
 
@@ -159,6 +160,11 @@ class Monitor extends React.Component {
                 <StandState stateData={this.state.standState} />
             </div>
         );
+        let addAgent = (
+            <div className="monitor-add-agent">
+                <AddAgent />
+            </div>
+        );
         return (
             <div>
                 <AppBar
@@ -174,7 +180,11 @@ class Monitor extends React.Component {
                         <div className="monitor-line">{restsDynamic}</div>
                     </div>
                     {/*<div className="monitor-col monitor-messages-list">{notifyList}</div>*/}
-                    <div className="monitor-col">{stansState}</div>
+                    {/*<div className="monitor-col">{stansState}</div>*/}
+                    <div className="monitor-col">
+                        <div className="monitor-line">{stansState}</div>
+                        <div className="monitor-line">{addAgent}</div>
+                    </div>
                 </div>
             </div>
         );

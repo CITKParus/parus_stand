@@ -51,6 +51,7 @@ const PARUS_ACTION_MSG_DELETE = "MSG_DELETE"; //удаление сообщен�
 const PARUS_ACTION_MSG_SET_STATE = "MSG_SET_STATE"; //установка состояния сообщения в очедери уведомлений стенда
 const PARUS_ACTION_MSG_GET_LIST = "MSG_GET_LIST"; //получение списка сообщений очереди уведомлений стенда
 const PARUS_ACTION_STAND_GET_STATE = "STAND_GET_STATE"; //получение состояния стенда
+const PARUS_ACTION_ADD_AGENT = "ADD_AGENT"; //добавление контрагента
 
 //команды сервера приложений
 const SERVICE_ACTION_CANCEL_AUTH = "CANCEL_AUTH"; //отмена аутентификации посетителя стенда
@@ -661,6 +662,35 @@ const printGetState = prms => {
     });
 };
 
+//добавление контрагента
+const addAgent = prms => {
+    return new Promise((resolve, reject) => {
+        //проверим наличие параметров
+        if (prms) {
+            //исполняем действие на сервере ПП Парус 8
+            pc.parusServerAction({
+                prms: {
+                    SACTION: PARUS_ACTION_ADD_AGENT,
+                    SSESSION: PARUS_SESSION,
+                    SAGNABBR: prms.mnemo
+                },
+                callBack: resp => {
+                    //проверим результат выполнения
+                    if (resp.state == utils.SERVER_STATE_ERR) {
+                        //завершение не удалось
+                        reject(resp);
+                    } else {
+                        //завершение удалась - ресолвим с успехом
+                        resolve(resp);
+                    }
+                }
+            });
+        } else {
+            reject(utils.buildErrResp(utils.SERVER_RE_MSG_BAD_REQUEST));
+        }
+    });
+};
+
 //выгрузка файла
 const downloadGetUrl = prms => {
     return new Promise((resolve, reject) => {
@@ -772,6 +802,11 @@ const makeAction = prms => {
                 actionFunction = printGetState;
                 break;
             }
+            //добавление контарагента
+            case PARUS_ACTION_ADD_AGENT: {
+                actionFunction = addAgent;
+                break;
+            }
             //какая-то неизвестная нам функция
             default: {
                 actionFunction = utils.SERVER_RE_MSG_BAD_REQUEST;
@@ -854,5 +889,6 @@ exports.PARUS_ACTION_MSG_DELETE = PARUS_ACTION_MSG_DELETE;
 exports.PARUS_ACTION_MSG_SET_STATE = PARUS_ACTION_MSG_SET_STATE;
 exports.PARUS_ACTION_MSG_GET_LIST = PARUS_ACTION_MSG_GET_LIST;
 exports.PARUS_ACTION_STAND_GET_STATE = PARUS_ACTION_STAND_GET_STATE;
+exports.PARUS_ACTION_ADD_AGENT = PARUS_ACTION_ADD_AGENT;
 exports.SERVICE_ACTION_CANCEL_AUTH = SERVICE_ACTION_CANCEL_AUTH;
 exports.makeAction = makeAction;

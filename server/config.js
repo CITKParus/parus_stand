@@ -1,4 +1,4 @@
-/*
+﻿/*
     Сервер стенда
     Константы и настройки
 */
@@ -17,7 +17,7 @@ exports.SERVER_VERIFY_PARUS_SESSION = false; //флаг принудительн
 exports.SERVER_USER_RESET_EMERGENCY_CODE = "-321"; //ключ аварийного сброса текущего пользователя вендингового автомата
 
 //параметры подключения к HTTP-серверу ПП Парус 8
-exports.PARUS_HTTP_ADDRESS = "http://192.168.1.146:7777/stand/PARUS.UDO_PKG_WEB_API.PROCESS"; //адрес HTTP-сервера
+exports.PARUS_HTTP_ADDRESS = "http://172.28.100.180:7777/stand/PARUS.UDO_PKG_WEB_API.PROCESS"; //адрес HTTP-сервера
 exports.PARUS_USER_NAME = "stand"; //имя пользователя
 exports.PARUS_USER_PASSWORD = "stand"; //пароль пользователя
 exports.PARUS_COMPANY = "Организация"; //регистрационный номер организации

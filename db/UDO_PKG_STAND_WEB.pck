@@ -129,6 +129,13 @@ create or replace package UDO_PKG_STAND_WEB as
     CRES                    out clob    -- Результат работы
   );
 
+  /* Добавление контрагента */
+  procedure ADD_AGENT
+  (
+    CPRMS                   clob,       -- Входные параметры
+    CRES                    out clob    -- Результат работы
+  );
+
 end;
 /
 create or replace package body UDO_PKG_STAND_WEB as
@@ -897,6 +904,125 @@ create or replace package body UDO_PKG_STAND_WEB as
     JRES := STAND_STATE_TO_JSON(SS => STAND_STATE);
     /* Отдаём ответ */
     JRES.TO_CLOB(BUF => CRES);
+  exception
+    when others then
+      SERR := sqlerrm;
+      CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                        NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_ERR,
+                                        SRESP_MSG    => SERR);
+      rollback;
+  end;
+  
+  /* Добавление контрагента */
+  procedure ADD_AGENT
+  (
+    CPRMS                   clob,                                       -- Входные параметры
+    CRES                    out clob                                    -- Результат работы
+  ) is
+    NCOMPANY                COMPANIES.RN%type := GET_SESSION_COMPANY(); -- Рег. номер организации
+    NCRN                    ACATALOG.RN%type;                           -- Рег. номер каталога для добавления контрагента
+    NRN                     AGNLIST.RN%type;                            -- Рег. номер добавленного контрагента
+    JPRMS                   JSON;                                       -- Объектное представление параметров запроса
+    SAGNABBR                AGNLIST.AGNABBR%type;                       -- Мнемокод контрагента
+    SERR                    PKG_STD.TSTRING;                            -- Буфер для ошибок
+  begin
+    /* Инициализируем выход */
+    DBMS_LOB.CREATETEMPORARY(LOB_LOC => CRES, CACHE => false);
+    /* Конвертируем параметры в объектное представление */
+    JPRMS := JSON(CPRMS);
+    /* Считываем мнемокод контрагента */
+    if ((not JPRMS.EXIST('SAGNABBR')) or (JPRMS.GET('SAGNABBR').VALUE_OF() is null)) then
+      P_EXCEPTION(0, 'В запросе к серверу не указан мнемокод контрагента!');
+    else
+      SAGNABBR := JPRMS.GET('SAGNABBR').VALUE_OF();
+    end if;
+    /* Добавляем контрагента */
+    begin
+      FIND_ROOT_CATALOG(NCOMPANY => NCOMPANY, SCODE => 'AGNLIST', NCRN => NCRN);
+      P_AGNLIST_INSERT(NCOMPANY          => NCOMPANY,
+                       CRN               => NCRN,
+                       AGNABBR           => SAGNABBR,
+                       AGNTYPE           => 0,
+                       AGNNAME           => SAGNABBR,
+                       AGNIDNUMB         => null,
+                       ECONCODE          => null,
+                       ORGCODE           => null,
+                       AGNFAMILYNAME     => null,
+                       AGNFIRSTNAME      => null,
+                       AGNLASTNAME       => null,
+                       AGNFAMILYNAME_TO  => null,
+                       AGNFIRSTNAME_TO   => null,
+                       AGNLASTNAME_TO    => null,
+                       AGNFAMILYNAME_FR  => null,
+                       AGNFIRSTNAME_FR   => null,
+                       AGNLASTNAME_FR    => null,
+                       AGNFAMILYNAME_AC  => null,
+                       AGNFIRSTNAME_AC   => null,
+                       AGNLASTNAME_AC    => null,
+                       AGNFAMILYNAME_ABL => null,
+                       AGNFIRSTNAME_ABL  => null,
+                       AGNLASTNAME_ABL   => null,
+                       EMP               => 0,
+                       EMPPOST           => null,
+                       EMPPOST_FROM      => null,
+                       EMPPOST_TO        => null,
+                       EMPPOST_AC        => null,
+                       EMPPOST_ABL       => null,
+                       AGNBURN           => null,
+                       PHONE             => null,
+                       PHONE2            => null,
+                       FAX               => null,
+                       TELEX             => null,
+                       MAIL              => null,
+                       IMAGE             => null,
+                       DDISCDATE         => null,
+                       AGN_COMMENT       => null,
+                       NSEX              => 0,
+                       SPENSION_NBR      => null,
+                       SMEDPOLICY_SER    => null,
+                       SMEDPOLICY_NUMB   => null,
+                       SPROPFORM         => null,
+                       SREASON_CODE      => null,
+                       NRESIDENT_SIGN    => 0,
+                       STAXPSTATUS       => null,
+                       SOGRN             => null,
+                       SPRFMLSTS         => null,
+                       SPRNATION         => null,
+                       SCITIZENSHIP      => null,
+                       ADDR_BURN         => null,
+                       SPRMLREL          => null,
+                       SOKATO            => null,
+                       SPFR_NAME         => null,
+                       DPFR_FILL_DATE    => null,
+                       DPFR_REG_DATE     => null,
+                       SPFR_REG_NUMB     => null,
+                       SFULLNAME         => null,
+                       SOKFS             => null,
+                       SOKOPF            => null,
+                       STFOMS            => null,
+                       SFSS_REG_NUMB     => null,
+                       SFSS_SUBCODE      => null,
+                       NCOEFFIC          => 0,
+                       DAGNDEATH         => null,
+                       NOLD_RN           => null,
+                       SOKTMO            => null,
+                       SINN_CITIZENSHIP  => null,
+                       DTAX_REG_DATE     => null,
+                       SORIGINAL_NAME    => null,
+                       NIND_BUSINESSMAN  => 0,
+                       SFNS_CODE         => null,
+                       SCTZNSHP_TYPE     => null,
+                       NRN               => NRN);
+    exception
+      when DUP_VAL_ON_INDEX then
+        P_EXCEPTION(0, 'Контрагент "' || SAGNABBR || '" уже существует!');
+      when others then
+        P_EXCEPTION(0, 'Ошибка добавления контрагента: ' || sqlerrm);
+    end;
+    /* Отдаём ответ что всё прошло успешно */
+    CRES := UDO_PKG_WEB_API.RESP_MAKE(NRESP_FORMAT => UDO_PKG_WEB_API.NRESP_FORMAT_JSON,
+                                      NRESP_STATE  => UDO_PKG_WEB_API.NRESP_STATE_OK,
+                                      SRESP_MSG    => 'Контрагент "' || SAGNABBR || '" успешно добавлен');
   exception
     when others then
       SERR := sqlerrm;
